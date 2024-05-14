@@ -1,10 +1,19 @@
 #include <cstdint>
 #include <memory>
+#include <name.pb.h>
 #include <person.pb.h>
 #include <sds/json/deserialize.hpp>
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
+
+namespace
+{
+auto operator==( const Test::Name & lhs, const Test::Name & rhs ) noexcept -> bool
+{
+    return lhs.name == rhs.name;
+}
+}// namespace
 
 TEST_CASE( "json" )
 {
@@ -22,6 +31,59 @@ TEST_CASE( "json" )
     }
     SUBCASE( "deserialize" )
     {
+        SUBCASE( "ignore" )
+        {
+            SUBCASE( "empty" )
+            {
+                CHECK( sds::json::detail::deserialize< Test::Name >( R"({})" ) == Test::Name{ } );
+                CHECK_THROWS( sds::json::detail::deserialize< Test::Name >( "" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< Test::Name >( R"(})" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< Test::Name >( R"({)" ) );
+            }
+            SUBCASE( "string" )
+            {
+                CHECK( sds::json::detail::deserialize< Test::Name >( R"({"string":"string"})" ) == Test::Name{ } );
+            }
+            SUBCASE( "int" )
+            {
+                CHECK( sds::json::detail::deserialize< Test::Name >( R"({"integer":42})" ) == Test::Name{ } );
+            }
+            SUBCASE( "float" )
+            {
+                CHECK( sds::json::detail::deserialize< Test::Name >( R"({"fl":42.0, "fl2":0})" ) == Test::Name{ } );
+            }
+            SUBCASE( "array" )
+            {
+                CHECK( sds::json::detail::deserialize< Test::Name >( R"({"array":[42,"hello"]})" ) == Test::Name{ } );
+                CHECK( sds::json::detail::deserialize< Test::Name >( R"({"array":[]})" ) == Test::Name{ } );
+                CHECK_THROWS( sds::json::detail::deserialize< Test::Name >( R"({"array":[})" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< Test::Name >( R"({"array":[)" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< Test::Name >( R"({"array":[42)" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< Test::Name >( R"({"array":[42,)" ) );
+            }
+            SUBCASE( "bool" )
+            {
+                CHECK( sds::json::detail::deserialize< Test::Name >( R"({"value":true, "value2":false})" ) == Test::Name{ } );
+                CHECK_THROWS( sds::json::detail::deserialize< Test::Name >( R"({"value":tru, "value2":false})" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< Test::Name >( R"({"value":true, "value2":fals})" ) );
+            }
+            SUBCASE( "null" )
+            {
+                CHECK( sds::json::detail::deserialize< Test::Name >( R"({"value":null})" ) == Test::Name{ } );
+                CHECK_THROWS( sds::json::detail::deserialize< Test::Name >( R"({"value":nul})" ) );
+            }
+            SUBCASE( "object" )
+            {
+                CHECK( sds::json::detail::deserialize< Test::Name >( R"({"value":{}})" ) == Test::Name{ } );
+                CHECK( sds::json::detail::deserialize< Test::Name >( R"({"value":{"key":"value", "key2":[42]}})" ) == Test::Name{ } );
+                CHECK_THROWS( sds::json::detail::deserialize< Test::Name >( R"({"value"})" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< Test::Name >( R"({"value":{"key":"value", "key2":[42]})" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< Test::Name >( R"({"value":{"key":}})" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< Test::Name >( R"({"value":{"key"}})" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< Test::Name >( R"({"value":{"key":"value")" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< Test::Name >( R"({"value":{"key":"value",)" ) );
+            }
+        }
         SUBCASE( "person" )
         {
             constexpr std::string_view jsons[] = {
