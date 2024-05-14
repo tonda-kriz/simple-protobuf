@@ -90,6 +90,54 @@ TEST_CASE( "json" )
                 CHECK( *value == false );
             }
         }
+        SUBCASE( "float" )
+        {
+            CHECK( sds::json::detail::deserialize< float >( "0" ) == 0 );
+            CHECK( sds::json::detail::deserialize< float >( "42" ) == 42 );
+            CHECK( sds::json::detail::deserialize< float >( "3.14" ) == 3.14f );
+            CHECK( sds::json::detail::deserialize< float >( "0.0" ) == 0.0f );
+            CHECK( sds::json::detail::deserialize< float >( "-0.0" ) == -0.0f );
+            CHECK( sds::json::detail::deserialize< float >( "-3.14" ) == -3.14f );
+            CHECK( sds::json::detail::deserialize< float >( "3.14e+10" ) == 3.14e+10f );
+            CHECK( sds::json::detail::deserialize< float >( "3.14e-10" ) == 3.14e-10f );
+            CHECK( sds::json::detail::deserialize< float >( "3.14E+10" ) == 3.14E+10f );
+            CHECK( sds::json::detail::deserialize< float >( "3.14E-10" ) == 3.14E-10f );
+            CHECK_THROWS( sds::json::detail::deserialize< float >( "hello" ) );
+            CHECK_THROWS( sds::json::detail::deserialize< float >( "" ) );
+            CHECK_THROWS( sds::json::detail::deserialize< float >( "true" ) );
+            CHECK_THROWS( sds::json::detail::deserialize< float >( R"("hello")" ) );
+            SUBCASE( "array" )
+            {
+                CHECK( sds::json::detail::deserialize< std::vector< float > >( "[]" ) == std::vector< float >{ } );
+                CHECK( sds::json::detail::deserialize< std::vector< float > >( "null" ) == std::vector< float >{ } );
+                CHECK( sds::json::detail::deserialize< std::vector< float > >( "[42]" ) == std::vector< float >{ 42 } );
+                CHECK( sds::json::detail::deserialize< std::vector< float > >( "[42,3.14]" ) == std::vector< float >{ 42, 3.14f } );
+                CHECK( sds::json::detail::deserialize< std::vector< float > >( "[42,3.14,0.0]" ) == std::vector< float >{ 42, 3.14f, 0.0f } );
+                CHECK( sds::json::detail::deserialize< std::vector< float > >( "[42,3.14,-0.0]" ) == std::vector< float >{ 42, 3.14f, -0.0f } );
+                CHECK_THROWS( sds::json::detail::deserialize< std::vector< float > >( "42" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< std::vector< float > >( "true" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< std::vector< float > >( "hello" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< std::vector< float > >( R"([)" ) );
+            }
+            SUBCASE( "optional" )
+            {
+                auto value = std::optional< float >( );
+                CHECK_NOTHROW( sds::json::detail::deserialize( "42", value ) );
+                CHECK( *value == 42.0f );
+                CHECK_NOTHROW( sds::json::detail::deserialize( "3.14", value ) );
+                CHECK( *value == 3.14f );
+                CHECK_NOTHROW( sds::json::detail::deserialize( "0.0", value ) );
+                CHECK( *value == 0.0f );
+                CHECK_NOTHROW( sds::json::detail::deserialize( "-3.14", value ) );
+                CHECK( *value == -3.14f );
+                CHECK( sds::json::detail::deserialize< std::optional< float > >( "42" ) == 42 );
+                CHECK( sds::json::detail::deserialize< std::optional< float > >( "null" ) == std::nullopt );
+                CHECK_THROWS( sds::json::detail::deserialize< std::optional< float > >( "hello" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< std::optional< float > >( "" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< std::optional< float > >( "true" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< std::optional< float > >( R"("hello")" ) );
+            }
+        }
         SUBCASE( "int32" )
         {
             CHECK( sds::json::detail::deserialize< int32_t >( "42" ) == 42 );
