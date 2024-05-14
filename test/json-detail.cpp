@@ -39,6 +39,13 @@ TEST_CASE( "json" )
                 CHECK( person.phones[ 0 ].type == PhoneBook::Person::PhoneType::HOME );
             }
         }
+        SUBCASE( "bool" )
+        {
+            CHECK( sds::json::detail::deserialize< bool >( "true" ) == true );
+            CHECK( sds::json::detail::deserialize< bool >( "false" ) == false );
+            CHECK_THROWS( sds::json::detail::deserialize< bool >( "hello" ) );
+        }
+
         SUBCASE( "string" )
         {
             SUBCASE( "escape" )
