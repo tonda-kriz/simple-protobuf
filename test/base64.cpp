@@ -37,7 +37,7 @@ TEST_CASE( "base64" )
 {
     SUBCASE( "base64_encode" )
     {
-        // CHECK( base64_encode( "hello world" ) == "aGVsbG8gd29ybGQ=" );
+        CHECK( base64_encode( "hello world" ) == "aGVsbG8gd29ybGQ=" );
 
         CHECK( base64_encode( "" ) == "" );
         CHECK( base64_encode( "f" ) == "Zg==" );
@@ -56,7 +56,6 @@ TEST_CASE( "base64" )
             CHECK( sds::json::detail::base64_decode( result, "Zg" ) == false );
             CHECK( sds::json::detail::base64_decode( result, "Z" ) == false );
         }
-        // CHECK( base64_encode( "hello world" ) == "aGVsbG8gd29ybGQ=" );
 
         CHECK( base64_decode( "" ) == "" );
         CHECK( base64_decode( "Zg==" ) == "f" );
