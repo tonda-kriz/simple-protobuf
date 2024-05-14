@@ -286,11 +286,18 @@ static inline void deserialize( istream & stream, std::vector< T > & value )
 template < typename T >
 auto deserialize_map_key( istream & stream ) -> T
 {
-    auto str_key_map = stream.deserialize_string( );
-    auto map_key     = T( );
-    auto key_stream  = istream( str_key_map );
-    deserialize( key_stream, map_key );
-    return map_key;
+    if constexpr( std::is_same_v< T, std::string > )
+    {
+        return std::string( stream.deserialize_string( ) );
+    }
+    else
+    {
+        auto str_key_map = stream.deserialize_string( );
+        auto map_key     = T( );
+        auto key_stream  = istream( str_key_map );
+        deserialize( key_stream, map_key );
+        return map_key;
+    }
 }
 
 template < typename keyT, typename valueT >

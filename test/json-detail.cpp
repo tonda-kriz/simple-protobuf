@@ -7,13 +7,13 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
 
-namespace
+namespace Test
 {
 auto operator==( const Test::Name & lhs, const Test::Name & rhs ) noexcept -> bool
 {
     return lhs.name == rhs.name;
 }
-}// namespace
+}// namespace Test
 
 TEST_CASE( "json" )
 {
@@ -294,7 +294,52 @@ TEST_CASE( "json" )
                 CHECK_THROWS( sds::json::detail::deserialize< std::optional< std::vector< std::byte > > >( R"()" ) );
             }
         }
-
+        SUBCASE( "map" )
+        {
+            SUBCASE( "int32/int32" )
+            {
+                CHECK( sds::json::detail::deserialize< std::map< int32_t, int32_t > >( R"({"1":2})" ) == std::map< int32_t, int32_t >{ { 1, 2 } } );
+                CHECK( sds::json::detail::deserialize< std::map< int32_t, int32_t > >( R"({"1":2,"2":3})" ) == std::map< int32_t, int32_t >{ { 1, 2 }, { 2, 3 } } );
+                CHECK( sds::json::detail::deserialize< std::map< int32_t, int32_t > >( R"({})" ) == std::map< int32_t, int32_t >{ } );
+                CHECK( sds::json::detail::deserialize< std::map< int32_t, int32_t > >( R"(null)" ) == std::map< int32_t, int32_t >{ } );
+                CHECK_THROWS( sds::json::detail::deserialize< std::map< int32_t, int32_t > >( R"()" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< std::map< int32_t, int32_t > >( R"("hello")" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< std::map< int32_t, int32_t > >( R"({"hello":2})" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< std::map< int32_t, int32_t > >( R"({"1":"hello"})" ) );
+            }
+            SUBCASE( "string/string" )
+            {
+                CHECK( sds::json::detail::deserialize< std::map< std::string, std::string > >( R"({"hello":"world"})" ) == std::map< std::string, std::string >{ { "hello", "world" } } );
+                CHECK( sds::json::detail::deserialize< std::map< std::string, std::string > >( R"({})" ) == std::map< std::string, std::string >{ } );
+                CHECK( sds::json::detail::deserialize< std::map< std::string, std::string > >( R"(null)" ) == std::map< std::string, std::string >{ } );
+                CHECK_THROWS( sds::json::detail::deserialize< std::map< std::string, std::string > >( R"()" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< std::map< std::string, std::string > >( R"({"1":["hello"]})" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< std::map< std::string, std::string > >( R"({"hello":{"hello":"world"}]})" ) );
+            }
+            SUBCASE( "int32/string" )
+            {
+                CHECK( sds::json::detail::deserialize< std::map< int32_t, std::string > >( R"({"1":"hello"})" ) == std::map< int32_t, std::string >{ { 1, "hello" } } );
+                CHECK( sds::json::detail::deserialize< std::map< int32_t, std::string > >( R"({})" ) == std::map< int32_t, std::string >{ } );
+                CHECK( sds::json::detail::deserialize< std::map< int32_t, std::string > >( R"(null)" ) == std::map< int32_t, std::string >{ } );
+                CHECK_THROWS( sds::json::detail::deserialize< std::map< int32_t, std::string > >( R"()" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< std::map< int32_t, std::string > >( R"({"hello":"world"})" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< std::map< int32_t, std::string > >( R"({"1":1})" ) );
+            }
+            SUBCASE( "string/int32" )
+            {
+                CHECK( sds::json::detail::deserialize< std::map< std::string, int32_t > >( R"({"hello":2})" ) == std::map< std::string, int32_t >{ { "hello", 2 } } );
+                CHECK( sds::json::detail::deserialize< std::map< std::string, int32_t > >( R"({})" ) == std::map< std::string, int32_t >{ } );
+                CHECK( sds::json::detail::deserialize< std::map< std::string, int32_t > >( R"(null)" ) == std::map< std::string, int32_t >{ } );
+                CHECK_THROWS( sds::json::detail::deserialize< std::map< std::string, int32_t > >( R"()" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< std::map< std::string, int32_t > >( R"({"2","hello"})" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< std::map< std::string, int32_t > >( R"({"1":})" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< std::map< std::string, int32_t > >( R"({"hello":2)" ) );
+            }
+            SUBCASE( "string/name" )
+            {
+                CHECK( sds::json::detail::deserialize< std::map< std::string, Test::Name > >( R"({"hello":{"name":"john"}})" ) == std::map< std::string, Test::Name >{ { "hello", { .name = "john" } } } );
+            }
+        }
         SUBCASE( "string" )
         {
             SUBCASE( "escape" )
