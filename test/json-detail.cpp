@@ -90,6 +90,56 @@ TEST_CASE( "json" )
                 CHECK( *value == false );
             }
         }
+        SUBCASE( "int32" )
+        {
+            CHECK( sds::json::detail::deserialize< int32_t >( "42" ) == 42 );
+            CHECK( sds::json::detail::deserialize< int32_t >( "-42" ) == -42 );
+            CHECK( sds::json::detail::deserialize< int32_t >( "0" ) == 0 );
+            CHECK( sds::json::detail::deserialize< int32_t >( "2147483647" ) == 2147483647 );
+            CHECK( sds::json::detail::deserialize< int32_t >( "-2147483648" ) == -2147483648 );
+            CHECK_THROWS( sds::json::detail::deserialize< int32_t >( "hello" ) );
+            CHECK_THROWS( sds::json::detail::deserialize< int32_t >( "" ) );
+            CHECK_THROWS( sds::json::detail::deserialize< int32_t >( "true" ) );
+            CHECK_THROWS( sds::json::detail::deserialize< int32_t >( R"("hello")" ) );
+            SUBCASE( "array" )
+            {
+                CHECK( sds::json::detail::deserialize< std::vector< int32_t > >( R"([42,-42,0])" ) == std::vector< int32_t >{ 42, -42, 0 } );
+                CHECK( sds::json::detail::deserialize< std::vector< int32_t > >( R"([-2147483648,2147483647])" ) == std::vector< int32_t >{ -2147483648, 2147483647 } );
+                CHECK( sds::json::detail::deserialize< std::vector< int32_t > >( R"([])" ) == std::vector< int32_t >( ) );
+                CHECK( sds::json::detail::deserialize< std::vector< int32_t > >( R"(null)" ) == std::vector< int32_t >( ) );
+                CHECK_THROWS( sds::json::detail::deserialize< std::vector< int32_t > >( R"([)" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< std::vector< int32_t > >( R"(])" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< std::vector< int32_t > >( R"([42,)" ) );
+            }
+            SUBCASE( "optional" )
+            {
+                CHECK( sds::json::detail::deserialize< std::optional< int32_t > >( "42" ) == std::optional< int32_t >( 42 ) );
+                CHECK( sds::json::detail::deserialize< std::optional< int32_t > >( "-42" ) == std::optional< int32_t >( -42 ) );
+                CHECK( sds::json::detail::deserialize< std::optional< int32_t > >( "0" ) == std::optional< int32_t >( 0 ) );
+                CHECK( sds::json::detail::deserialize< std::optional< int32_t > >( "2147483647" ) == std::optional< int32_t >( 2147483647 ) );
+                CHECK( sds::json::detail::deserialize< std::optional< int32_t > >( "-2147483648" ) == std::optional< int32_t >( -2147483648 ) );
+                CHECK( sds::json::detail::deserialize< std::optional< int32_t > >( "null" ) == std::optional< int32_t >( ) );
+                CHECK_THROWS( sds::json::detail::deserialize< std::optional< int32_t > >( "hello" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< std::optional< int32_t > >( R"()" ) );
+            }
+            SUBCASE( "ptr" )
+            {
+                auto value = std::unique_ptr< int32_t >( );
+                CHECK_NOTHROW( sds::json::detail::deserialize( "42", value ) );
+                CHECK( *value == 42 );
+                CHECK_NOTHROW( sds::json::detail::deserialize( "-42", value ) );
+                CHECK( *value == -42 );
+                CHECK_NOTHROW( sds::json::detail::deserialize( "0", value ) );
+                CHECK( *value == 0 );
+                CHECK_NOTHROW( sds::json::detail::deserialize( "2147483647", value ) );
+                CHECK( *value == 2147483647 );
+                CHECK_NOTHROW( sds::json::detail::deserialize( "-2147483648", value ) );
+                CHECK( *value == -2147483648 );
+                CHECK_NOTHROW( sds::json::detail::deserialize( "null", value ) );
+                CHECK( value == nullptr );
+            }
+        }
+
         SUBCASE( "array" )
         {
             CHECK( sds::json::detail::deserialize< std::vector< std::string > >( R"(["hello","world"])" ) == std::vector< std::string >{ "hello", "world" } );
@@ -114,6 +164,25 @@ TEST_CASE( "json" )
             CHECK_THROWS( sds::json::detail::deserialize< std::vector< std::byte > >( R"("AAECAwQ")" ) );
             CHECK_THROWS( sds::json::detail::deserialize< std::vector< std::byte > >( R"([])" ) );
             CHECK_THROWS( sds::json::detail::deserialize< std::vector< std::byte > >( R"()" ) );
+            SUBCASE( "array" )
+            {
+                CHECK( sds::json::detail::deserialize< std::vector< std::vector< std::byte > > >( R"(["AAECAwQ="])" ) == std::vector< std::vector< std::byte > >{ std::vector< std::byte >{ std::byte( 0 ), std::byte( 1 ), std::byte( 2 ), std::byte( 3 ), std::byte( 4 ) } } );
+                CHECK( sds::json::detail::deserialize< std::vector< std::vector< std::byte > > >( R"(["AAECAwQ=","aGVsbG8="])" ) == std::vector< std::vector< std::byte > >{ std::vector< std::byte >{ std::byte( 0 ), std::byte( 1 ), std::byte( 2 ), std::byte( 3 ), std::byte( 4 ) }, std::vector< std::byte >{ std::byte( 'h' ), std::byte( 'e' ), std::byte( 'l' ), std::byte( 'l' ), std::byte( 'o' ) } } );
+                CHECK( sds::json::detail::deserialize< std::vector< std::vector< std::byte > > >( R"([])" ) == std::vector< std::vector< std::byte > >{ } );
+                CHECK( sds::json::detail::deserialize< std::vector< std::vector< std::byte > > >( R"(null)" ) == std::vector< std::vector< std::byte > >{ } );
+                CHECK( sds::json::detail::deserialize< std::vector< std::vector< std::byte > > >( R"([""])" ) == std::vector< std::vector< std::byte > >{ std::vector< std::byte >{} } );
+            }
+            SUBCASE( "optional" )
+            {
+                CHECK( sds::json::detail::deserialize< std::optional< std::vector< std::byte > > >( R"(null)" ) == std::nullopt );
+                CHECK( sds::json::detail::deserialize< std::optional< std::vector< std::byte > > >( R"("AAECAwQ=")" ) == std::vector< std::byte >{ std::byte( 0 ), std::byte( 1 ), std::byte( 2 ), std::byte( 3 ), std::byte( 4 ) } );
+                CHECK( sds::json::detail::deserialize< std::optional< std::vector< std::byte > > >( R"("aGVsbG8=")" ) == std::vector< std::byte >{ std::byte( 'h' ), std::byte( 'e' ), std::byte( 'l' ), std::byte( 'l' ), std::byte( 'o' ) } );
+                CHECK( sds::json::detail::deserialize< std::optional< std::vector< std::byte > > >( R"("")" ) == std::vector< std::byte >{ } );
+                CHECK_THROWS( sds::json::detail::deserialize< std::optional< std::vector< std::byte > > >( R"(true)" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< std::optional< std::vector< std::byte > > >( R"("AAECAwQ")" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< std::optional< std::vector< std::byte > > >( R"([])" ) );
+                CHECK_THROWS( sds::json::detail::deserialize< std::optional< std::vector< std::byte > > >( R"()" ) );
+            }
         }
 
         SUBCASE( "string" )
