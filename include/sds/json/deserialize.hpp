@@ -447,11 +447,8 @@ static inline void ignore_number( istream & stream )
 
 static inline void ignore_bool( istream & stream )
 {
-    if( !stream.consume( "true" ) &&
-        !stream.consume( "false" ) )
-    {
-        throw std::runtime_error( "expecting 'true' or 'false'" );
-    }
+    auto value = bool{ };
+    deserialize( stream, value );
 }
 
 static inline void ignore_null( istream & stream )
