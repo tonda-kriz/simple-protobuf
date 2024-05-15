@@ -375,6 +375,33 @@ TEST_CASE( "json" )
                 }
             }
         }
+        SUBCASE( "variant" )
+        {
+            SUBCASE( "int" )
+            {
+                auto variant = sds::json::deserialize< Test::Variant >( R"({"var_int":42})" );
+                CHECK( variant.oneof_field.index( ) == 0 );
+                CHECK( std::get< 0 >( variant.oneof_field ) == 42 );
+            }
+            SUBCASE( "string" )
+            {
+                auto variant = sds::json::deserialize< Test::Variant >( R"({"var_string":"hello"})" );
+                CHECK( variant.oneof_field.index( ) == 1 );
+                CHECK( std::get< 1 >( variant.oneof_field ) == std::string( "hello" ) );
+            }
+            SUBCASE( "bytes" )
+            {
+                auto variant = sds::json::deserialize< Test::Variant >( R"({"var_bytes":"aGVsbG8="})" );
+                CHECK( variant.oneof_field.index( ) == 2 );
+                CHECK( std::get< 2 >( variant.oneof_field ) == std::vector< std::byte >{ std::byte( 'h' ), std::byte( 'e' ), std::byte( 'l' ), std::byte( 'l' ), std::byte( 'o' ) } );
+            }
+            SUBCASE( "name" )
+            {
+                auto variant = sds::json::deserialize< Test::Variant >( R"({"var_name":{"name":"John"}})" );
+                CHECK( variant.oneof_field.index( ) == 3 );
+                CHECK( std::get< 3 >( variant.oneof_field ) == Test::Name{ .name = "John" } );
+            }
+        }
         SUBCASE( "serialize" )
         {
         }

@@ -3,3 +3,12 @@ syntax = "proto3";
 package Test;
 
 message Name { string name = 1; }
+
+message Variant {
+    oneof oneof_field {
+        uint32 var_int = 1;
+        string var_string = 2;
+        bytes var_bytes = 3;
+        Name var_name = 4;
+    }
+}
