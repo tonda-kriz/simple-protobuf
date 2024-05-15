@@ -389,10 +389,8 @@ static inline void ignore_key_and_value( istream & stream )
 
 static inline void ignore_object( istream & stream )
 {
-    if( !stream.consume( '{' ) )
-    {
-        throw std::runtime_error( "expecting '{'" );
-    }
+    //- '{' was already checked by caller
+    stream.consume_current_char( false );
 
     if( stream.consume( '}' ) )
     {
@@ -412,10 +410,8 @@ static inline void ignore_object( istream & stream )
 
 static inline void ignore_array( istream & stream )
 {
-    if( !stream.consume( '[' ) )
-    {
-        throw std::runtime_error( "expecting '['" );
-    }
+    //- '[' was already checked by caller
+    stream.consume_current_char( false );
 
     if( stream.consume( ']' ) )
     {
