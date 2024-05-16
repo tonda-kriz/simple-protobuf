@@ -3,6 +3,7 @@
 #include <name.pb.h>
 #include <person.pb.h>
 #include <sds/json/deserialize.hpp>
+#include <sds/json/serialize.hpp>
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
@@ -14,6 +15,8 @@ auto operator==( const Test::Name & lhs, const Test::Name & rhs ) noexcept -> bo
     return lhs.name == rhs.name;
 }
 }// namespace Test
+
+using namespace std::literals;
 
 TEST_CASE( "json" )
 {
@@ -415,8 +418,193 @@ TEST_CASE( "json" )
                 CHECK( variant.oneof_field.index( ) == 0 );
             }
         }
-        SUBCASE( "serialize" )
+    }
+    SUBCASE( "serialize" )
+    {
+        SUBCASE( "string" )
         {
+            CHECK( sds::json::detail::serialize< std::string >( "john" ) == R"("john")" );
+            SUBCASE( "escaped" )
+            {
+                CHECK( sds::json::detail::serialize< std::string >( "\"" ) == R"("\"")" );
+                CHECK( sds::json::detail::serialize< std::string >( "\\" ) == R"("\\")" );
+                CHECK( sds::json::detail::serialize< std::string >( "/" ) == R"("\/")" );
+                CHECK( sds::json::detail::serialize< std::string >( "\b" ) == R"("\b")" );
+                CHECK( sds::json::detail::serialize< std::string >( "\f" ) == R"("\f")" );
+                CHECK( sds::json::detail::serialize< std::string >( "\n" ) == R"("\n")" );
+                CHECK( sds::json::detail::serialize< std::string >( "\r" ) == R"("\r")" );
+                CHECK( sds::json::detail::serialize< std::string >( "\t" ) == R"("\t")" );
+                CHECK( sds::json::detail::serialize< std::string >( "\"\\/\b\f\n\r\t" ) == R"("\"\\\/\b\f\n\r\t")" );
+            }
+            SUBCASE( "optional" )
+            {
+                CHECK( sds::json::detail::serialize< std::optional< std::string > >( std::nullopt ) == "" );
+                CHECK( sds::json::detail::serialize< std::optional< std::string > >( "hello" ) == R"("hello")" );
+            }
+            SUBCASE( "array" )
+            {
+                CHECK( sds::json::detail::serialize< std::vector< std::string > >( { "hello", "world" } ) == R"(["hello","world"])" );
+                CHECK( sds::json::detail::serialize< std::vector< std::string > >( { } ) == "" );
+            }
+        }
+        SUBCASE( "string_view" )
+        {
+            CHECK( sds::json::detail::serialize( "john"sv ) == R"("john")" );
+            SUBCASE( "escaped" )
+            {
+                CHECK( sds::json::detail::serialize( "\""sv ) == R"("\"")" );
+                CHECK( sds::json::detail::serialize( "\\"sv ) == R"("\\")" );
+                CHECK( sds::json::detail::serialize( "/"sv ) == R"("\/")" );
+                CHECK( sds::json::detail::serialize( "\b"sv ) == R"("\b")" );
+                CHECK( sds::json::detail::serialize( "\f"sv ) == R"("\f")" );
+                CHECK( sds::json::detail::serialize( "\n"sv ) == R"("\n")" );
+                CHECK( sds::json::detail::serialize( "\r"sv ) == R"("\r")" );
+                CHECK( sds::json::detail::serialize( "\t"sv ) == R"("\t")" );
+                CHECK( sds::json::detail::serialize( "he\"\\/\b\f\n\r\tlo"sv ) == R"("he\"\\\/\b\f\n\r\tlo")" );
+            }
+            SUBCASE( "optional" )
+            {
+                CHECK( sds::json::detail::serialize< std::optional< std::string_view > >( std::nullopt ) == "" );
+                CHECK( sds::json::detail::serialize< std::optional< std::string_view > >( "hello" ) == R"("hello")" );
+            }
+            SUBCASE( "array" )
+            {
+                CHECK( sds::json::detail::serialize< std::vector< std::string_view > >( { "hello", "world" } ) == R"(["hello","world"])" );
+                CHECK( sds::json::detail::serialize< std::vector< std::string_view > >( { } ) == "" );
+            }
+        }
+        SUBCASE( "bool" )
+        {
+            CHECK( sds::json::detail::serialize( true ) == "true" );
+            CHECK( sds::json::detail::serialize( false ) == "false" );
+            SUBCASE( "optional" )
+            {
+                CHECK( sds::json::detail::serialize< std::optional< bool > >( std::nullopt ) == "" );
+                CHECK( sds::json::detail::serialize< std::optional< bool > >( true ) == "true" );
+                CHECK( sds::json::detail::serialize< std::optional< bool > >( false ) == "false" );
+            }
+            SUBCASE( "array" )
+            {
+                CHECK( sds::json::detail::serialize< std::vector< bool > >( { true, false } ) == R"([true,false])" );
+                CHECK( sds::json::detail::serialize< std::vector< bool > >( { } ) == "" );
+            }
+        }
+        SUBCASE( "int" )
+        {
+            CHECK( sds::json::detail::serialize( 42 ) == "42" );
+            SUBCASE( "optional" )
+            {
+                CHECK( sds::json::detail::serialize< std::optional< int > >( std::nullopt ) == "" );
+                CHECK( sds::json::detail::serialize< std::optional< int > >( 42 ) == "42" );
+            }
+            SUBCASE( "array" )
+            {
+                CHECK( sds::json::detail::serialize< std::vector< int > >( { 42 } ) == R"([42])" );
+                CHECK( sds::json::detail::serialize< std::vector< int > >( { 42, 3 } ) == R"([42,3])" );
+                CHECK( sds::json::detail::serialize< std::vector< int > >( { } ) == "" );
+            }
+        }
+        SUBCASE( "double" )
+        {
+            CHECK( sds::json::detail::serialize( 42.0 ) == "42" );
+            SUBCASE( "optional" )
+            {
+                CHECK( sds::json::detail::serialize< std::optional< double > >( std::nullopt ) == "" );
+                CHECK( sds::json::detail::serialize< std::optional< double > >( 42.3 ) == "42.3" );
+            }
+            SUBCASE( "array" )
+            {
+                CHECK( sds::json::detail::serialize< std::vector< double > >( { 42.3 } ) == R"([42.3])" );
+                CHECK( sds::json::detail::serialize< std::vector< double > >( { 42.3, 3.0 } ) == R"([42.3,3])" );
+                CHECK( sds::json::detail::serialize< std::vector< double > >( { } ) == "" );
+            }
+        }
+        SUBCASE( "bytes" )
+        {
+            CHECK( sds::json::detail::serialize( std::vector< std::byte >{ std::byte{ 0 }, std::byte{ 1 }, std::byte{ 2 } } ) == R"("AAEC")" );
+
+            CHECK( sds::json::detail::serialize< std::vector< std::byte > >( { std::byte( 0 ), std::byte( 1 ), std::byte( 2 ), std::byte( 3 ), std::byte( 4 ) } ) == R"("AAECAwQ=")" );
+            CHECK( sds::json::detail::serialize< std::vector< std::byte > >( { std::byte( 'h' ), std::byte( 'e' ), std::byte( 'l' ), std::byte( 'l' ), std::byte( 'o' ) } ) == R"("aGVsbG8=")" );
+            CHECK( sds::json::detail::serialize< std::vector< std::byte > >( { } ) == "" );
+
+            SUBCASE( "array" )
+            {
+                CHECK( sds::json::detail::serialize< std::vector< std::vector< std::byte > > >( std::vector< std::vector< std::byte > >{ std::vector< std::byte >{ std::byte( 0 ), std::byte( 1 ), std::byte( 2 ), std::byte( 3 ), std::byte( 4 ) } } ) == R"(["AAECAwQ="])" );
+                CHECK( sds::json::detail::serialize< std::vector< std::vector< std::byte > > >( std::vector< std::vector< std::byte > >{ std::vector< std::byte >{ std::byte( 0 ), std::byte( 1 ), std::byte( 2 ), std::byte( 3 ), std::byte( 4 ) }, std::vector< std::byte >{ std::byte( 'h' ), std::byte( 'e' ), std::byte( 'l' ), std::byte( 'l' ), std::byte( 'o' ) } } ) == R"(["AAECAwQ=","aGVsbG8="])" );
+                CHECK( sds::json::detail::serialize< std::vector< std::vector< std::byte > > >( std::vector< std::vector< std::byte > >{ } ) == "" );
+            }
+            SUBCASE( "optional" )
+            {
+                CHECK( sds::json::detail::serialize< std::optional< std::vector< std::byte > > >( std::nullopt ) == "" );
+                CHECK( sds::json::detail::serialize< std::optional< std::vector< std::byte > > >( std::vector< std::byte >{ std::byte( 0 ), std::byte( 1 ), std::byte( 2 ), std::byte( 3 ), std::byte( 4 ) } ) == R"("AAECAwQ=")" );
+                CHECK( sds::json::detail::serialize< std::optional< std::vector< std::byte > > >( std::vector< std::byte >{ std::byte( 'h' ), std::byte( 'e' ), std::byte( 'l' ), std::byte( 'l' ), std::byte( 'o' ) } ) == R"("aGVsbG8=")" );
+                CHECK( sds::json::detail::serialize< std::optional< std::vector< std::byte > > >( std::vector< std::byte >{ } ) == "" );
+            }
+        }
+        SUBCASE( "variant" )
+        {
+            SUBCASE( "int" )
+            {
+                CHECK( sds::json::serialize( Test::Variant{ .oneof_field = 42U } ) == R"({"var_int":42})" );
+            }
+            SUBCASE( "string" )
+            {
+                CHECK( sds::json::serialize( Test::Variant{ .oneof_field = "hello" } ) == R"({"var_string":"hello"})" );
+            }
+            SUBCASE( "bytes" )
+            {
+                CHECK( sds::json::serialize( Test::Variant{ .oneof_field = std::vector< std::byte >{ std::byte( 'h' ), std::byte( 'e' ), std::byte( 'l' ), std::byte( 'l' ), std::byte( 'o' ) } } ) == R"({"var_bytes":"aGVsbG8="})" );
+            }
+            SUBCASE( "name" )
+            {
+                CHECK( sds::json::serialize( Test::Variant{ .oneof_field = Test::Name{ .name = "John" } } ) == R"({"name":{"name":"John"}})" );
+            }
+        }
+        SUBCASE( "map" )
+        {
+            SUBCASE( "int32/int32" )
+            {
+                CHECK( sds::json::detail::serialize( std::map< int32_t, int32_t >{ { 1, 2 } } ) == R"({"1":2})" );
+                CHECK( sds::json::detail::serialize( std::map< int32_t, int32_t >{ { 1, 2 }, { 2, 3 } } ) == R"({"1":2,"2":3})" );
+                CHECK( sds::json::detail::serialize( std::map< int32_t, int32_t >{ } ) == "" );
+            }
+            SUBCASE( "string/string" )
+            {
+                CHECK( sds::json::detail::serialize( std::map< std::string, std::string >{ { "hello", "world" } } ) == R"({"hello":"world"})" );
+                CHECK( sds::json::detail::serialize( std::map< std::string, std::string >{ } ) == "" );
+            }
+            SUBCASE( "int32/string" )
+            {
+                CHECK( sds::json::detail::serialize( std::map< int32_t, std::string >{ { 1, "hello" } } ) == ( R"({"1":"hello"})" ) );
+                CHECK( sds::json::detail::serialize( std::map< int32_t, std::string >{ } ) == "" );
+            }
+            SUBCASE( "string/int32" )
+            {
+                CHECK( sds::json::detail::serialize( std::map< std::string, int32_t >{ { "hello", 2 } } ) == R"({"hello":2})" );
+                CHECK( sds::json::detail::serialize( std::map< std::string, int32_t >{ } ) == "" );
+            }
+            SUBCASE( "string/name" )
+            {
+                CHECK( sds::json::detail::serialize( std::map< std::string, Test::Name >{ { "hello", { .name = "john" } } } ) == R"({"hello":{"name":"john"}})" );
+            }
+        }
+        SUBCASE( "person" )
+        {
+            CHECK( sds::json::serialize( PhoneBook::Person{
+                       .name   = "John Doe",
+                       .id     = 123,
+                       .email  = "QXUeh@example.com",
+                       .phones = {
+                           PhoneBook::Person::PhoneNumber{
+                               .number = "555-4321",
+                               .type   = PhoneBook::Person::PhoneType::HOME,
+                           },
+                       },
+                   } ) == R"({"name":"John Doe","id":123,"email":"QXUeh@example.com","phones":[{"number":"555-4321","type":"HOME"}]})" );
+        }
+        SUBCASE( "name" )
+        {
+            CHECK( sds::json::serialize( Test::Name{ } ) == R"({})" );
         }
     }
 }

@@ -313,9 +313,22 @@ static inline void serialize( ostream & stream, std::string_view key, const std:
     stream.put_comma = false;
     for( auto & [ map_key, map_value ] : map )
     {
-        stream.write( '"' );
-        serialize( stream, map_key );
-        stream.write( "\":" );
+        if constexpr( std::is_same_v< keyT, std::string_view > || std::is_same_v< keyT, std::string > )
+        {
+            serialize_key( stream, map_key );
+        }
+        else
+        {
+            if( stream.put_comma )
+            {
+                stream.write( ',' );
+            }
+
+            stream.write( '"' );
+            serialize( stream, map_key );
+            stream.write( "\":" );
+        }
+        stream.put_comma = false;
         serialize( stream, no_name, map_value );
         stream.put_comma = true;
     }
