@@ -9,6 +9,6 @@ message Variant {
         uint32 var_int = 1;
         string var_string = 2;
         bytes var_bytes = 3;
-        Name var_name = 4;
+        Name name = 4;
     }
 }

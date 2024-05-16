@@ -19,9 +19,14 @@ TEST_CASE( "json" )
 {
     SUBCASE( "dj2hash" )
     {
-        const auto hash  = sds::json::detail::djb2_hash( "hello" );
-        const auto hash2 = sds::json::detail::djb2_hash( "world" );
-        const auto hash3 = sds::json::detail::djb2_hash( { } );
+        const auto hash           = sds::json::detail::djb2_hash( "hello" );
+        const auto collision      = sds::json::detail::djb2_hash( "narpjy" );
+        const auto hash2          = sds::json::detail::djb2_hash( "world" );
+        const auto name_hash      = sds::json::detail::djb2_hash( "name" );
+        const auto name_collision = sds::json::detail::djb2_hash( "bkfvdzz" );
+        const auto hash3          = sds::json::detail::djb2_hash( { } );
+        CHECK( hash == collision );
+        CHECK( name_hash == name_collision );
         CHECK( hash3 != 0 );
         CHECK( hash != 0 );
         CHECK( hash2 != 0 );
@@ -43,10 +48,12 @@ TEST_CASE( "json" )
             SUBCASE( "string" )
             {
                 CHECK( sds::json::detail::deserialize< Test::Name >( R"({"string":"string"})" ) == Test::Name{ } );
+                CHECK( sds::json::detail::deserialize< Test::Name >( R"({"bkfvdzz":"string"})" ) == Test::Name{ } );
             }
             SUBCASE( "int" )
             {
                 CHECK( sds::json::detail::deserialize< Test::Name >( R"({"integer":42})" ) == Test::Name{ } );
+                CHECK( sds::json::detail::deserialize< Test::Name >( R"({"bkfvdzz":42})" ) == Test::Name{ } );
             }
             SUBCASE( "float" )
             {
@@ -56,6 +63,7 @@ TEST_CASE( "json" )
             {
                 CHECK( sds::json::detail::deserialize< Test::Name >( R"({"array":[42,"hello"]})" ) == Test::Name{ } );
                 CHECK( sds::json::detail::deserialize< Test::Name >( R"({"array":[]})" ) == Test::Name{ } );
+                CHECK( sds::json::detail::deserialize< Test::Name >( R"({"bkfvdzz":[]})" ) == Test::Name{ } );
                 CHECK_THROWS( sds::json::detail::deserialize< Test::Name >( R"({"array":[})" ) );
                 CHECK_THROWS( sds::json::detail::deserialize< Test::Name >( R"({"array":[)" ) );
                 CHECK_THROWS( sds::json::detail::deserialize< Test::Name >( R"({"array":[42)" ) );
@@ -397,9 +405,14 @@ TEST_CASE( "json" )
             }
             SUBCASE( "name" )
             {
-                auto variant = sds::json::deserialize< Test::Variant >( R"({"var_name":{"name":"John"}})" );
+                auto variant = sds::json::deserialize< Test::Variant >( R"({"name":{"name":"John"}})" );
                 CHECK( variant.oneof_field.index( ) == 3 );
                 CHECK( std::get< 3 >( variant.oneof_field ) == Test::Name{ .name = "John" } );
+            }
+            SUBCASE( "collision" )
+            {
+                auto variant = sds::json::deserialize< Test::Variant >( R"({"bkfvdzz":{"name":"John"}})" );
+                CHECK( variant.oneof_field.index( ) == 0 );
             }
         }
         SUBCASE( "serialize" )
