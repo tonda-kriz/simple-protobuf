@@ -605,6 +605,9 @@ TEST_CASE( "json" )
         SUBCASE( "name" )
         {
             CHECK( sds::json::serialize( Test::Name{ } ) == R"({})" );
+            char buffer[ 2 ] = { };
+            CHECK( sds::json::serialize( Test::Name{ }, buffer ) == 2 );
+            CHECK( std::string_view( buffer, sizeof( buffer ) ) == R"({})" );
         }
     }
 }
