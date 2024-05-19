@@ -1,3 +1,5 @@
+//- this example is based on https://protobuf.dev/getting-started/cpptutorial/
+
 #include <addressbook.pb.h>
 #include <filesystem>
 #include <iostream>
