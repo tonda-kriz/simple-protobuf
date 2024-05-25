@@ -142,8 +142,9 @@ static inline constexpr auto wire_type_from( ) -> wire_type
     }
     return wire_type::length_delimited;
 }
+template < typename T >
+static inline void serialize( ostream & stream, uint32_t field_number, const T & value );
 
-static inline void serialize( ostream & stream, uint32_t field_number, const auto & value );
 static inline void serialize( ostream & stream, uint32_t field_number, const is_struct auto & value );
 static inline void serialize( ostream & stream, uint32_t field_number, const std::string_view & value );
 static inline void serialize( ostream & stream, uint32_t field_number, const std::string & value );
