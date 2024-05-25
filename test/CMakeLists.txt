@@ -20,6 +20,12 @@ target_link_libraries(json-detail-test PUBLIC sds-proto)
 add_dependencies(unit_tests json-detail-test)
 doctest_discover_tests(json-detail-test)
 
+add_executable(pb-detail-test pb-detail.cpp ${PROTO_PERSON_SRC} ${PROTO_NAME_SRC})
+target_compile_options(pb-detail-test PUBLIC -Wall -Wpedantic -Werror -Wno-missing-field-initializers)
+target_link_libraries(pb-detail-test PUBLIC sds-proto)
+add_dependencies(unit_tests pb-detail-test)
+doctest_discover_tests(pb-detail-test)
+
 add_executable(compiled-protos main.cpp ${PROTO_SRCS} ${PROTO_HDRS})
 target_compile_options(compiled-protos PUBLIC -Wno-deprecated-declarations -Wno-deprecated -Wall -Wpedantic -Werror)
 target_link_libraries(compiled-protos PUBLIC sds-proto)
