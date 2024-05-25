@@ -202,6 +202,16 @@ static inline void serialize( ostream & stream, uint32_t field_number, const std
     }
 }
 
+template < typename keyT, typename valueT >
+static inline void serialize( ostream & stream, const std::map< keyT, valueT > & value )
+{
+    for( const auto & [ k, v ] : value )
+    {
+        serialize( stream, 1, k );
+        serialize( stream, 2, v );
+    }
+}
+
 template < typename T >
 static inline void serialize( ostream & stream, uint32_t field_number, const std::vector< T > & value )
 {
@@ -245,7 +255,7 @@ static inline void serialize( ostream & stream, uint32_t field_number, const is_
 static inline void serialize( ostream & stream, uint32_t field_number, const is_enum auto & value )
 {
     serialize_tag( stream, field_number, wire_type::varint );
-    serialize_varint( stream, value );
+    serialize_varint( stream, int32_t( value ) );
 }
 
 static inline auto serialize_size( const auto & value ) noexcept -> size_t
