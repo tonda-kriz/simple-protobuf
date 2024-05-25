@@ -30,6 +30,7 @@ void dump_cpp( const proto_file & file, const std::filesystem::path & header_fil
     auto stream = std::stringstream( );
 
     dump_json_cpp( file, header_file.string( ), stream );
+    dump_pb_cpp( file, header_file.string( ), stream );
 
     save_file( file_path, stream.str( ) );
 }
