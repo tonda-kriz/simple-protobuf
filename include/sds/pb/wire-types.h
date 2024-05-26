@@ -11,6 +11,7 @@
 #pragma once
 
 #include <cstdint>
+#include <type_traits>
 
 namespace sds::pb::detail
 {
@@ -32,16 +33,44 @@ enum class wire_type : uint8_t
     fixed32 = 5
 };
 
-enum class wire_encoder : uint8_t
+//- type1, type2 and packed flag
+enum class scalar_encoder : uint8_t
 {
     //- int32, int64, uint32, uint64, bool, enum
     varint = 0,
-    //- 8 bytes
-    fixed64 = 1,
-    //- 4 bytes
-    fixed32 = 5,
     //- zigzag int32 or int64
-    svarint = 6,
+    svarint = 1,
+    //- 4 bytes
+    i32 = 2,
+    //- 8 bytes
+    i64 = 3,
+    //- packed array
+    packed = 0x80
 };
+
+static constexpr auto combine( scalar_encoder a, scalar_encoder b ) noexcept -> scalar_encoder
+{
+    if( b == scalar_encoder::packed )
+    {
+        return scalar_encoder( static_cast< std::underlying_type_t< scalar_encoder > >( a ) | static_cast< std::underlying_type_t< scalar_encoder > >( b ) );
+    }
+
+    return scalar_encoder( static_cast< std::underlying_type_t< scalar_encoder > >( a ) | ( static_cast< std::underlying_type_t< scalar_encoder > >( b ) << 2 ) );
+}
+
+static constexpr auto type1( scalar_encoder a ) noexcept -> scalar_encoder
+{
+    return scalar_encoder( static_cast< std::underlying_type_t< scalar_encoder > >( a ) & 0x03 );
+}
+
+static constexpr auto type2( scalar_encoder a ) noexcept -> scalar_encoder
+{
+    return scalar_encoder( ( static_cast< std::underlying_type_t< scalar_encoder > >( a ) >> 2 ) & 0x03 );
+}
+
+static constexpr auto is_packed( scalar_encoder a ) noexcept -> bool
+{
+    return static_cast< std::underlying_type_t< scalar_encoder > >( a ) & static_cast< std::underlying_type_t< scalar_encoder > >( scalar_encoder::packed );
+}
 
 }// namespace sds::pb::detail
