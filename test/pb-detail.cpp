@@ -111,6 +111,35 @@ TEST_CASE( "protobuf" )
                 CHECK( pb_serialize_as< scalar_encoder::varint, std::vector< int > >( { 0x42 } ) == "\x08\x42" );
                 CHECK( pb_serialize_as< scalar_encoder::varint, std::vector< int > >( { 0x42, 0x3 } ) == "\x08\x42\x08\x03" );
                 CHECK( pb_serialize_as< scalar_encoder::varint, std::vector< int > >( { } ) == ""sv );
+
+                SUBCASE( "packed" )
+                {
+                    CHECK( pb_serialize_as< combine( scalar_encoder::varint, scalar_encoder::packed ), std::vector< int > >( { 0x42 } ) == "\x0a\x01\x42"sv );
+                    CHECK( pb_serialize_as< combine( scalar_encoder::varint, scalar_encoder::packed ), std::vector< int > >( { 0x42, 0x3 } ) == "\x0a\x02\x42\x03"sv );
+                    CHECK( pb_serialize_as< combine( scalar_encoder::varint, scalar_encoder::packed ), std::vector< int > >( { } ) == ""sv );
+                }
+            }
+        }
+        SUBCASE( "i32" )
+        {
+            CHECK( pb_serialize_as< scalar_encoder::i32 >( 0x42 ) == "\x0d\x42\x00\x00\x00"sv );
+            CHECK( pb_serialize_as< scalar_encoder::i32 >( 0xff ) == "\x0d\xff\x00\x00\x00"sv );
+            SUBCASE( "optional" )
+            {
+                CHECK( pb_serialize_as< scalar_encoder::i32, std::optional< int > >( std::nullopt ) == "" );
+                CHECK( pb_serialize_as< scalar_encoder::i32, std::optional< int > >( 0x42 ) == "\x0d\x42\x00\x00\x00"sv );
+            }
+            SUBCASE( "array" )
+            {
+                CHECK( pb_serialize_as< scalar_encoder::i32, std::vector< int > >( { 0x42 } ) == "\x0d\x42\x00\x00\x00"sv );
+                CHECK( pb_serialize_as< scalar_encoder::i32, std::vector< int > >( { 0x42, 0x3 } ) == "\x0d\x42\x00\x00\x00\x0d\x03\x00\x00\x00"sv );
+                CHECK( pb_serialize_as< scalar_encoder::i32, std::vector< int > >( { } ) == ""sv );
+                SUBCASE( "packed" )
+                {
+                    CHECK( pb_serialize_as< combine( scalar_encoder::i32, scalar_encoder::packed ), std::vector< int > >( { 0x42 } ) == "\x0a\x04\x42\x00\x00\x00"sv );
+                    CHECK( pb_serialize_as< combine( scalar_encoder::i32, scalar_encoder::packed ), std::vector< int > >( { 0x42, 0x3 } ) == "\x0a\x08\x42\x00\x00\x00\x03\x00\x00\x00"sv );
+                    CHECK( pb_serialize_as< combine( scalar_encoder::i32, scalar_encoder::packed ), std::vector< int > >( { } ) == ""sv );
+                }
             }
         }
     }

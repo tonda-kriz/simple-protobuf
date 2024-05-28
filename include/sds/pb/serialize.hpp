@@ -133,7 +133,7 @@ template < scalar_encoder encoder, typename T >
     requires std::is_integral_v< T >
 static inline void serialize_as( ostream & stream, uint32_t field_number, const T & value )
 {
-    serialize_tag( stream, field_number, wire_type::varint );
+    serialize_tag( stream, field_number, wire_type_from_scalar_encoder( encoder ) );
     serialize_as< encoder >( stream, value );
 }
 
@@ -247,6 +247,11 @@ static inline void serialize_as( ostream & stream, uint32_t field_number, const 
 {
     if constexpr( is_packed( encoder ) )
     {
+        if( value.empty( ) )
+        {
+            return;
+        }
+
         auto size_stream = ostream( );
         serialize_packed_as< encoder >( size_stream, value );
         const auto size = size_stream.size( );
