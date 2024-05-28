@@ -108,6 +108,9 @@ concept is_struct = ::std::is_class_v< T >;
 template < class T >
 concept is_enum = ::std::is_enum_v< T >;
 
+template < class T >
+concept is_int_or_float = ::std::is_integral_v< T > || ::std::is_floating_point_v< T >;
+
 static inline void serialize( ostream & stream, uint32_t field_number, const is_struct auto & value );
 static inline void serialize( ostream & stream, uint32_t field_number, const std::string_view & value );
 static inline void serialize( ostream & stream, uint32_t field_number, const std::string & value );
@@ -121,38 +124,33 @@ static inline void serialize( ostream & stream, uint32_t field_number, const std
 template < scalar_encoder encoder, typename T >
 static inline void serialize_as( ostream & stream, uint32_t field_number, const std::vector< T > & value );
 
-static inline void serialize( ostream & stream, uint32_t field_number, const std::floating_point auto & value );
-
 template < scalar_encoder encoder, typename keyT, typename valueT >
 static inline void serialize_as( ostream & stream, uint32_t field_number, const std::map< keyT, valueT > & value );
 
 template < scalar_encoder encoder >
-static inline void serialize( ostream & stream, std::integral auto value );
-
-template < scalar_encoder encoder, typename T >
-    requires std::is_integral_v< T >
-static inline void serialize_as( ostream & stream, uint32_t field_number, const T & value )
+static inline void serialize_as( ostream & stream, uint32_t field_number, const is_int_or_float auto & value )
 {
     serialize_tag( stream, field_number, wire_type_from_scalar_encoder( encoder ) );
     serialize_as< encoder >( stream, value );
 }
 
-static inline void serialize( ostream & stream, uint32_t field_number, const std::floating_point auto & value )
-{
-    serialize_tag( stream, field_number, sizeof( value ) == sizeof( float ) ? wire_type::fixed32 : wire_type::fixed64 );
-    stream.write( &value, sizeof( value ) );
-}
-
 template < scalar_encoder encoder >
-static inline void serialize_as( ostream & stream, std::integral auto value )
+static inline void serialize_as( ostream & stream, is_int_or_float auto value )
 {
     constexpr auto type = type1( encoder );
 
     if constexpr( type == scalar_encoder::varint )
     {
-        using u_int = std::make_unsigned_t< decltype( value ) >;
-
-        return serialize_varint( stream, u_int( value ) );
+        if constexpr( std::is_same_v< bool, decltype( value ) > )
+        {
+            const uint8_t tmp = value ? 1 : 0;
+            return stream.write( &tmp, 1 );
+        }
+        else
+        {
+            using u_int = std::make_unsigned_t< decltype( value ) >;
+            return serialize_varint( stream, u_int( value ) );
+        }
     }
     else if constexpr( type == scalar_encoder::svarint )
     {
@@ -175,19 +173,6 @@ static inline void serialize_as( ostream & stream, std::integral auto value )
 static inline void serialize( ostream & stream, uint32_t field_number, const std::string & value )
 {
     serialize( stream, field_number, std::string_view( value ) );
-}
-
-static inline void serialize( ostream & stream, uint32_t field_number, const bool & value )
-{
-    serialize_tag( stream, field_number, wire_type::varint );
-    const uint8_t tmp = value ? 1 : 0;
-    stream.write( &tmp, 1 );
-}
-
-template < scalar_encoder encoder >
-static inline void serialize_as( ostream & stream, uint32_t field_number, const bool & value )
-{
-    serialize( stream, field_number, value );
 }
 
 static inline void serialize( ostream & stream, uint32_t field_number, const std::string_view & value )
@@ -226,7 +211,7 @@ static inline void serialize_as( ostream & stream, const std::map< keyT, valueT 
         {
             serialize( stream, 1, k );
         }
-        if constexpr( std::is_integral_v< valueT > )
+        if constexpr( is_int_or_float< valueT > )
         {
             serialize_as< value_encoder >( stream, 2, v );
         }
@@ -280,14 +265,7 @@ static inline void serialize_as( ostream & stream, uint32_t field_number, const 
     {
         for( const auto & v : value )
         {
-            if constexpr( std::is_integral_v< T > )
-            {
-                serialize_as< encoder >( stream, field_number, v );
-            }
-            else
-            {
-                serialize( stream, field_number, v );
-            }
+            serialize_as< encoder >( stream, field_number, v );
         }
     }
 }
@@ -311,7 +289,6 @@ static inline void serialize( ostream & stream, uint32_t field_number, const std
 }
 
 template < scalar_encoder encoder, typename T >
-    requires std::is_integral_v< T >
 static inline void serialize_as( ostream & stream, uint32_t field_number, const std::optional< T > & p_value )
 {
     if( p_value )

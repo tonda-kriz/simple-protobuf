@@ -179,7 +179,8 @@ auto map_encoder_type( std::string_view key_type, std::string_view value_type ) 
 
 auto encoder_type( const proto_field & field ) -> std::string
 {
-    if( field.type == "int32" ||
+    if( field.type == "bool" ||
+        field.type == "int32" ||
         field.type == "uint32" ||
         field.type == "int64" ||
         field.type == "uint64" )
@@ -201,7 +202,8 @@ auto encoder_type( const proto_field & field ) -> std::string
         return "_as< scalar_encoder::svarint >";
     }
     if( field.type == "fixed32" ||
-        field.type == "sfixed32" )
+        field.type == "sfixed32" ||
+        field.type == "float" )
     {
         if( is_packed_array( field ) )
         {
@@ -210,7 +212,8 @@ auto encoder_type( const proto_field & field ) -> std::string
         return "_as< scalar_encoder::i32 >";
     }
     if( field.type == "fixed64" ||
-        field.type == "sfixed64" )
+        field.type == "sfixed64" ||
+        field.type == "double" )
     {
         if( is_packed_array( field ) )
         {

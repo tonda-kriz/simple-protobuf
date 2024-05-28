@@ -81,18 +81,18 @@ TEST_CASE( "protobuf" )
     }
     SUBCASE( "bool" )
     {
-        CHECK( pb_serialize( true ) == "\x08\x01" );
-        CHECK( pb_serialize( false ) == "\x08\x00"sv );
+        CHECK( pb_serialize_as< scalar_encoder::varint >( true ) == "\x08\x01" );
+        CHECK( pb_serialize_as< scalar_encoder::varint >( false ) == "\x08\x00"sv );
         SUBCASE( "optional" )
         {
-            CHECK( pb_serialize< std::optional< bool > >( std::nullopt ) == "" );
-            CHECK( pb_serialize< std::optional< bool > >( true ) == "\x08\x01" );
-            CHECK( pb_serialize< std::optional< bool > >( false ) == "\x08\x00"sv );
+            CHECK( pb_serialize_as< scalar_encoder::varint, std::optional< bool > >( std::nullopt ) == "" );
+            CHECK( pb_serialize_as< scalar_encoder::varint, std::optional< bool > >( true ) == "\x08\x01" );
+            CHECK( pb_serialize_as< scalar_encoder::varint, std::optional< bool > >( false ) == "\x08\x00"sv );
         }
         SUBCASE( "array" )
         {
-            CHECK( pb_serialize< std::vector< bool > >( { true, false } ) == "\x08\x01\x08\x00"sv );
-            CHECK( pb_serialize< std::vector< bool > >( { } ) == "" );
+            CHECK( pb_serialize_as< scalar_encoder::varint, std::vector< bool > >( { true, false } ) == "\x08\x01\x08\x00"sv );
+            CHECK( pb_serialize_as< scalar_encoder::varint, std::vector< bool > >( { } ) == "" );
         }
     }
     SUBCASE( "int" )
@@ -198,17 +198,17 @@ TEST_CASE( "protobuf" )
     }
     SUBCASE( "double" )
     {
-        CHECK( pb_serialize( 42.0 ) == "\x09\x00\x00\x00\x00\x00\x00\x45\x40"sv );
+        CHECK( pb_serialize_as< scalar_encoder::i64 >( 42.0 ) == "\x09\x00\x00\x00\x00\x00\x00\x45\x40"sv );
         SUBCASE( "optional" )
         {
-            CHECK( pb_serialize< std::optional< double > >( std::nullopt ) == "" );
-            CHECK( pb_serialize< std::optional< double > >( 42.3 ) == "\x09\x66\x66\x66\x66\x66\x26\x45\x40" );
+            CHECK( pb_serialize_as< scalar_encoder::i64, std::optional< double > >( std::nullopt ) == "" );
+            CHECK( pb_serialize_as< scalar_encoder::i64, std::optional< double > >( 42.3 ) == "\x09\x66\x66\x66\x66\x66\x26\x45\x40" );
         }
         SUBCASE( "array" )
         {
-            CHECK( pb_serialize< std::vector< double > >( { 42.3 } ) == "\x09\x66\x66\x66\x66\x66\x26\x45\x40" );
-            CHECK( pb_serialize< std::vector< double > >( { 42.3, 3.0 } ) == "\x09\x66\x66\x66\x66\x66\x26\x45\x40\x09\x00\x00\x00\x00\x00\x00\x08\x40"sv );
-            CHECK( pb_serialize< std::vector< double > >( { } ) == "" );
+            CHECK( pb_serialize_as< scalar_encoder::i64, std::vector< double > >( { 42.3 } ) == "\x09\x66\x66\x66\x66\x66\x26\x45\x40" );
+            CHECK( pb_serialize_as< scalar_encoder::i64, std::vector< double > >( { 42.3, 3.0 } ) == "\x09\x66\x66\x66\x66\x66\x26\x45\x40\x09\x00\x00\x00\x00\x00\x00\x08\x40"sv );
+            CHECK( pb_serialize_as< scalar_encoder::i64, std::vector< double > >( { } ) == "" );
         }
     }
     SUBCASE( "bytes" )
