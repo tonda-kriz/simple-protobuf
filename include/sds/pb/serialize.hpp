@@ -146,20 +146,28 @@ static inline void serialize( ostream & stream, uint32_t field_number, const std
 template < scalar_encoder encoder >
 static inline void serialize_as( ostream & stream, std::integral auto value )
 {
-    using u_int = std::make_unsigned_t< decltype( value ) >;
+    constexpr auto type = type1( encoder );
 
-    switch( type1( encoder ) )
+    if constexpr( type == scalar_encoder::varint )
     {
-    case scalar_encoder::varint:
+        using u_int = std::make_unsigned_t< decltype( value ) >;
+
         return serialize_varint( stream, u_int( value ) );
+    }
+    else if constexpr( type == scalar_encoder::svarint )
+    {
+        static_assert( std::is_signed_v< decltype( value ) > );
 
-    case scalar_encoder::svarint:
         return serialize_svarint( stream, value );
-
-    case scalar_encoder::i32:
+    }
+    else if constexpr( type == scalar_encoder::i32 )
+    {
+        static_assert( sizeof( value ) == sizeof( uint32_t ) );
         return stream.write( &value, sizeof( value ) );
-
-    case scalar_encoder::i64:
+    }
+    else if constexpr( type == scalar_encoder::i64 )
+    {
+        static_assert( sizeof( value ) == sizeof( uint64_t ) );
         return stream.write( &value, sizeof( value ) );
     }
 }
