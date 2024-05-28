@@ -92,7 +92,7 @@ static inline void serialize_varint( ostream & stream, uint64_t value )
 }
 static inline void serialize_svarint( ostream & stream, int64_t value )
 {
-    auto tmp = ( value << 1 ) ^ ( value >> 63 );
+    auto tmp = uint64_t( ( value << 1 ) ^ ( value >> 63 ) );
     return serialize_varint( stream, tmp );
 }
 
@@ -146,10 +146,12 @@ static inline void serialize( ostream & stream, uint32_t field_number, const std
 template < scalar_encoder encoder >
 static inline void serialize_as( ostream & stream, std::integral auto value )
 {
+    using u_int = std::make_unsigned_t< decltype( value ) >;
+
     switch( type1( encoder ) )
     {
     case scalar_encoder::varint:
-        return serialize_varint( stream, value );
+        return serialize_varint( stream, u_int( value ) );
 
     case scalar_encoder::svarint:
         return serialize_svarint( stream, value );
@@ -172,6 +174,12 @@ static inline void serialize( ostream & stream, uint32_t field_number, const boo
     serialize_tag( stream, field_number, wire_type::varint );
     const uint8_t tmp = value ? 1 : 0;
     stream.write( &tmp, 1 );
+}
+
+template < scalar_encoder encoder >
+static inline void serialize_as( ostream & stream, uint32_t field_number, const bool & value )
+{
+    serialize( stream, field_number, value );
 }
 
 static inline void serialize( ostream & stream, uint32_t field_number, const std::string_view & value )
