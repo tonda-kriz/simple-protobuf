@@ -141,6 +141,8 @@ static inline void serialize_as( ostream & stream, is_int_or_float auto value )
 
     if constexpr( type == scalar_encoder::varint )
     {
+        static_assert( std::is_integral_v< decltype( value ) > );
+
         if constexpr( std::is_same_v< bool, decltype( value ) > )
         {
             const uint8_t tmp = value ? 1 : 0;
@@ -154,7 +156,7 @@ static inline void serialize_as( ostream & stream, is_int_or_float auto value )
     }
     else if constexpr( type == scalar_encoder::svarint )
     {
-        static_assert( std::is_signed_v< decltype( value ) > );
+        static_assert( std::is_signed_v< decltype( value ) > && std::is_integral_v< decltype( value ) > );
 
         return serialize_svarint( stream, value );
     }
