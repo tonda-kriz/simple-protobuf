@@ -16,7 +16,7 @@
 namespace sds
 {
 
-struct istream
+struct char_stream
 {
 private:
     const char * m_begin = nullptr;
@@ -43,7 +43,7 @@ private:
     }
 
 public:
-    explicit istream( std::string_view content ) noexcept
+    explicit char_stream( std::string_view content ) noexcept
         : m_begin( content.data( ) )
         , m_end( m_begin + content.size( ) )
     {

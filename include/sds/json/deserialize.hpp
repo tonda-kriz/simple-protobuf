@@ -10,7 +10,7 @@
 
 #pragma once
 
-#include "../istream.h"
+#include "../char_stream.h"
 #include "base64.h"
 #include <algorithm>
 #include <cctype>
@@ -66,14 +66,14 @@ static constexpr inline auto djb2_hash( std::string_view str ) noexcept -> uint3
     return hash;
 }
 
-struct istream : public sds::istream
+struct istream : public sds::char_stream
 {
 private:
     std::string_view m_current_key;
 
 public:
     istream( std::string_view content ) noexcept
-        : sds::istream( content.data( ) )
+        : sds::char_stream( content.data( ) )
     {
     }
 
