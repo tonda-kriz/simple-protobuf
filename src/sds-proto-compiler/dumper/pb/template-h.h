@@ -89,7 +89,7 @@ void serialize( ostream & stream, const $ & value );
  * @param value to be deserialized
  * @param stream internal buffer
  */
-auto deserialize( istream & stream, $ & value ) -> bool;
+void deserialize( istream & stream, $ & value );
 
 /**
  * @brief return true if value contains only empty fields

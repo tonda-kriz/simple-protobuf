@@ -10,11 +10,11 @@
 
 #pragma once
 
+#include "concepts.h"
 #include "wire-types.h"
 #include <algorithm>
 #include <cctype>
 #include <charconv>
-#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -102,15 +102,6 @@ static inline void serialize_tag( ostream & stream, uint32_t field_number, wire_
     serialize_varint( stream, tag );
 }
 
-template < class T >
-concept is_struct = ::std::is_class_v< T >;
-
-template < class T >
-concept is_enum = ::std::is_enum_v< T >;
-
-template < class T >
-concept is_int_or_float = ::std::is_integral_v< T > || ::std::is_floating_point_v< T >;
-
 static inline void serialize( ostream & stream, uint32_t field_number, const is_struct auto & value );
 static inline void serialize( ostream & stream, uint32_t field_number, const std::string_view & value );
 static inline void serialize( ostream & stream, uint32_t field_number, const std::string & value );
@@ -137,7 +128,7 @@ static inline void serialize_as( ostream & stream, uint32_t field_number, const 
 template < scalar_encoder encoder >
 static inline void serialize_as( ostream & stream, is_int_or_float auto value )
 {
-    constexpr auto type = type1( encoder );
+    const auto type = type1( encoder );
 
     if constexpr( type == scalar_encoder::varint )
     {

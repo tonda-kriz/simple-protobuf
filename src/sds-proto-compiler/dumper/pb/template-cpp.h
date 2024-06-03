@@ -27,7 +27,7 @@ auto serialize( const $ & value, void * buffer ) -> size_t
 {
     return detail::serialize( value, buffer );
 }
-/*
+
 template <>
 auto deserialize< $ >( std::string_view protobuf ) -> $
 {
@@ -38,5 +38,5 @@ void deserialize( std::string_view protobuf, $ & result )
 {
     return detail::deserialize( protobuf, result );
 }
-*/
+
 )";

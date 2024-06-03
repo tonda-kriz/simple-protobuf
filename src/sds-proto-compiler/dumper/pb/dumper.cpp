@@ -57,20 +57,6 @@ void dump_prototypes( std::ostream & stream, const proto_message & message, std:
     dump_prototypes( stream, message_with_parent );
 }
 
-void dump_prototypes( std::ostream & stream, const proto_enum & my_enum, std::string_view parent )
-{
-    const auto enum_with_parent = std::string( parent ) + "::" + std::string( my_enum.name );
-    dump_prototypes( stream, enum_with_parent );
-}
-
-void dump_prototypes( std::ostream & stream, const proto_enums & enums, std::string_view parent )
-{
-    for( const auto & my_enum : enums )
-    {
-        dump_prototypes( stream, my_enum, parent );
-    }
-}
-
 void dump_prototypes( std::ostream & stream, const proto_messages & messages, std::string_view parent )
 {
     for( const auto & message : messages )
@@ -87,31 +73,20 @@ void dump_prototypes( std::ostream & stream, const proto_messages & messages, st
         const auto message_with_parent = std::string( parent ) + "::" + std::string( message.name );
         dump_prototypes( stream, message.messages, message_with_parent );
     }
-
-    for( const auto & message : messages )
-    {
-        if( message.enums.empty( ) )
-        {
-            continue;
-        }
-        const auto message_with_parent = std::string( parent ) + "::" + std::string( message.name );
-        dump_prototypes( stream, message.enums, message_with_parent );
-    }
 }
 
 void dump_prototypes( std::ostream & stream, const proto_file & file )
 {
     const auto package_name = replace( file.package.name, ".", "::" );
     dump_prototypes( stream, file.package.messages, package_name );
-    dump_prototypes( stream, file.package.enums, package_name );
 }
 
 void dump_cpp_includes( std::ostream & stream, std::string_view header_file_path )
 {
     stream << "#include \"" << header_file_path << "\"\n"
-           <<//"#include <sds/pb/deserialize.hpp>\n"
-        "#include <sds/pb/serialize.hpp>\n"
-        "#include <type_traits>\n\n";
+           << "#include <sds/pb/deserialize.hpp>\n"
+              "#include <sds/pb/serialize.hpp>\n"
+              "#include <type_traits>\n\n";
 }
 
 void dump_cpp_prototypes( std::ostream & stream, std::string_view type )
@@ -268,108 +243,26 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & me
 {
     if( message.fields.empty( ) && message.maps.empty( ) && message.oneofs.empty( ) )
     {
-        stream << "auto deserialize_value( detail::istream &, " << full_name << " & ) -> bool\n{\n";
-        stream << "\treturn true;\n}\n\n";
+        stream << "void deserialize( detail::istream & stream, " << full_name << " & )\n{\n";
+        stream << "\tstream.skip();\n}\n\n";
         return;
     }
 
-    /*stream << "auto deserialize_value( detail::istream & stream, " << full_name << " & value ) -> bool\n{\n";
-    stream << "\tswitch( djb2_hash( stream.current_key() ) )\n\t{\n";
+    stream << "void deserialize( detail::istream & stream, " << full_name << " & value )\n{\n";
+    stream << "\tswitch( stream.field() )\n\t{\n";
 
-    //- json deserializer needs to accept both camelCase (parsed_name) and the original field name
-    struct one_field
-    {
-        std::string parsed_name;
-        std::string_view name;
-        size_t oneof_index = SIZE_MAX;
-    };
-
-    auto name_map = std::multimap< uint32_t, one_field >( );
     for( const auto & field : message.fields )
     {
-        const auto field_name = json_field_name_or_camelCase( field );
-        name_map.emplace( sds::json::detail::djb2_hash( field_name ),
-                          one_field{
-                              .parsed_name = field_name,
-                              .name        = field.name,
-                          } );
-        if( field_name != field.name )
-        {
-            name_map.emplace( sds::json::detail::djb2_hash( field.name ),
-                              one_field{
-                                  .parsed_name = std::string( field.name ),
-                                  .name        = field.name,
-                              } );
-        }
+        stream << "\t\tcase " << field.number << ":\n\t\t\treturn ";
+        stream << "stream.deserialize" << encoder_type( field ) << "( value." << field.name << " );\n";
     }
-    for( const auto & field : message.maps )
+    for( const auto & map : message.maps )
     {
-        const auto field_name = json_field_name_or_camelCase( field );
-        name_map.emplace( sds::json::detail::djb2_hash( field_name ),
-                          one_field{
-                              .parsed_name = field_name,
-                              .name        = field.name,
-                          } );
-        if( field_name != field.name )
-        {
-            name_map.emplace( sds::json::detail::djb2_hash( field.name ),
-                              one_field{ .parsed_name = std::string( field.name ),
-                                         .name        = field.name } );
-        }
-    }
-    for( const auto & oneof : message.oneofs )
-    {
-        for( size_t i = 0; i < oneof.fields.size( ); ++i )
-        {
-            const auto field_name = json_field_name_or_camelCase( oneof.fields[ i ] );
-            name_map.emplace( sds::json::detail::djb2_hash( field_name ),
-                              one_field{
-                                  .parsed_name = field_name,
-                                  .name        = oneof.name,
-                                  .oneof_index = i,
-                              } );
-            if( field_name != oneof.fields[ i ].name )
-            {
-                name_map.emplace( sds::json::detail::djb2_hash( oneof.fields[ i ].name ),
-                                  one_field{
-                                      .parsed_name = std::string( oneof.fields[ i ].name ),
-                                      .name        = oneof.name,
-                                      .oneof_index = i,
-                                  } );
-            }
-        }
+        stream << "\t\tcase " << map.number << ":\n\t\t\treturn ";
+        stream << "\tstream.deserialize" << map_encoder_type( map.key_type, map.value_type ) << "( value." << map.name << " );\n";
     }
 
-    auto last_hash = name_map.begin( )->first + 1;
-    auto put_or    = false;
-    for( const auto & [ hash, field ] : name_map )
-    {
-        if( hash != last_hash )
-        {
-            if( put_or )
-            {
-                stream << ";\n";
-            }
-            last_hash = hash;
-            stream << "\t\tcase detail::djb2_hash( \"" << field.parsed_name << "\"sv ):\n\t\t\treturn\n";
-            put_or = false;
-        }
-        if( put_or )
-        {
-            stream << " ||\n";
-        }
-        if( field.oneof_index == SIZE_MAX )
-        {
-            stream << "\t\t\t\tstream.deserialize( \"" << field.parsed_name << "\"sv, value." << field.name << " )";
-        }
-        else
-        {
-            stream << "\t\t\t\tstream.deserialize_variant<" << field.oneof_index << ">( \"" << field.parsed_name << "\"sv, value." << field.name << " )";
-        }
-        put_or = true;
-    }
-
-    stream << ";\n\t}\n\treturn false;\n}\n";*/
+    stream << "\t\tdefault:\n\t\t\treturn stream.skip();\t\n}\n}\n\n";
 }
 
 void dump_cpp_is_empty( std::ostream & stream, const proto_message &, std::string_view full_name )
