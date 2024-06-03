@@ -30,17 +30,17 @@ struct istream
 {
 private:
     uint32_t m_tag;
+    const uint8_t * m_tag_ptr = nullptr;
     const uint8_t * m_begin;
     const uint8_t * m_end;
 
-    void read_tag( );
+    void update_tag( );
 
 public:
     istream( const void * content, size_t size ) noexcept
         : m_begin( static_cast< const uint8_t * >( content ) )
         , m_end( m_begin + size )
     {
-        read_tag( );
     }
 
     void skip( );
@@ -50,7 +50,7 @@ public:
     template < scalar_encoder encoder >
     void deserialize_as( auto & value );
 
-    void check_wire_type( detail::wire_type type ) const
+    void check_wire_type( detail::wire_type type )
     {
         if( wire_type( ) != type )
         {
@@ -71,6 +71,11 @@ public:
         return m_end - m_begin;
     }
 
+    [[nodiscard]] auto data( ) const -> const void *
+    {
+        return m_begin;
+    }
+
     void read( void * data, size_t size )
     {
         if( this->size( ) < size ) [[unlikely]]
@@ -86,12 +91,14 @@ public:
         m_begin += size;
     }
 
-    [[nodiscard]] auto field( ) const -> uint32_t
+    [[nodiscard]] auto field( ) -> uint32_t
     {
+        update_tag( );
         return m_tag >> 3;
     }
-    [[nodiscard]] auto wire_type( ) const -> detail::wire_type
+    [[nodiscard]] auto wire_type( ) -> detail::wire_type
     {
+        update_tag( );
         return static_cast< detail::wire_type >( m_tag & 0x07 );
     }
     [[nodiscard]] auto empty( ) const -> bool
@@ -109,6 +116,7 @@ template < typename T >
 {
     if constexpr( std::is_same_v< T, bool > )
     {
+        stream.check_wire_type( detail::wire_type::varint );
         switch( stream.read_byte( ) )
         {
         case 0:
@@ -171,24 +179,36 @@ static inline void deserialize_as( istream & stream, is_int_or_float auto & valu
     const auto type = type1( encoder );
     if constexpr( type == scalar_encoder::svarint )
     {
-        stream.check_wire_type( wire_type::varint );
-        value = read_varint< T >( stream );
-        value = ( value << 1 ) ^ ( value >> ( ( sizeof( value ) * CHAR_BIT ) - 1 ) );
+        if constexpr( !is_packed( encoder ) )
+        {
+            stream.check_wire_type( wire_type::varint );
+        }
+        auto tmp = read_varint< std::make_unsigned_t< T > >( stream );
+        value    = T( ( tmp >> 1 ) ^ ( ~( tmp & 1 ) + 1 ) );
     }
     else if constexpr( type == scalar_encoder::varint )
     {
-        stream.check_wire_type( wire_type::varint );
+        if constexpr( !is_packed( encoder ) )
+        {
+            stream.check_wire_type( wire_type::varint );
+        }
         value = read_varint< T >( stream );
     }
     else if constexpr( type == scalar_encoder::i32 )
     {
-        stream.check_wire_type( wire_type::fixed32 );
+        if constexpr( !is_packed( encoder ) )
+        {
+            stream.check_wire_type( wire_type::fixed32 );
+        }
         static_assert( sizeof( value ) == sizeof( uint32_t ) );
         stream.read( &value, sizeof( value ) );
     }
     else if constexpr( type == scalar_encoder::i64 )
     {
-        stream.check_wire_type( wire_type::fixed64 );
+        if constexpr( !is_packed( encoder ) )
+        {
+            stream.check_wire_type( wire_type::fixed64 );
+        }
         static_assert( sizeof( value ) == sizeof( uint64_t ) );
         stream.read( &value, sizeof( value ) );
     }
@@ -215,6 +235,14 @@ static inline void deserialize_as( istream & stream, std::optional< T > & p_valu
 {
     auto & value = p_value.emplace( T( ) );
     deserialize_as< encoder >( stream, value );
+}
+
+static inline void deserialize( istream & stream, std::string_view & value )
+{
+    stream.check_wire_type( wire_type::length_delimited );
+    const auto size = read_varint< uint32_t >( stream );
+    value           = std::string_view( static_cast< const char * >( stream.data( ) ), size );
+    stream.read( nullptr, size );
 }
 
 static inline void deserialize( istream & stream, std::string & value )
@@ -263,7 +291,7 @@ static inline void deserialize_as( istream & stream, std::vector< T > & value )
         const auto size = read_varint< uint32_t >( stream );
         auto substream  = stream.sub_stream( size );
         stream.read( nullptr, size );
-        deserialize_packed_as< type1( encoder ) >( substream, value );
+        deserialize_packed_as< encoder >( substream, value );
     }
     else
     {
@@ -337,9 +365,13 @@ inline void istream::deserialize( auto & value )
     detail::deserialize( *this, value );
 }
 
-inline void istream::read_tag( )
+inline void istream::update_tag( )
 {
-    m_tag = read_varint< uint32_t >( *this );
+    if( m_tag_ptr != m_begin )
+    {
+        m_tag     = read_varint< uint32_t >( *this );
+        m_tag_ptr = m_begin;
+    }
 }
 
 inline void istream::skip( )

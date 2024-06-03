@@ -2,9 +2,12 @@
 #include <cstdint>
 #include <memory>
 #include <name.pb.h>
+#include <optional>
 #include <person.pb.h>
+#include <sds/pb/deserialize.hpp>
 #include <sds/pb/serialize.hpp>
 #include <string>
+#include <string_view>
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
@@ -41,6 +44,30 @@ auto pb_serialize_as( const T & value ) -> std::string
     auto stream     = sds::pb::detail::ostream( result.data( ) );
     sds::pb::detail::serialize_as< encoder >( stream, 1, value );
     return result;
+}
+
+template < typename T >
+auto pb_deserialize( std::string_view protobuf ) -> T
+{
+    auto stream = sds::pb::detail::istream( protobuf.data( ), protobuf.size( ) );
+    auto value  = T( );
+    while( !stream.empty( ) )
+    {
+        sds::pb::detail::deserialize( stream, value );
+    }
+    return value;
+}
+
+template < sds::pb::detail::scalar_encoder encoder, typename T >
+auto pb_deserialize_as( std::string_view protobuf ) -> T
+{
+    auto stream = sds::pb::detail::istream( protobuf.data( ), protobuf.size( ) );
+    auto value  = T( );
+    while( !stream.empty( ) )
+    {
+        sds::pb::detail::deserialize_as< encoder >( stream, value );
+    }
+    return value;
 }
 
 using sds::pb::detail::scalar_encoder;
@@ -301,6 +328,156 @@ TEST_CASE( "protobuf" )
         {
             CHECK( sds::pb::serialize( Test::Name{ } ) == "" );
             CHECK( sds::pb::serialize( Test::Name{ }, nullptr ) == 0 );
+        }
+    }
+    SUBCASE( "deserialize" )
+    {
+        SUBCASE( "string" )
+        {
+            CHECK( pb_deserialize< std::string >( "" ) == "" );
+            CHECK( pb_deserialize< std::string >( "\x0a\x05hello" ) == "hello" );
+            SUBCASE( "optional" )
+            {
+                CHECK( pb_deserialize< std::optional< std::string > >( "" ) == std::nullopt );
+                CHECK( pb_deserialize< std::optional< std::string > >( "\x0a\x05hello" ) == "hello" );
+            }
+            SUBCASE( "array" )
+            {
+                CHECK( pb_deserialize< std::vector< std::string > >( "" ) == std::vector< std::string >( ) );
+                CHECK( pb_deserialize< std::vector< std::string > >( "\x0a\x05hello\x0a\x05world" ) == std::vector< std::string >{ "hello", "world" } );
+            }
+        }
+        SUBCASE( "string_view" )
+        {
+            CHECK( pb_deserialize< std::string_view >( "" ) == "" );
+            CHECK( pb_deserialize< std::string_view >( "\x0a\x04john" ) == "john"sv );
+            SUBCASE( "optional" )
+            {
+                CHECK( pb_deserialize< std::optional< std::string_view > >( "" ) == std::nullopt );
+                CHECK( pb_deserialize< std::optional< std::string_view > >( "\x0a\x05hello" ) == "hello" );
+            }
+            SUBCASE( "array" )
+            {
+                CHECK( pb_deserialize< std::vector< std::string_view > >( "" ) == std::vector< std::string_view >( ) );
+                CHECK( pb_deserialize< std::vector< std::string_view > >( "\x0a\x05hello\x0a\x05world" ) == std::vector< std::string_view >{ "hello", "world" } );
+            }
+        }
+        SUBCASE( "bool" )
+        {
+            CHECK( pb_deserialize_as< scalar_encoder::varint, bool >( "\x08\x01" ) == true );
+            CHECK( pb_deserialize_as< scalar_encoder::varint, bool >( "\x08\x00"sv ) == false );
+            SUBCASE( "optional" )
+            {
+                CHECK( pb_deserialize_as< scalar_encoder::varint, std::optional< bool > >( "" ) == std::nullopt );
+                CHECK( pb_deserialize_as< scalar_encoder::varint, std::optional< bool > >( "\x08\x01" ) == true );
+                CHECK( pb_deserialize_as< scalar_encoder::varint, std::optional< bool > >( "\x08\x00"sv ) == false );
+            }
+            SUBCASE( "array" )
+            {
+                CHECK( pb_deserialize_as< scalar_encoder::varint, std::vector< bool > >( "\x08\x01\x08\x00"sv ) == std::vector< bool >{ true, false } );
+                CHECK( pb_deserialize_as< scalar_encoder::varint, std::vector< bool > >( "" ) == std::vector< bool >{ } );
+            }
+        }
+        SUBCASE( "int" )
+        {
+            SUBCASE( "varint" )
+            {
+                CHECK( pb_deserialize_as< scalar_encoder::varint, int >( "\x08\x42" ) == 0x42 );
+                CHECK( pb_deserialize_as< scalar_encoder::varint, int >( "\x08\xff\x01" ) == 0xff );
+                CHECK( pb_deserialize_as< scalar_encoder::varint, int32_t >( "\x08\xfe\xff\xff\xff\x0f" ) == -2 );
+                CHECK( pb_deserialize_as< scalar_encoder::varint, int64_t >( "\x08\xfe\xff\xff\xff\xff\xff\xff\xff\xff\x01" ) == -2 );
+
+                SUBCASE( "optional" )
+                {
+                    CHECK( pb_deserialize_as< scalar_encoder::varint, std::optional< int > >( "" ) == std::nullopt );
+                    CHECK( pb_deserialize_as< scalar_encoder::varint, std::optional< int > >( "\x08\x42" ) == 0x42 );
+                }
+                SUBCASE( "array" )
+                {
+                    CHECK( pb_deserialize_as< scalar_encoder::varint, std::vector< int > >( "\x08\x42" ) == std::vector< int >{ 0x42 } );
+                    CHECK( pb_deserialize_as< scalar_encoder::varint, std::vector< int > >( "\x08\x42\x08\x03" ) == std::vector< int >{ 0x42, 0x3 } );
+                    CHECK( pb_deserialize_as< scalar_encoder::varint, std::vector< int > >( "" ) == std::vector< int >( ) );
+
+                    SUBCASE( "packed" )
+                    {
+                        CHECK( pb_deserialize_as< combine( scalar_encoder::varint, scalar_encoder::packed ), std::vector< int > >( "\x0a\x01\x42" ) == std::vector< int >{ 0x42 } );
+                        CHECK( pb_deserialize_as< combine( scalar_encoder::varint, scalar_encoder::packed ), std::vector< int > >( "\x0a\x02\x42\x03" ) == std::vector< int >{ 0x42, 0x3 } );
+                        CHECK( pb_deserialize_as< combine( scalar_encoder::varint, scalar_encoder::packed ), std::vector< int > >( "" ) == std::vector< int >( ) );
+                    }
+                }
+            }
+            SUBCASE( "svarint" )
+            {
+                CHECK( pb_deserialize_as< scalar_encoder::svarint, int >( "\x08\x84\x01" ) == 0x42 );
+                CHECK( pb_deserialize_as< scalar_encoder::svarint, int >( "\x08\xfe\x03" ) == 0xff );
+                CHECK( pb_deserialize_as< scalar_encoder::svarint, int32_t >( "\x08\x03" ) == -2 );
+                CHECK( pb_deserialize_as< scalar_encoder::svarint, int64_t >( "\x08\x03" ) == -2 );
+
+                SUBCASE( "optional" )
+                {
+                    CHECK( pb_deserialize_as< scalar_encoder::svarint, std::optional< int > >( "" ) == std::nullopt );
+                    CHECK( pb_deserialize_as< scalar_encoder::svarint, std::optional< int > >( "\x08\x84\x01" ) == 0x42 );
+                }
+                SUBCASE( "array" )
+                {
+                    CHECK( pb_deserialize_as< scalar_encoder::svarint, std::vector< int > >( "\x08\x84\x01" ) == std::vector< int >{ 0x42 } );
+                    CHECK( pb_deserialize_as< scalar_encoder::svarint, std::vector< int > >( "\x08\x84\x01\x08\x03" ) == std::vector< int >{ 0x42, -2 } );
+                    CHECK( pb_deserialize_as< scalar_encoder::svarint, std::vector< int > >( "" ) == std::vector< int >( ) );
+
+                    SUBCASE( "packed" )
+                    {
+                        CHECK( pb_deserialize_as< combine( scalar_encoder::svarint, scalar_encoder::packed ), std::vector< int > >( "\x0a\x02\x84\x01" ) == std::vector< int >{ 0x42 } );
+                        CHECK( pb_deserialize_as< combine( scalar_encoder::svarint, scalar_encoder::packed ), std::vector< int > >( "\x0a\x03\x84\x01\x03" ) == std::vector< int >{ 0x42, -2 } );
+                        CHECK( pb_deserialize_as< combine( scalar_encoder::svarint, scalar_encoder::packed ), std::vector< int > >( "" ) == std::vector< int >( ) );
+                    }
+                }
+            }
+            SUBCASE( "i32" )
+            {
+                CHECK( pb_deserialize_as< scalar_encoder::i32, int >( "\x0d\x42\x00\x00\x00"sv ) == 0x42 );
+                CHECK( pb_deserialize_as< scalar_encoder::i32, int >( "\x0d\xff\x00\x00\x00"sv ) == 0xff );
+                CHECK( pb_deserialize_as< scalar_encoder::i32, int32_t >( "\x0d\xfe\xff\xff\xff" ) == -2 );
+                SUBCASE( "optional" )
+                {
+                    CHECK( pb_deserialize_as< scalar_encoder::i32, std::optional< int > >( "" ) == std::nullopt );
+                    CHECK( pb_deserialize_as< scalar_encoder::i32, std::optional< int > >( "\x0d\x42\x00\x00\x00"sv ) == 0x42 );
+                }
+                SUBCASE( "array" )
+                {
+                    CHECK( pb_deserialize_as< scalar_encoder::i32, std::vector< int > >( "\x0d\x42\x00\x00\x00"sv ) == std::vector< int >{ 0x42 } );
+                    CHECK( pb_deserialize_as< scalar_encoder::i32, std::vector< int > >( "\x0d\x42\x00\x00\x00\x0d\x03\x00\x00\x00"sv ) == std::vector< int >{ 0x42, 0x3 } );
+                    CHECK( pb_deserialize_as< scalar_encoder::i32, std::vector< int > >( "" ) == std::vector< int >( ) );
+                    SUBCASE( "packed" )
+                    {
+                        CHECK( pb_deserialize_as< combine( scalar_encoder::i32, scalar_encoder::packed ), std::vector< int > >( "\x0a\x04\x42\x00\x00\x00"sv ) == std::vector< int >{ 0x42 } );
+                        CHECK( pb_deserialize_as< combine( scalar_encoder::i32, scalar_encoder::packed ), std::vector< int > >( "\x0a\x08\x42\x00\x00\x00\x03\x00\x00\x00"sv ) == std::vector< int >{ 0x42, 0x3 } );
+                        CHECK( pb_deserialize_as< combine( scalar_encoder::i32, scalar_encoder::packed ), std::vector< int > >( "" ) == std::vector< int >( ) );
+                    }
+                }
+            }
+            SUBCASE( "i64" )
+            {
+                CHECK( pb_deserialize_as< scalar_encoder::i64, int64_t >( "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv ) == 0x42 );
+                CHECK( pb_deserialize_as< scalar_encoder::i64, uint64_t >( "\x09\xff\x00\x00\x00\x00\x00\x00\x00"sv ) == 0xff );
+                CHECK( pb_deserialize_as< scalar_encoder::i64, int64_t >( "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv ) == int64_t( -2 ) );
+                SUBCASE( "optional" )
+                {
+                    CHECK( pb_deserialize_as< scalar_encoder::i64, std::optional< int64_t > >( "" ) == std::nullopt );
+                    CHECK( pb_deserialize_as< scalar_encoder::i64, std::optional< int64_t > >( "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv ) == 0x42 );
+                }
+                SUBCASE( "array" )
+                {
+                    CHECK( pb_deserialize_as< scalar_encoder::i64, std::vector< int64_t > >( "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv ) == std::vector< int64_t >{ 0x42 } );
+                    CHECK( pb_deserialize_as< scalar_encoder::i64, std::vector< int64_t > >( "\x09\x42\x00\x00\x00\x00\x00\x00\x00\x09\x03\x00\x00\x00\x00\x00\x00\x00"sv ) == std::vector< int64_t >{ 0x42, 0x3 } );
+                    CHECK( pb_deserialize_as< scalar_encoder::i64, std::vector< int64_t > >( "" ) == std::vector< int64_t >{ } );
+                    SUBCASE( "packed" )
+                    {
+                        CHECK( pb_deserialize_as< combine( scalar_encoder::i64, scalar_encoder::packed ), std::vector< int64_t > >( "\x0a\x08\x42\x00\x00\x00\x00\x00\x00\x00"sv ) == std::vector< int64_t >{ 0x42 } );
+                        CHECK( pb_deserialize_as< combine( scalar_encoder::i64, scalar_encoder::packed ), std::vector< int64_t > >( "\x0a\x10\x42\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00"sv ) == std::vector< int64_t >{ 0x42, 0x3 } );
+                        CHECK( pb_deserialize_as< combine( scalar_encoder::i64, scalar_encoder::packed ), std::vector< int64_t > >( "" ) == std::vector< int64_t >( ) );
+                    }
+                }
+            }
         }
     }
 }
