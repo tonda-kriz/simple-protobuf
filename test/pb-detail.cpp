@@ -479,5 +479,41 @@ TEST_CASE( "protobuf" )
                 }
             }
         }
+        SUBCASE( "double" )
+        {
+            CHECK( pb_deserialize_as< scalar_encoder::i64, double >( "\x09\x00\x00\x00\x00\x00\x00\x45\x40"sv ) == 42.0 );
+            SUBCASE( "optional" )
+            {
+                CHECK( pb_deserialize_as< scalar_encoder::i64, std::optional< double > >( "" ) == std::nullopt );
+                CHECK( pb_deserialize_as< scalar_encoder::i64, std::optional< double > >( "\x09\x66\x66\x66\x66\x66\x26\x45\x40" ) == 42.3 );
+            }
+            SUBCASE( "array" )
+            {
+                CHECK( pb_deserialize_as< scalar_encoder::i64, std::vector< double > >( "\x09\x66\x66\x66\x66\x66\x26\x45\x40" ) == std::vector< double >{ 42.3 } );
+                CHECK( pb_deserialize_as< scalar_encoder::i64, std::vector< double > >( "\x09\x66\x66\x66\x66\x66\x26\x45\x40\x09\x00\x00\x00\x00\x00\x00\x08\x40"sv ) == std::vector< double >{ 42.3, 3.0 } );
+                CHECK( pb_deserialize_as< scalar_encoder::i64, std::vector< double > >( "" ) == std::vector< double >( ) );
+            }
+        }
+        SUBCASE( "bytes" )
+        {
+            CHECK( pb_deserialize< std::vector< std::byte > >( "\x0a\x03\x00\x01\x02"sv ) == std::vector< std::byte >{ std::byte{ 0 }, std::byte{ 1 }, std::byte{ 2 } } );
+
+            CHECK( pb_deserialize< std::vector< std::byte > >( "\x0a\x05\x00\x01\x02\x03\x04"sv ) == std::vector< std::byte >( { std::byte( 0 ), std::byte( 1 ), std::byte( 2 ), std::byte( 3 ), std::byte( 4 ) } ) );
+            CHECK( pb_deserialize< std::vector< std::byte > >( "\x0a\x05hello"sv ) == std::vector< std::byte >( { std::byte( 'h' ), std::byte( 'e' ), std::byte( 'l' ), std::byte( 'l' ), std::byte( 'o' ) } ) );
+            CHECK( pb_deserialize< std::vector< std::byte > >( "" ) == std::vector< std::byte >( ) );
+
+            SUBCASE( "array" )
+            {
+                CHECK( pb_deserialize< std::vector< std::vector< std::byte > > >( "\x0a\x05\x00\x01\x02\x03\x04"sv ) == std::vector< std::vector< std::byte > >{ { std::byte( 0 ), std::byte( 1 ), std::byte( 2 ), std::byte( 3 ), std::byte( 4 ) } } );
+                CHECK( pb_deserialize< std::vector< std::vector< std::byte > > >( "\x0a\x05\x00\x01\x02\x03\x04\x0a\x05hello"sv ) == std::vector< std::vector< std::byte > >{ std::vector< std::byte >{ std::byte( 0 ), std::byte( 1 ), std::byte( 2 ), std::byte( 3 ), std::byte( 4 ) }, std::vector< std::byte >{ std::byte( 'h' ), std::byte( 'e' ), std::byte( 'l' ), std::byte( 'l' ), std::byte( 'o' ) } } );
+                CHECK( pb_deserialize< std::vector< std::vector< std::byte > > >( "" ) == std::vector< std::vector< std::byte > >{ } );
+            }
+            SUBCASE( "optional" )
+            {
+                CHECK( pb_deserialize< std::optional< std::vector< std::byte > > >( "" ) == std::nullopt );
+                CHECK( pb_deserialize< std::optional< std::vector< std::byte > > >( "\x0a\x05\x00\x01\x02\x03\x04"sv ) == std::vector< std::byte >{ std::byte( 0 ), std::byte( 1 ), std::byte( 2 ), std::byte( 3 ), std::byte( 4 ) } );
+                CHECK( pb_deserialize< std::optional< std::vector< std::byte > > >( "\x0a\x05hello"sv ) == std::vector< std::byte >{ std::byte( 'h' ), std::byte( 'e' ), std::byte( 'l' ), std::byte( 'l' ), std::byte( 'o' ) } );
+            }
+        }
     }
 }

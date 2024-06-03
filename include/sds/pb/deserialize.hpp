@@ -152,7 +152,7 @@ static inline void deserialize( istream & stream, std::string & value );
 template < scalar_encoder encoder >
 static inline void deserialize_as( istream & stream, is_int_or_float auto & value );
 
-// static inline void deserialize( istream & stream, auto & value );
+static inline void deserialize( istream & stream, std::vector< std::byte > & value );
 
 template < typename T >
 static inline void deserialize( istream & stream, std::vector< T > & value );
@@ -258,6 +258,14 @@ static inline void deserialize( istream & stream, std::unique_ptr< T > & value )
 {
     value = std::make_unique< T >( );
     deserialize( stream, *value );
+}
+
+static inline void deserialize( istream & stream, std::vector< std::byte > & value )
+{
+    stream.check_wire_type( wire_type::length_delimited );
+    const auto size = read_varint< uint32_t >( stream );
+    value.resize( size );
+    stream.read( value.data( ), size );
 }
 
 template < typename T >
