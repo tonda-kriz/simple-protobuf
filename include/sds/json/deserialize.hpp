@@ -583,7 +583,7 @@ inline auto istream::deserialize_string( ) -> std::string_view
     return result;
 }
 
-static inline void deserialize( std::string_view string, auto & value )
+static inline void deserialize( auto & value, std::string_view string )
 {
     auto stream = detail::istream( string );
     detail::deserialize( stream, value );

@@ -467,7 +467,7 @@ static inline auto deserialize( std::string_view protobuf ) -> Result
     return result;
 }
 
-static inline void deserialize( std::string_view string, auto & value )
+static inline void deserialize( auto & value, std::string_view string )
 {
     using T = std::remove_cvref_t< decltype( value ) >;
     static_assert( is_struct< T > );

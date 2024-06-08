@@ -34,9 +34,9 @@ auto deserialize< $ >( std::string_view protobuf ) -> $
     return detail::deserialize< $ >( protobuf );
 }
 
-void deserialize( std::string_view protobuf, $ & result )
+void deserialize( $ & result, std::string_view protobuf )
 {
-    return detail::deserialize( protobuf, result );
+    return detail::deserialize( result, protobuf );
 }
 
 )";

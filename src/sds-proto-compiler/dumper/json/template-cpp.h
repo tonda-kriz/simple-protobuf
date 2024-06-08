@@ -34,9 +34,9 @@ auto deserialize< $ >( std::string_view json ) -> $
     return detail::deserialize< $ >( json );
 }
 
-void deserialize( std::string_view json, $ & result )
+void deserialize( $ & result, std::string_view json )
 {
-    return detail::deserialize( json, result );
+    return detail::deserialize( result, json );
 }
 
 )";

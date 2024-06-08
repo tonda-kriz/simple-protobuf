@@ -24,6 +24,19 @@ auto operator==( const Test::Variant & lhs, const Test::Variant & rhs ) noexcept
 }
 }// namespace Test
 
+namespace PhoneBook
+{
+auto operator==( const Person::PhoneNumber & lhs, const Person::PhoneNumber & rhs ) noexcept -> bool
+{
+    return lhs.number == rhs.number && lhs.type == rhs.type;
+}
+
+auto operator==( const Person & lhs, const Person & rhs ) noexcept -> bool
+{
+    return lhs.name == rhs.name && lhs.id == rhs.id && lhs.email == rhs.email && lhs.phones == rhs.phones;
+}
+}// namespace PhoneBook
+
 namespace
 {
 template < typename T >
@@ -359,6 +372,16 @@ TEST_CASE( "protobuf" )
                 CHECK( pb_deserialize_as< scalar_encoder::varint, std::optional< bool > >( "\x01" ) == true );
                 CHECK( pb_deserialize_as< scalar_encoder::varint, std::optional< bool > >( "\x00"sv ) == false );
             }
+            SUBCASE( "array" )
+            {
+                CHECK( pb_deserialize_as< scalar_encoder::varint, std::vector< bool > >( "\x01" ) == std::vector< bool >{ true } );
+                CHECK( pb_deserialize_as< scalar_encoder::varint, std::vector< bool > >( "\x00"sv ) == std::vector< bool >{ false } );
+                SUBCASE( "packed" )
+                {
+                    CHECK( pb_deserialize_as< combine( scalar_encoder::varint, scalar_encoder::packed ), std::vector< bool > >( "\x01" ) == std::vector< bool >{ true } );
+                    CHECK( pb_deserialize_as< combine( scalar_encoder::varint, scalar_encoder::packed ), std::vector< bool > >( "\x01\x00"sv ) == std::vector< bool >{ true, false } );
+                }
+            }
         }
         SUBCASE( "int" )
         {
@@ -492,6 +515,37 @@ TEST_CASE( "protobuf" )
             {
                 CHECK( sds::pb::deserialize< Test::Variant >( "\x22\x06\x0A\x04John" ) == Test::Variant{ .oneof_field = Test::Name{ .name = "John" } } );
             }
+        }
+        SUBCASE( "person" )
+        {
+            const auto person = sds::pb::deserialize< PhoneBook::Person >( "\x0a\x08John Doe\x10\x7b\x1a\x11QXUeh@example.com\x22\x0c\x0A\x08"
+                                                                           "555-4321\x10\x01" );
+            CHECK( person == PhoneBook::Person{
+                                 .name   = "John Doe",
+                                 .id     = 123,
+                                 .email  = "QXUeh@example.com",
+                                 .phones = {
+                                     PhoneBook::Person::PhoneNumber{
+                                         .number = "555-4321",
+                                         .type   = PhoneBook::Person::PhoneType::HOME,
+                                     },
+                                 },
+                             } );
+
+            auto person2 = PhoneBook::Person{ };
+            CHECK_NOTHROW( sds::pb::deserialize( person2, "\x0a\x08John Doe\x10\x7b\x1a\x11QXUeh@example.com\x22\x0c\x0A\x08"
+                                                          "555-4321\x10\x01"sv ) );
+            CHECK( person2 == PhoneBook::Person{
+                                  .name   = "John Doe",
+                                  .id     = 123,
+                                  .email  = "QXUeh@example.com",
+                                  .phones = {
+                                      PhoneBook::Person::PhoneNumber{
+                                          .number = "555-4321",
+                                          .type   = PhoneBook::Person::PhoneType::HOME,
+                                      },
+                                  },
+                              } );
         }
     }
 }
