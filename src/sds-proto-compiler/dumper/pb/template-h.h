@@ -87,9 +87,10 @@ void serialize( ostream & stream, const $ & value );
  * @brief serialize value from internal stream.
  *
  * @param value to be deserialized
+ * @param tag field tag and wire type
  * @param stream internal buffer
  */
-void deserialize( istream & stream, $ & value );
+void deserialize_value( istream & stream, $ & value, uint32_t tag );
 
 /**
  * @brief return true if value contains only empty fields

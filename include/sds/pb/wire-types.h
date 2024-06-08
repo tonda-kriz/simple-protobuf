@@ -48,18 +48,6 @@ enum class scalar_encoder : uint8_t
     packed = 0x80
 };
 
-static constexpr auto wire_type_from_scalar_encoder( scalar_encoder a ) noexcept -> wire_type
-{
-    switch( a )
-    {
-    case scalar_encoder::i32:
-        return wire_type::fixed32;
-    case scalar_encoder::i64:
-        return wire_type::fixed64;
-    default:
-        return wire_type::varint;
-    }
-}
 static constexpr auto combine( scalar_encoder a, scalar_encoder b ) noexcept -> scalar_encoder
 {
     if( b == scalar_encoder::packed )
@@ -83,6 +71,19 @@ static constexpr auto type2( scalar_encoder a ) noexcept -> scalar_encoder
 static constexpr auto is_packed( scalar_encoder a ) noexcept -> bool
 {
     return static_cast< std::underlying_type_t< scalar_encoder > >( a ) & static_cast< std::underlying_type_t< scalar_encoder > >( scalar_encoder::packed );
+}
+
+static constexpr auto wire_type_from_scalar_encoder( scalar_encoder a ) noexcept -> wire_type
+{
+    switch( type1( a ) )
+    {
+    case scalar_encoder::i32:
+        return wire_type::fixed32;
+    case scalar_encoder::i64:
+        return wire_type::fixed64;
+    default:
+        return wire_type::varint;
+    }
 }
 
 }// namespace sds::pb::detail

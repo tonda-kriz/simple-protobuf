@@ -243,26 +243,43 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & me
 {
     if( message.fields.empty( ) && message.maps.empty( ) && message.oneofs.empty( ) )
     {
-        stream << "void deserialize( detail::istream & stream, " << full_name << " & )\n{\n";
-        stream << "\tstream.skip();\n}\n\n";
+        stream << "void deserialize_value( detail::istream & stream, " << full_name << " &, uint32_t tag )\n{\n";
+        stream << "\tstream.skip( tag );\n}\n\n";
         return;
     }
 
-    stream << "void deserialize( detail::istream & stream, " << full_name << " & value )\n{\n";
-    stream << "\tswitch( stream.field() )\n\t{\n";
+    stream << "void deserialize_value( detail::istream & stream, " << full_name << " & value, uint32_t tag )\n{\n";
+    stream << "\tswitch( field_from_tag( tag ) )\n\t{\n";
 
     for( const auto & field : message.fields )
     {
         stream << "\t\tcase " << field.number << ":\n\t\t\treturn ";
-        stream << "stream.deserialize" << encoder_type( field ) << "( value." << field.name << " );\n";
+        stream << "stream.deserialize" << encoder_type( field ) << "( value." << field.name << ", tag );\n";
     }
     for( const auto & map : message.maps )
     {
         stream << "\t\tcase " << map.number << ":\n\t\t\treturn ";
-        stream << "\tstream.deserialize" << map_encoder_type( map.key_type, map.value_type ) << "( value." << map.name << " );\n";
+        stream << "\tstream.deserialize" << map_encoder_type( map.key_type, map.value_type ) << "( value." << map.name << ", tag );\n";
+    }
+    for( const auto & oneof : message.oneofs )
+    {
+        for( size_t i = 0; i < oneof.fields.size( ); ++i )
+        {
+            stream << "\t\tcase " << oneof.fields[ i ].number << ":\n\t\t\treturn ";
+            auto type = encoder_type( oneof.fields[ i ] );
+            if( type.empty( ) )
+            {
+                stream << "\tstream.deserialize_variant< " << i << ">( value." << oneof.name << ", tag );\n";
+            }
+            else
+            {
+                type.erase( 0, 4 );
+                stream << "\tstream.deserialize_variant_as< " << i << ", " << type << "( value." << oneof.name << ", tag );\n";
+            }
+        }
     }
 
-    stream << "\t\tdefault:\n\t\t\treturn stream.skip();\t\n}\n}\n\n";
+    stream << "\t\tdefault:\n\t\t\treturn stream.skip( tag );\t\n}\n}\n\n";
 }
 
 void dump_cpp_is_empty( std::ostream & stream, const proto_message &, std::string_view full_name )
