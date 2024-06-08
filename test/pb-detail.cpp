@@ -86,6 +86,18 @@ auto pb_deserialize_as( std::string_view protobuf ) -> T
     return value;
 }
 
+template < sds::pb::detail::scalar_encoder encoder, typename T >
+auto pb_deserialize_map_as( std::string_view protobuf ) -> T
+{
+    auto stream = sds::pb::detail::istream( protobuf.data( ), protobuf.size( ) );
+    auto value  = T( );
+    while( !stream.empty( ) )
+    {
+        sds::pb::detail::deserialize_as< encoder >( stream, value, sds::pb::detail::wire_type::length_delimited );
+    }
+    return value;
+}
+
 using sds::pb::detail::scalar_encoder;
 using sds::pb::detail::wire_type;
 
@@ -526,6 +538,29 @@ TEST_CASE( "protobuf" )
             {
                 CHECK( sds::pb::deserialize< Test::Variant >( "\x22\x06\x0A\x04John" ) == Test::Variant{ .oneof_field = Test::Name{ .name = "John" } } );
                 CHECK_THROWS( sds::pb::deserialize< Test::Variant >( "\x22\x06\x0A\x04Joh" ) );
+            }
+        }
+        SUBCASE( "map" )
+        {
+            SUBCASE( "int32/int32" )
+            {
+                CHECK( pb_deserialize_map_as< combine( sds::pb::detail::scalar_encoder::varint, sds::pb::detail::scalar_encoder::varint ), std::map< int32_t, int32_t > >( "\x08\x01\x10\x02" ) == std::map< int32_t, int32_t >{ { 1, 2 } } );
+            }
+            SUBCASE( "string/string" )
+            {
+                CHECK( pb_deserialize_map_as< combine( sds::pb::detail::scalar_encoder::varint, sds::pb::detail::scalar_encoder::varint ), std::map< std::string, std::string > >( "\x0a\x05hello\x12\x05world" ) == std::map< std::string, std::string >{ { "hello", "world" } } );
+            }
+            SUBCASE( "int32/string" )
+            {
+                CHECK( pb_deserialize_map_as< combine( sds::pb::detail::scalar_encoder::varint, sds::pb::detail::scalar_encoder::varint ), std::map< int32_t, std::string > >( "\x08\x01\x12\x05hello" ) == std::map< int32_t, std::string >{ { 1, "hello" } } );
+            }
+            SUBCASE( "string/int32" )
+            {
+                CHECK( pb_deserialize_map_as< combine( sds::pb::detail::scalar_encoder::varint, sds::pb::detail::scalar_encoder::varint ), std::map< std::string, int32_t > >( "\x0a\x05hello\x10\x02" ) == std::map< std::string, int32_t >{ { "hello", 2 } } );
+            }
+            SUBCASE( "string/name" )
+            {
+                CHECK( pb_deserialize_map_as< combine( sds::pb::detail::scalar_encoder::varint, sds::pb::detail::scalar_encoder::varint ), std::map< std::string, Test::Name > >( "\x0a\x05hello\x12\x06\x0A\x04john" ) == std::map< std::string, Test::Name >{ { "hello", { .name = "john" } } } );
             }
         }
         SUBCASE( "person" )
