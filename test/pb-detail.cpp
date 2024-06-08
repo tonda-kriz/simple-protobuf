@@ -349,6 +349,8 @@ TEST_CASE( "protobuf" )
         {
             CHECK( pb_deserialize< wire_type::length_delimited, std::string >( "" ) == "" );
             CHECK( pb_deserialize< wire_type::length_delimited, std::string >( "hello" ) == "hello" );
+            CHECK_THROWS( pb_deserialize< wire_type::varint, std::string >( "hello" ) );
+            CHECK_THROWS( pb_deserialize< wire_type::fixed32, std::string >( "hello" ) );
             SUBCASE( "optional" )
             {
                 CHECK( pb_deserialize< wire_type::length_delimited, std::optional< std::string > >( "hello" ) == "hello" );
@@ -367,6 +369,9 @@ TEST_CASE( "protobuf" )
         {
             CHECK( pb_deserialize_as< scalar_encoder::varint, bool >( "\x01" ) == true );
             CHECK( pb_deserialize_as< scalar_encoder::varint, bool >( "\x00"sv ) == false );
+            CHECK_THROWS( pb_deserialize_as< scalar_encoder::varint, bool >( "\x02"sv ) );
+            CHECK_THROWS( pb_deserialize_as< scalar_encoder::varint, bool >( "\xff\x01"sv ) );
+
             SUBCASE( "optional" )
             {
                 CHECK( pb_deserialize_as< scalar_encoder::varint, std::optional< bool > >( "\x01" ) == true );
@@ -389,6 +394,8 @@ TEST_CASE( "protobuf" )
             {
                 CHECK( pb_deserialize_as< scalar_encoder::varint, int >( "\x42" ) == 0x42 );
                 CHECK( pb_deserialize_as< scalar_encoder::varint, int >( "\xff\x01" ) == 0xff );
+                CHECK_THROWS( pb_deserialize_as< scalar_encoder::varint, int >( "\xff" ) );
+                CHECK_THROWS( pb_deserialize_as< scalar_encoder::varint, int >( "\xff\xff\xff\xff\xff\xff\xff\xff\x01" ) );
                 CHECK( pb_deserialize_as< scalar_encoder::varint, int32_t >( "\xfe\xff\xff\xff\x0f" ) == -2 );
                 CHECK( pb_deserialize_as< scalar_encoder::varint, int64_t >( "\xfe\xff\xff\xff\xff\xff\xff\xff\xff\x01" ) == -2 );
 
@@ -432,6 +439,7 @@ TEST_CASE( "protobuf" )
             SUBCASE( "i32" )
             {
                 CHECK( pb_deserialize_as< scalar_encoder::i32, int >( "\x42\x00\x00\x00"sv ) == 0x42 );
+                CHECK_THROWS( pb_deserialize_as< scalar_encoder::i32, int >( "\x42\x00\x00"sv ) );
                 CHECK( pb_deserialize_as< scalar_encoder::i32, int >( "\xff\x00\x00\x00"sv ) == 0xff );
                 CHECK( pb_deserialize_as< scalar_encoder::i32, int32_t >( "\xfe\xff\xff\xff" ) == -2 );
                 SUBCASE( "optional" )
@@ -471,6 +479,7 @@ TEST_CASE( "protobuf" )
         SUBCASE( "double" )
         {
             CHECK( pb_deserialize_as< scalar_encoder::i64, double >( "\x00\x00\x00\x00\x00\x00\x45\x40"sv ) == 42.0 );
+            CHECK_THROWS( pb_deserialize_as< scalar_encoder::i64, double >( "\x00\x00\x00\x00\x00\x00\x45"sv ) );
             SUBCASE( "optional" )
             {
                 CHECK( pb_deserialize_as< scalar_encoder::i64, std::optional< double > >( "\x66\x66\x66\x66\x66\x26\x45\x40" ) == 42.3 );
@@ -506,14 +515,17 @@ TEST_CASE( "protobuf" )
             SUBCASE( "string" )
             {
                 CHECK( sds::pb::deserialize< Test::Variant >( "\x12\x05hello" ) == Test::Variant{ .oneof_field = "hello" } );
+                CHECK_THROWS( sds::pb::deserialize< Test::Variant >( "\x12\x05hell" ) );
             }
             SUBCASE( "bytes" )
             {
                 CHECK( sds::pb::deserialize< Test::Variant >( "\x1A\x05hello" ) == Test::Variant{ .oneof_field = std::vector< std::byte >{ std::byte( 'h' ), std::byte( 'e' ), std::byte( 'l' ), std::byte( 'l' ), std::byte( 'o' ) } } );
+                CHECK_THROWS( sds::pb::deserialize< Test::Variant >( "\x1A\x05hell" ) );
             }
             SUBCASE( "name" )
             {
                 CHECK( sds::pb::deserialize< Test::Variant >( "\x22\x06\x0A\x04John" ) == Test::Variant{ .oneof_field = Test::Name{ .name = "John" } } );
+                CHECK_THROWS( sds::pb::deserialize< Test::Variant >( "\x22\x06\x0A\x04Joh" ) );
             }
         }
         SUBCASE( "person" )
@@ -546,6 +558,7 @@ TEST_CASE( "protobuf" )
                                       },
                                   },
                               } );
+            CHECK_THROWS( sds::pb::deserialize( person2, "\x0a\x08John Doe\x10\x7b\x1a\x11QXUeh@example.com\x22\x0c\x0A\x08"sv ) );
         }
     }
 }
