@@ -5,6 +5,7 @@ FILE(GLOB protos ${CMAKE_CURRENT_SOURCE_DIR}/proto/*.proto)
 sds_protobuf_generate(PROTO_SRCS PROTO_HDRS ${protos})
 sds_protobuf_generate(PROTO_PERSON_SRC PROTO_PERSON_HDR proto/person/person.proto)
 sds_protobuf_generate(PROTO_NAME_SRC PROTO_NAME_HDR proto/name/name.proto)
+sds_protobuf_generate(PROTO_SCALAR_SRC PROTO_NAME_HDR proto/scalar/scalar.proto)
 
 add_custom_target(unit_tests)
 
@@ -20,7 +21,7 @@ target_link_libraries(json-detail-test PUBLIC sds-proto)
 add_dependencies(unit_tests json-detail-test)
 doctest_discover_tests(json-detail-test)
 
-add_executable(pb-detail-test pb-detail.cpp ${PROTO_PERSON_SRC} ${PROTO_NAME_SRC})
+add_executable(pb-detail-test pb-detail.cpp ${PROTO_PERSON_SRC} ${PROTO_NAME_SRC} ${PROTO_SCALAR_SRC})
 target_compile_options(pb-detail-test PUBLIC -Wall -Wpedantic -Werror -Wno-missing-field-initializers)
 target_link_libraries(pb-detail-test PUBLIC sds-proto)
 add_dependencies(unit_tests pb-detail-test)
