@@ -1,6 +1,6 @@
-package Test.Scalar;
+package Test;
 
-message Integers {
+message Scalar {
     message OptInt32 { optional int32 value = 1; }
     message ReqInt32 { required int32 value = 1; }
     message RepInt32 { repeated int32 value = 1; }
@@ -54,9 +54,7 @@ message Integers {
     message OptBool { optional bool value = 1; }
     message ReqBool { required bool value = 1; }
     message RepBool { repeated bool value = 1; }
-}
 
-message Floats {
     message OptFloat { optional float value = 1; }
     message ReqFloat { required float value = 1; }
     message RepFloat { repeated float value = 1; }
@@ -64,15 +62,11 @@ message Floats {
     message OptDouble { optional double value = 1; }
     message ReqDouble { required double value = 1; }
     message RepDouble { repeated double value = 1; }
-}
 
-message Strings {
     message OptString { optional string value = 1; }
     message ReqString { required string value = 1; }
     message RepString { repeated string value = 1; }
-}
 
-message Bytes {
     message OptBytes { optional bytes value = 1; }
     message ReqBytes { required bytes value = 1; }
     message RepBytes { repeated bytes value = 1; }

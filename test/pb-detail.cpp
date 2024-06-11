@@ -119,19 +119,19 @@ TEST_CASE( "protobuf" )
         {
             SUBCASE( "required" )
             {
-                CHECK( sds::pb::serialize( Test::Scalar::Strings::ReqString{ } ) == "" );
-                CHECK( sds::pb::serialize( Test::Scalar::Strings::ReqString{ .value = "hello" } ) == "\x0a\x05hello" );
+                CHECK( sds::pb::serialize( Test::Scalar::ReqString{ } ) == "" );
+                CHECK( sds::pb::serialize( Test::Scalar::ReqString{ .value = "hello" } ) == "\x0a\x05hello" );
             }
             SUBCASE( "optional" )
             {
-                CHECK( sds::pb::serialize( Test::Scalar::Strings::OptString{ } ) == "" );
-                CHECK( sds::pb::serialize( Test::Scalar::Strings::OptString{ .value = "hello" } ) == "\x0a\x05hello" );
+                CHECK( sds::pb::serialize( Test::Scalar::OptString{ } ) == "" );
+                CHECK( sds::pb::serialize( Test::Scalar::OptString{ .value = "hello" } ) == "\x0a\x05hello" );
             }
             SUBCASE( "repeated" )
             {
-                CHECK( sds::pb::serialize( Test::Scalar::Strings::RepString{ } ) == "" );
-                CHECK( sds::pb::serialize( Test::Scalar::Strings::RepString{ .value = { "hello" } } ) == "\x0a\x05hello" );
-                CHECK( sds::pb::serialize( Test::Scalar::Strings::RepString{ .value = { "hello", "world" } } ) == "\x0a\x05hello\x0a\x05world" );
+                CHECK( sds::pb::serialize( Test::Scalar::RepString{ } ) == "" );
+                CHECK( sds::pb::serialize( Test::Scalar::RepString{ .value = { "hello" } } ) == "\x0a\x05hello" );
+                CHECK( sds::pb::serialize( Test::Scalar::RepString{ .value = { "hello", "world" } } ) == "\x0a\x05hello\x0a\x05world" );
             }
         }
         SUBCASE( "string_view" )
@@ -153,22 +153,22 @@ TEST_CASE( "protobuf" )
         {
             SUBCASE( "required" )
             {
-                CHECK( sds::pb::serialize( Test::Scalar::Integers::ReqBool{ } ) == "\x08\x00"sv );
-                CHECK( sds::pb::serialize( Test::Scalar::Integers::ReqBool{ .value = true } ) == "\x08\x01" );
-                CHECK( sds::pb::serialize( Test::Scalar::Integers::ReqBool{ .value = false } ) == "\x08\x00"sv );
+                CHECK( sds::pb::serialize( Test::Scalar::ReqBool{ } ) == "\x08\x00"sv );
+                CHECK( sds::pb::serialize( Test::Scalar::ReqBool{ .value = true } ) == "\x08\x01" );
+                CHECK( sds::pb::serialize( Test::Scalar::ReqBool{ .value = false } ) == "\x08\x00"sv );
             }
             SUBCASE( "optional" )
             {
-                CHECK( sds::pb::serialize( Test::Scalar::Integers::OptBool{ } ) == "" );
-                CHECK( sds::pb::serialize( Test::Scalar::Integers::OptBool{ .value = true } ) == "\x08\x01" );
-                CHECK( sds::pb::serialize( Test::Scalar::Integers::OptBool{ .value = false } ) == "\x08\x00"sv );
+                CHECK( sds::pb::serialize( Test::Scalar::OptBool{ } ) == "" );
+                CHECK( sds::pb::serialize( Test::Scalar::OptBool{ .value = true } ) == "\x08\x01" );
+                CHECK( sds::pb::serialize( Test::Scalar::OptBool{ .value = false } ) == "\x08\x00"sv );
             }
             SUBCASE( "repeated" )
             {
-                CHECK( sds::pb::serialize( Test::Scalar::Integers::RepBool{ } ) == "" );
-                CHECK( sds::pb::serialize( Test::Scalar::Integers::RepBool{ .value = { true } } ) == "\x08\x01" );
-                CHECK( sds::pb::serialize( Test::Scalar::Integers::RepBool{ .value = { true, false } } ) == "\x08\x01\x08\x00"sv );
-                CHECK( sds::pb::serialize( Test::Scalar::Integers::RepBool{ .value = {} } ) == "" );
+                CHECK( sds::pb::serialize( Test::Scalar::RepBool{ } ) == "" );
+                CHECK( sds::pb::serialize( Test::Scalar::RepBool{ .value = { true } } ) == "\x08\x01" );
+                CHECK( sds::pb::serialize( Test::Scalar::RepBool{ .value = { true, false } } ) == "\x08\x01\x08\x00"sv );
+                CHECK( sds::pb::serialize( Test::Scalar::RepBool{ .value = {} } ) == "" );
             }
         }
         SUBCASE( "int" )
@@ -177,30 +177,30 @@ TEST_CASE( "protobuf" )
             {
                 SUBCASE( "required" )
                 {
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::ReqInt32{ .value = 0x42 } ) == "\x08\x42" );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::ReqInt32{ .value = 0xff } ) == "\x08\xff\x01" );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::ReqInt32{ .value = -2 } ) == "\x08\xfe\xff\xff\xff\x0f"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::ReqInt32{ .value = 0x42 } ) == "\x08\x42" );
+                    CHECK( sds::pb::serialize( Test::Scalar::ReqInt32{ .value = 0xff } ) == "\x08\xff\x01" );
+                    CHECK( sds::pb::serialize( Test::Scalar::ReqInt32{ .value = -2 } ) == "\x08\xfe\xff\xff\xff\x0f"sv );
                 }
                 SUBCASE( "optional" )
                 {
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::OptInt32{ } ) == "" );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::OptInt32{ .value = 0x42 } ) == "\x08\x42" );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::OptInt32{ .value = 0xff } ) == "\x08\xff\x01" );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::OptInt32{ .value = -2 } ) == "\x08\xfe\xff\xff\xff\x0f"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::OptInt32{ } ) == "" );
+                    CHECK( sds::pb::serialize( Test::Scalar::OptInt32{ .value = 0x42 } ) == "\x08\x42" );
+                    CHECK( sds::pb::serialize( Test::Scalar::OptInt32{ .value = 0xff } ) == "\x08\xff\x01" );
+                    CHECK( sds::pb::serialize( Test::Scalar::OptInt32{ .value = -2 } ) == "\x08\xfe\xff\xff\xff\x0f"sv );
                 }
                 SUBCASE( "repeated" )
                 {
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::RepInt32{ } ) == "" );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::RepInt32{ .value = { 0x42 } } ) == "\x08\x42" );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::RepInt32{ .value = { 0x42, 0x3 } } ) == "\x08\x42\x08\x03" );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::RepInt32{ .value = {} } ) == "" );
+                    CHECK( sds::pb::serialize( Test::Scalar::RepInt32{ } ) == "" );
+                    CHECK( sds::pb::serialize( Test::Scalar::RepInt32{ .value = { 0x42 } } ) == "\x08\x42" );
+                    CHECK( sds::pb::serialize( Test::Scalar::RepInt32{ .value = { 0x42, 0x3 } } ) == "\x08\x42\x08\x03" );
+                    CHECK( sds::pb::serialize( Test::Scalar::RepInt32{ .value = {} } ) == "" );
 
                     SUBCASE( "packed" )
                     {
-                        CHECK( sds::pb::serialize( Test::Scalar::Integers::RepPackInt32{ } ) == "" );
-                        CHECK( sds::pb::serialize( Test::Scalar::Integers::RepPackInt32{ .value = { 0x42 } } ) == "\x0a\x01\x42" );
-                        CHECK( sds::pb::serialize( Test::Scalar::Integers::RepPackInt32{ .value = { 0x42, 0x3 } } ) == "\x0a\x02\x42\x03" );
-                        CHECK( sds::pb::serialize( Test::Scalar::Integers::RepPackInt32{ .value = {} } ) == "" );
+                        CHECK( sds::pb::serialize( Test::Scalar::RepPackInt32{ } ) == "" );
+                        CHECK( sds::pb::serialize( Test::Scalar::RepPackInt32{ .value = { 0x42 } } ) == "\x0a\x01\x42" );
+                        CHECK( sds::pb::serialize( Test::Scalar::RepPackInt32{ .value = { 0x42, 0x3 } } ) == "\x0a\x02\x42\x03" );
+                        CHECK( sds::pb::serialize( Test::Scalar::RepPackInt32{ .value = {} } ) == "" );
                     }
                 }
             }
@@ -208,30 +208,30 @@ TEST_CASE( "protobuf" )
             {
                 SUBCASE( "required" )
                 {
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::ReqInt64{ .value = 0x42 } ) == "\x08\x42" );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::ReqInt64{ .value = 0xff } ) == "\x08\xff\x01" );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::ReqInt64{ .value = -2 } ) == "\x08\xfe\xff\xff\xff\xff\xff\xff\xff\xff\x01" );
+                    CHECK( sds::pb::serialize( Test::Scalar::ReqInt64{ .value = 0x42 } ) == "\x08\x42" );
+                    CHECK( sds::pb::serialize( Test::Scalar::ReqInt64{ .value = 0xff } ) == "\x08\xff\x01" );
+                    CHECK( sds::pb::serialize( Test::Scalar::ReqInt64{ .value = -2 } ) == "\x08\xfe\xff\xff\xff\xff\xff\xff\xff\xff\x01" );
                 }
                 SUBCASE( "optional" )
                 {
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::OptInt64{ } ) == "" );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::OptInt64{ .value = 0x42 } ) == "\x08\x42" );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::OptInt64{ .value = 0xff } ) == "\x08\xff\x01" );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::OptInt64{ .value = -2 } ) == "\x08\xfe\xff\xff\xff\xff\xff\xff\xff\xff\x01" );
+                    CHECK( sds::pb::serialize( Test::Scalar::OptInt64{ } ) == "" );
+                    CHECK( sds::pb::serialize( Test::Scalar::OptInt64{ .value = 0x42 } ) == "\x08\x42" );
+                    CHECK( sds::pb::serialize( Test::Scalar::OptInt64{ .value = 0xff } ) == "\x08\xff\x01" );
+                    CHECK( sds::pb::serialize( Test::Scalar::OptInt64{ .value = -2 } ) == "\x08\xfe\xff\xff\xff\xff\xff\xff\xff\xff\x01" );
                 }
                 SUBCASE( "repeated" )
                 {
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::RepInt64{ } ) == "" );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::RepInt64{ .value = { 0x42 } } ) == "\x08\x42" );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::RepInt64{ .value = { 0x42, 0x3 } } ) == "\x08\x42\x08\x03" );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::RepInt64{ .value = {} } ) == "" );
+                    CHECK( sds::pb::serialize( Test::Scalar::RepInt64{ } ) == "" );
+                    CHECK( sds::pb::serialize( Test::Scalar::RepInt64{ .value = { 0x42 } } ) == "\x08\x42" );
+                    CHECK( sds::pb::serialize( Test::Scalar::RepInt64{ .value = { 0x42, 0x3 } } ) == "\x08\x42\x08\x03" );
+                    CHECK( sds::pb::serialize( Test::Scalar::RepInt64{ .value = {} } ) == "" );
 
                     SUBCASE( "packed" )
                     {
-                        CHECK( sds::pb::serialize( Test::Scalar::Integers::RepPackInt64{ } ) == "" );
-                        CHECK( sds::pb::serialize( Test::Scalar::Integers::RepPackInt64{ .value = { 0x42 } } ) == "\x0a\x01\x42" );
-                        CHECK( sds::pb::serialize( Test::Scalar::Integers::RepPackInt64{ .value = { 0x42, 0x3 } } ) == "\x0a\x02\x42\x03" );
-                        CHECK( sds::pb::serialize( Test::Scalar::Integers::RepPackInt64{ .value = {} } ) == "" );
+                        CHECK( sds::pb::serialize( Test::Scalar::RepPackInt64{ } ) == "" );
+                        CHECK( sds::pb::serialize( Test::Scalar::RepPackInt64{ .value = { 0x42 } } ) == "\x0a\x01\x42" );
+                        CHECK( sds::pb::serialize( Test::Scalar::RepPackInt64{ .value = { 0x42, 0x3 } } ) == "\x0a\x02\x42\x03" );
+                        CHECK( sds::pb::serialize( Test::Scalar::RepPackInt64{ .value = {} } ) == "" );
                     }
                 }
             }
@@ -239,29 +239,29 @@ TEST_CASE( "protobuf" )
             {
                 SUBCASE( "required" )
                 {
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::ReqSint32{ .value = 0x42 } ) == "\x08\x84\x01"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::ReqSint32{ .value = 0xff } ) == "\x08\xfe\x03"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::ReqSint32{ .value = -2 } ) == "\x08\x03"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::ReqSint32{ .value = 0x42 } ) == "\x08\x84\x01"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::ReqSint32{ .value = 0xff } ) == "\x08\xfe\x03"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::ReqSint32{ .value = -2 } ) == "\x08\x03"sv );
                 }
                 SUBCASE( "optional" )
                 {
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::OptSint32{ } ) == "" );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::OptSint32{ .value = 0x42 } ) == "\x08\x84\x01"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::OptSint32{ .value = 0xff } ) == "\x08\xfe\x03"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::OptSint32{ .value = -2 } ) == "\x08\x03"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::OptSint32{ } ) == "" );
+                    CHECK( sds::pb::serialize( Test::Scalar::OptSint32{ .value = 0x42 } ) == "\x08\x84\x01"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::OptSint32{ .value = 0xff } ) == "\x08\xfe\x03"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::OptSint32{ .value = -2 } ) == "\x08\x03"sv );
                 }
                 SUBCASE( "repeated" )
                 {
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::RepSint32{ } ) == "" );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::RepSint32{ .value = { 0x42 } } ) == "\x08\x84\x01"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::RepSint32{ .value = { 0x42, -2 } } ) == "\x08\x84\x01\x08\x03"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::RepSint32{ .value = {} } ) == "" );
+                    CHECK( sds::pb::serialize( Test::Scalar::RepSint32{ } ) == "" );
+                    CHECK( sds::pb::serialize( Test::Scalar::RepSint32{ .value = { 0x42 } } ) == "\x08\x84\x01"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::RepSint32{ .value = { 0x42, -2 } } ) == "\x08\x84\x01\x08\x03"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::RepSint32{ .value = {} } ) == "" );
 
                     SUBCASE( "packed" )
                     {
-                        CHECK( sds::pb::serialize( Test::Scalar::Integers::RepPackSint32{ .value = { 0x42 } } ) == "\x0a\x02\x84\x01"sv );
-                        CHECK( sds::pb::serialize( Test::Scalar::Integers::RepPackSint32{ .value = { 0x42, -2 } } ) == "\x0a\x03\x84\x01\x03"sv );
-                        CHECK( sds::pb::serialize( Test::Scalar::Integers::RepPackSint32{ .value = {} } ) == "" );
+                        CHECK( sds::pb::serialize( Test::Scalar::RepPackSint32{ .value = { 0x42 } } ) == "\x0a\x02\x84\x01"sv );
+                        CHECK( sds::pb::serialize( Test::Scalar::RepPackSint32{ .value = { 0x42, -2 } } ) == "\x0a\x03\x84\x01\x03"sv );
+                        CHECK( sds::pb::serialize( Test::Scalar::RepPackSint32{ .value = {} } ) == "" );
                     }
                 }
             }
@@ -269,29 +269,29 @@ TEST_CASE( "protobuf" )
             {
                 SUBCASE( "required" )
                 {
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::ReqSint64{ .value = 0x42 } ) == "\x08\x84\x01"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::ReqSint64{ .value = 0xff } ) == "\x08\xfe\x03"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::ReqSint64{ .value = -2 } ) == "\x08\x03"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::ReqSint64{ .value = 0x42 } ) == "\x08\x84\x01"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::ReqSint64{ .value = 0xff } ) == "\x08\xfe\x03"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::ReqSint64{ .value = -2 } ) == "\x08\x03"sv );
                 }
                 SUBCASE( "optional" )
                 {
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::OptSint64{ } ) == "" );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::OptSint64{ .value = 0x42 } ) == "\x08\x84\x01"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::OptSint64{ .value = 0xff } ) == "\x08\xfe\x03"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::OptSint64{ .value = -2 } ) == "\x08\x03"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::OptSint64{ } ) == "" );
+                    CHECK( sds::pb::serialize( Test::Scalar::OptSint64{ .value = 0x42 } ) == "\x08\x84\x01"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::OptSint64{ .value = 0xff } ) == "\x08\xfe\x03"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::OptSint64{ .value = -2 } ) == "\x08\x03"sv );
                 }
                 SUBCASE( "repeated" )
                 {
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::RepSint64{ } ) == "" );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::RepSint64{ .value = { 0x42 } } ) == "\x08\x84\x01"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::RepSint64{ .value = { 0x42, -2 } } ) == "\x08\x84\x01\x08\x03"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::RepSint64{ .value = {} } ) == "" );
+                    CHECK( sds::pb::serialize( Test::Scalar::RepSint64{ } ) == "" );
+                    CHECK( sds::pb::serialize( Test::Scalar::RepSint64{ .value = { 0x42 } } ) == "\x08\x84\x01"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::RepSint64{ .value = { 0x42, -2 } } ) == "\x08\x84\x01\x08\x03"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::RepSint64{ .value = {} } ) == "" );
 
                     SUBCASE( "packed" )
                     {
-                        CHECK( sds::pb::serialize( Test::Scalar::Integers::RepPackSint64{ .value = { 0x42 } } ) == "\x0a\x02\x84\x01"sv );
-                        CHECK( sds::pb::serialize( Test::Scalar::Integers::RepPackSint64{ .value = { 0x42, -2 } } ) == "\x0a\x03\x84\x01\x03"sv );
-                        CHECK( sds::pb::serialize( Test::Scalar::Integers::RepPackSint64{ .value = {} } ) == "" );
+                        CHECK( sds::pb::serialize( Test::Scalar::RepPackSint64{ .value = { 0x42 } } ) == "\x0a\x02\x84\x01"sv );
+                        CHECK( sds::pb::serialize( Test::Scalar::RepPackSint64{ .value = { 0x42, -2 } } ) == "\x0a\x03\x84\x01\x03"sv );
+                        CHECK( sds::pb::serialize( Test::Scalar::RepPackSint64{ .value = {} } ) == "" );
                     }
                 }
             }
@@ -299,27 +299,27 @@ TEST_CASE( "protobuf" )
             {
                 SUBCASE( "required" )
                 {
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::ReqFixed32{ .value = 0x42 } ) == "\x0d\x42\x00\x00\x00"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::ReqFixed32{ .value = 0xff } ) == "\x0d\xff\x00\x00\x00"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::ReqFixed32{ .value = uint32_t( -2 ) } ) == "\x0d\xfe\xff\xff\xff"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::ReqFixed32{ .value = 0x42 } ) == "\x0d\x42\x00\x00\x00"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::ReqFixed32{ .value = 0xff } ) == "\x0d\xff\x00\x00\x00"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::ReqFixed32{ .value = uint32_t( -2 ) } ) == "\x0d\xfe\xff\xff\xff"sv );
                 }
                 SUBCASE( "optional" )
                 {
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::OptFixed32{ .value = 0x42 } ) == "\x0d\x42\x00\x00\x00"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::OptFixed32{ .value = 0xff } ) == "\x0d\xff\x00\x00\x00"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::OptFixed32{ .value = -2 } ) == "\x0d\xfe\xff\xff\xff"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::OptFixed32{ .value = 0x42 } ) == "\x0d\x42\x00\x00\x00"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::OptFixed32{ .value = 0xff } ) == "\x0d\xff\x00\x00\x00"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::OptFixed32{ .value = -2 } ) == "\x0d\xfe\xff\xff\xff"sv );
                 }
                 SUBCASE( "repeated" )
                 {
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::RepFixed32{ .value = { 0x42 } } ) == "\x0d\x42\x00\x00\x00"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::RepFixed32{ .value = { 0x42, 0x3 } } ) == "\x0d\x42\x00\x00\x00\x0d\x03\x00\x00\x00"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::RepFixed32{ .value = {} } ) == ""sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::RepFixed32{ .value = { 0x42 } } ) == "\x0d\x42\x00\x00\x00"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::RepFixed32{ .value = { 0x42, 0x3 } } ) == "\x0d\x42\x00\x00\x00\x0d\x03\x00\x00\x00"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::RepFixed32{ .value = {} } ) == ""sv );
 
                     SUBCASE( "packed" )
                     {
-                        CHECK( sds::pb::serialize( Test::Scalar::Integers::RepPackFixed32{ .value = { 0x42 } } ) == "\x0a\x04\x42\x00\x00\x00"sv );
-                        CHECK( sds::pb::serialize( Test::Scalar::Integers::RepPackFixed32{ .value = { 0x42, 0x3 } } ) == "\x0a\x08\x42\x00\x00\x00\x03\x00\x00\x00"sv );
-                        CHECK( sds::pb::serialize( Test::Scalar::Integers::RepPackFixed32{ .value = {} } ) == ""sv );
+                        CHECK( sds::pb::serialize( Test::Scalar::RepPackFixed32{ .value = { 0x42 } } ) == "\x0a\x04\x42\x00\x00\x00"sv );
+                        CHECK( sds::pb::serialize( Test::Scalar::RepPackFixed32{ .value = { 0x42, 0x3 } } ) == "\x0a\x08\x42\x00\x00\x00\x03\x00\x00\x00"sv );
+                        CHECK( sds::pb::serialize( Test::Scalar::RepPackFixed32{ .value = {} } ) == ""sv );
                     }
                 }
             }
@@ -327,26 +327,26 @@ TEST_CASE( "protobuf" )
             {
                 SUBCASE( "required" )
                 {
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::ReqFixed64{ .value = 0x42 } ) == "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::ReqFixed64{ .value = 0xff } ) == "\x09\xff\x00\x00\x00\x00\x00\x00\x00"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::ReqFixed64{ .value = uint64_t( -2 ) } ) == "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::ReqFixed64{ .value = 0x42 } ) == "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::ReqFixed64{ .value = 0xff } ) == "\x09\xff\x00\x00\x00\x00\x00\x00\x00"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::ReqFixed64{ .value = uint64_t( -2 ) } ) == "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv );
                 }
                 SUBCASE( "optional" )
                 {
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::OptFixed64{ .value = 0x42 } ) == "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::OptFixed64{ .value = 0xff } ) == "\x09\xff\x00\x00\x00\x00\x00\x00\x00"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::OptFixed64{ .value = -2 } ) == "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::OptFixed64{ .value = 0x42 } ) == "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::OptFixed64{ .value = 0xff } ) == "\x09\xff\x00\x00\x00\x00\x00\x00\x00"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::OptFixed64{ .value = -2 } ) == "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv );
                 }
                 SUBCASE( "repeated" )
                 {
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::RepFixed64{ .value = { 0x42 } } ) == "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::RepFixed64{ .value = { 0x42, 0x3 } } ) == "\x09\x42\x00\x00\x00\x00\x00\x00\x00\x09\x03\x00\x00\x00\x00\x00\x00\x00"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::RepFixed64{ .value = {} } ) == ""sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::RepFixed64{ .value = { 0x42 } } ) == "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::RepFixed64{ .value = { 0x42, 0x3 } } ) == "\x09\x42\x00\x00\x00\x00\x00\x00\x00\x09\x03\x00\x00\x00\x00\x00\x00\x00"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::RepFixed64{ .value = {} } ) == ""sv );
                     SUBCASE( "packed" )
                     {
-                        CHECK( sds::pb::serialize( Test::Scalar::Integers::RepPackFixed64{ .value = { 0x42 } } ) == "\x0a\x08\x42\x00\x00\x00\x00\x00\x00\x00"sv );
-                        CHECK( sds::pb::serialize( Test::Scalar::Integers::RepPackFixed64{ .value = { 0x42, 0x3 } } ) == "\x0a\x10\x42\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00"sv );
-                        CHECK( sds::pb::serialize( Test::Scalar::Integers::RepPackFixed64{ .value = {} } ) == ""sv );
+                        CHECK( sds::pb::serialize( Test::Scalar::RepPackFixed64{ .value = { 0x42 } } ) == "\x0a\x08\x42\x00\x00\x00\x00\x00\x00\x00"sv );
+                        CHECK( sds::pb::serialize( Test::Scalar::RepPackFixed64{ .value = { 0x42, 0x3 } } ) == "\x0a\x10\x42\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00"sv );
+                        CHECK( sds::pb::serialize( Test::Scalar::RepPackFixed64{ .value = {} } ) == ""sv );
                     }
                 }
             }
@@ -354,27 +354,27 @@ TEST_CASE( "protobuf" )
             {
                 SUBCASE( "required" )
                 {
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::ReqSfixed32{ .value = 0x42 } ) == "\x0d\x42\x00\x00\x00"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::ReqSfixed32{ .value = 0xff } ) == "\x0d\xff\x00\x00\x00"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::ReqSfixed32{ .value = -2 } ) == "\x0d\xfe\xff\xff\xff"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::ReqSfixed32{ .value = 0x42 } ) == "\x0d\x42\x00\x00\x00"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::ReqSfixed32{ .value = 0xff } ) == "\x0d\xff\x00\x00\x00"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::ReqSfixed32{ .value = -2 } ) == "\x0d\xfe\xff\xff\xff"sv );
                 }
                 SUBCASE( "optional" )
                 {
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::ReqSfixed32{ .value = 0x42 } ) == "\x0d\x42\x00\x00\x00"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::ReqSfixed32{ .value = 0xff } ) == "\x0d\xff\x00\x00\x00"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::ReqSfixed32{ .value = -2 } ) == "\x0d\xfe\xff\xff\xff"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::ReqSfixed32{ .value = 0x42 } ) == "\x0d\x42\x00\x00\x00"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::ReqSfixed32{ .value = 0xff } ) == "\x0d\xff\x00\x00\x00"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::ReqSfixed32{ .value = -2 } ) == "\x0d\xfe\xff\xff\xff"sv );
                 }
                 SUBCASE( "repeated" )
                 {
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::RepSfixed32{ .value = { 0x42 } } ) == "\x0d\x42\x00\x00\x00"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::RepSfixed32{ .value = { 0x42, 0x3 } } ) == "\x0d\x42\x00\x00\x00\x0d\x03\x00\x00\x00"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::RepSfixed32{ .value = {} } ) == ""sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::RepSfixed32{ .value = { 0x42 } } ) == "\x0d\x42\x00\x00\x00"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::RepSfixed32{ .value = { 0x42, 0x3 } } ) == "\x0d\x42\x00\x00\x00\x0d\x03\x00\x00\x00"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::RepSfixed32{ .value = {} } ) == ""sv );
 
                     SUBCASE( "packed" )
                     {
-                        CHECK( sds::pb::serialize( Test::Scalar::Integers::RepPackSfixed32{ .value = { 0x42 } } ) == "\x0a\x04\x42\x00\x00\x00"sv );
-                        CHECK( sds::pb::serialize( Test::Scalar::Integers::RepPackSfixed32{ .value = { 0x42, 0x3 } } ) == "\x0a\x08\x42\x00\x00\x00\x03\x00\x00\x00"sv );
-                        CHECK( sds::pb::serialize( Test::Scalar::Integers::RepPackSfixed32{ .value = {} } ) == ""sv );
+                        CHECK( sds::pb::serialize( Test::Scalar::RepPackSfixed32{ .value = { 0x42 } } ) == "\x0a\x04\x42\x00\x00\x00"sv );
+                        CHECK( sds::pb::serialize( Test::Scalar::RepPackSfixed32{ .value = { 0x42, 0x3 } } ) == "\x0a\x08\x42\x00\x00\x00\x03\x00\x00\x00"sv );
+                        CHECK( sds::pb::serialize( Test::Scalar::RepPackSfixed32{ .value = {} } ) == ""sv );
                     }
                 }
             }
@@ -382,26 +382,26 @@ TEST_CASE( "protobuf" )
             {
                 SUBCASE( "required" )
                 {
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::ReqSfixed64{ .value = 0x42 } ) == "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::ReqSfixed64{ .value = 0xff } ) == "\x09\xff\x00\x00\x00\x00\x00\x00\x00"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::ReqSfixed64{ .value = -2 } ) == "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::ReqSfixed64{ .value = 0x42 } ) == "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::ReqSfixed64{ .value = 0xff } ) == "\x09\xff\x00\x00\x00\x00\x00\x00\x00"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::ReqSfixed64{ .value = -2 } ) == "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv );
                 }
                 SUBCASE( "optional" )
                 {
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::OptSfixed64{ .value = 0x42 } ) == "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::OptSfixed64{ .value = 0xff } ) == "\x09\xff\x00\x00\x00\x00\x00\x00\x00"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::OptSfixed64{ .value = -2 } ) == "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::OptSfixed64{ .value = 0x42 } ) == "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::OptSfixed64{ .value = 0xff } ) == "\x09\xff\x00\x00\x00\x00\x00\x00\x00"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::OptSfixed64{ .value = -2 } ) == "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv );
                 }
                 SUBCASE( "repeated" )
                 {
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::RepSfixed64{ .value = { 0x42 } } ) == "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::RepSfixed64{ .value = { 0x42, 0x3 } } ) == "\x09\x42\x00\x00\x00\x00\x00\x00\x00\x09\x03\x00\x00\x00\x00\x00\x00\x00"sv );
-                    CHECK( sds::pb::serialize( Test::Scalar::Integers::RepSfixed64{ .value = {} } ) == ""sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::RepSfixed64{ .value = { 0x42 } } ) == "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::RepSfixed64{ .value = { 0x42, 0x3 } } ) == "\x09\x42\x00\x00\x00\x00\x00\x00\x00\x09\x03\x00\x00\x00\x00\x00\x00\x00"sv );
+                    CHECK( sds::pb::serialize( Test::Scalar::RepSfixed64{ .value = {} } ) == ""sv );
                     SUBCASE( "packed" )
                     {
-                        CHECK( sds::pb::serialize( Test::Scalar::Integers::RepPackSfixed64{ .value = { 0x42 } } ) == "\x0a\x08\x42\x00\x00\x00\x00\x00\x00\x00"sv );
-                        CHECK( sds::pb::serialize( Test::Scalar::Integers::RepPackSfixed64{ .value = { 0x42, 0x3 } } ) == "\x0a\x10\x42\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00"sv );
-                        CHECK( sds::pb::serialize( Test::Scalar::Integers::RepPackSfixed64{ .value = {} } ) == ""sv );
+                        CHECK( sds::pb::serialize( Test::Scalar::RepPackSfixed64{ .value = { 0x42 } } ) == "\x0a\x08\x42\x00\x00\x00\x00\x00\x00\x00"sv );
+                        CHECK( sds::pb::serialize( Test::Scalar::RepPackSfixed64{ .value = { 0x42, 0x3 } } ) == "\x0a\x10\x42\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00"sv );
+                        CHECK( sds::pb::serialize( Test::Scalar::RepPackSfixed64{ .value = {} } ) == ""sv );
                     }
                 }
             }
@@ -410,58 +410,58 @@ TEST_CASE( "protobuf" )
         {
             SUBCASE( "required" )
             {
-                CHECK( sds::pb::serialize( Test::Scalar::Floats::ReqFloat{ .value = 42.0 } ) == "\x0d\x00\x00\x28\x42"sv );
+                CHECK( sds::pb::serialize( Test::Scalar::ReqFloat{ .value = 42.0 } ) == "\x0d\x00\x00\x28\x42"sv );
             }
             SUBCASE( "optional" )
             {
-                CHECK( sds::pb::serialize( Test::Scalar::Floats::OptFloat{ .value = 42.3 } ) == "\x0d\x33\x33\x29\x42"sv );
+                CHECK( sds::pb::serialize( Test::Scalar::OptFloat{ .value = 42.3 } ) == "\x0d\x33\x33\x29\x42"sv );
             }
             SUBCASE( "repeated" )
             {
-                CHECK( sds::pb::serialize( Test::Scalar::Floats::RepFloat{ .value = { 42.3 } } ) == "\x0d\x33\x33\x29\x42"sv );
-                CHECK( sds::pb::serialize( Test::Scalar::Floats::RepFloat{ .value = { 42.0, 42.3 } } ) == "\x0d\x00\x00\x28\x42\x0d\x33\x33\x29\x42"sv );
-                CHECK( sds::pb::serialize( Test::Scalar::Floats::RepFloat{ .value = {} } ) == ""sv );
+                CHECK( sds::pb::serialize( Test::Scalar::RepFloat{ .value = { 42.3 } } ) == "\x0d\x33\x33\x29\x42"sv );
+                CHECK( sds::pb::serialize( Test::Scalar::RepFloat{ .value = { 42.0, 42.3 } } ) == "\x0d\x00\x00\x28\x42\x0d\x33\x33\x29\x42"sv );
+                CHECK( sds::pb::serialize( Test::Scalar::RepFloat{ .value = {} } ) == ""sv );
             }
         }
         SUBCASE( "double" )
         {
             SUBCASE( "required" )
             {
-                CHECK( sds::pb::serialize( Test::Scalar::Floats::ReqDouble{ .value = 42.0 } ) == "\x09\x00\x00\x00\x00\x00\x00\x45\x40"sv );
+                CHECK( sds::pb::serialize( Test::Scalar::ReqDouble{ .value = 42.0 } ) == "\x09\x00\x00\x00\x00\x00\x00\x45\x40"sv );
             }
             SUBCASE( "optional" )
             {
-                CHECK( sds::pb::serialize( Test::Scalar::Floats::OptDouble{ .value = 42.3 } ) == "\x09\x66\x66\x66\x66\x66\x26\x45\x40"sv );
+                CHECK( sds::pb::serialize( Test::Scalar::OptDouble{ .value = 42.3 } ) == "\x09\x66\x66\x66\x66\x66\x26\x45\x40"sv );
             }
             SUBCASE( "repeated" )
             {
-                CHECK( sds::pb::serialize( Test::Scalar::Floats::RepDouble{ .value = { 42.3 } } ) == "\x09\x66\x66\x66\x66\x66\x26\x45\x40"sv );
-                CHECK( sds::pb::serialize( Test::Scalar::Floats::RepDouble{ .value = { 42.3, 3.0 } } ) == "\x09\x66\x66\x66\x66\x66\x26\x45\x40\x09\x00\x00\x00\x00\x00\x00\x08\x40"sv );
-                CHECK( sds::pb::serialize( Test::Scalar::Floats::RepDouble{ .value = {} } ) == ""sv );
+                CHECK( sds::pb::serialize( Test::Scalar::RepDouble{ .value = { 42.3 } } ) == "\x09\x66\x66\x66\x66\x66\x26\x45\x40"sv );
+                CHECK( sds::pb::serialize( Test::Scalar::RepDouble{ .value = { 42.3, 3.0 } } ) == "\x09\x66\x66\x66\x66\x66\x26\x45\x40\x09\x00\x00\x00\x00\x00\x00\x08\x40"sv );
+                CHECK( sds::pb::serialize( Test::Scalar::RepDouble{ .value = {} } ) == ""sv );
             }
         }
         SUBCASE( "bytes" )
         {
             SUBCASE( "required" )
             {
-                CHECK( sds::pb::serialize( Test::Scalar::Bytes::ReqBytes{ } ) == "" );
-                CHECK( sds::pb::serialize( Test::Scalar::Bytes::ReqBytes{ .value = to_bytes( "hello" ) } ) == "\x0a\x05hello"sv );
-                CHECK( sds::pb::serialize( Test::Scalar::Bytes::ReqBytes{ .value = to_bytes( "\x00\x01\x02"sv ) } ) == "\x0a\x03\x00\x01\x02"sv );
-                CHECK( sds::pb::serialize( Test::Scalar::Bytes::ReqBytes{ .value = to_bytes( "\x00\x01\x02\x03\x04"sv ) } ) == "\x0a\x05\x00\x01\x02\x03\x04"sv );
+                CHECK( sds::pb::serialize( Test::Scalar::ReqBytes{ } ) == "" );
+                CHECK( sds::pb::serialize( Test::Scalar::ReqBytes{ .value = to_bytes( "hello" ) } ) == "\x0a\x05hello"sv );
+                CHECK( sds::pb::serialize( Test::Scalar::ReqBytes{ .value = to_bytes( "\x00\x01\x02"sv ) } ) == "\x0a\x03\x00\x01\x02"sv );
+                CHECK( sds::pb::serialize( Test::Scalar::ReqBytes{ .value = to_bytes( "\x00\x01\x02\x03\x04"sv ) } ) == "\x0a\x05\x00\x01\x02\x03\x04"sv );
             }
             SUBCASE( "optional" )
             {
-                CHECK( sds::pb::serialize( Test::Scalar::Bytes::OptBytes{ } ) == "" );
-                CHECK( sds::pb::serialize( Test::Scalar::Bytes::OptBytes{ .value = to_bytes( "hello" ) } ) == "\x0a\x05hello"sv );
-                CHECK( sds::pb::serialize( Test::Scalar::Bytes::OptBytes{ .value = to_bytes( "\x00\x01\x02"sv ) } ) == "\x0a\x03\x00\x01\x02"sv );
-                CHECK( sds::pb::serialize( Test::Scalar::Bytes::OptBytes{ .value = to_bytes( "\x00\x01\x02\x03\x04"sv ) } ) == "\x0a\x05\x00\x01\x02\x03\x04"sv );
+                CHECK( sds::pb::serialize( Test::Scalar::OptBytes{ } ) == "" );
+                CHECK( sds::pb::serialize( Test::Scalar::OptBytes{ .value = to_bytes( "hello" ) } ) == "\x0a\x05hello"sv );
+                CHECK( sds::pb::serialize( Test::Scalar::OptBytes{ .value = to_bytes( "\x00\x01\x02"sv ) } ) == "\x0a\x03\x00\x01\x02"sv );
+                CHECK( sds::pb::serialize( Test::Scalar::OptBytes{ .value = to_bytes( "\x00\x01\x02\x03\x04"sv ) } ) == "\x0a\x05\x00\x01\x02\x03\x04"sv );
             }
             SUBCASE( "repeated" )
             {
-                CHECK( sds::pb::serialize( Test::Scalar::Bytes::RepBytes{ } ) == "" );
-                CHECK( sds::pb::serialize( Test::Scalar::Bytes::RepBytes{ .value = { to_bytes( "hello" ) } } ) == "\x0a\x05hello"sv );
-                CHECK( sds::pb::serialize( Test::Scalar::Bytes::RepBytes{ .value = { to_bytes( "\x00\x01\x02"sv ) } } ) == "\x0a\x03\x00\x01\x02"sv );
-                CHECK( sds::pb::serialize( Test::Scalar::Bytes::RepBytes{ .value = { to_bytes( "\x00\x01\x02\x03\x04"sv ) } } ) == "\x0a\x05\x00\x01\x02\x03\x04"sv );
+                CHECK( sds::pb::serialize( Test::Scalar::RepBytes{ } ) == "" );
+                CHECK( sds::pb::serialize( Test::Scalar::RepBytes{ .value = { to_bytes( "hello" ) } } ) == "\x0a\x05hello"sv );
+                CHECK( sds::pb::serialize( Test::Scalar::RepBytes{ .value = { to_bytes( "\x00\x01\x02"sv ) } } ) == "\x0a\x03\x00\x01\x02"sv );
+                CHECK( sds::pb::serialize( Test::Scalar::RepBytes{ .value = { to_bytes( "\x00\x01\x02\x03\x04"sv ) } } ) == "\x0a\x05\x00\x01\x02\x03\x04"sv );
             }
         }
         SUBCASE( "variant" )
