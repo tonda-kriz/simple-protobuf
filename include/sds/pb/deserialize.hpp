@@ -16,6 +16,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
+#include <limits>
 #include <map>
 #include <memory>
 #include <optional>
@@ -132,17 +133,30 @@ template < typename T >
     }
     else
     {
-        using unsigned_type = std::make_unsigned_t< T >;
 
-        auto result = unsigned_type( 0 );
+        auto value = uint64_t( 0 );
 
-        for( auto shift = 0U; shift < sizeof( T ) * CHAR_BIT; shift += CHAR_BIT - 1 )
+        for( auto shift = 0U; shift < sizeof( value ) * CHAR_BIT; shift += CHAR_BIT - 1 )
         {
             uint8_t byte = stream.read_byte( );
-            result |= unsigned_type( byte & 0x7F ) << shift;
+            value |= uint64_t( byte & 0x7F ) << shift;
             if( ( byte & 0x80 ) == 0 )
             {
-                return result;
+                if constexpr( std::is_signed_v< T > &&
+                              sizeof( T ) < sizeof( value ) )
+                {
+                    //- GPB encodes signed varints always as 64-bits
+                    //- so int32_t(-2) is encoded as "\xfe\xff\xff\xff\xff\xff\xff\xff\xff\x01", same as int64_t(-2)
+                    //- but it should be encoded as  "\xfe\xff\xff\xff\x0f"
+                    value = T( value );
+                }
+                auto result = T( value );
+                if( result == value )
+                {
+                    return result;
+                }
+
+                break;
             }
         }
         throw std::runtime_error( "invalid varint" );
