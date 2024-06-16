@@ -113,13 +113,13 @@ auto main( int argc, char * argv[] ) -> int
 
     try
     {
-        auto address_book = sds::json::deserialize< tutorial::AddressBook >( load_file( argv[ 1 ] ) );
+        auto address_book = spb::json::deserialize< tutorial::AddressBook >( load_file( argv[ 1 ] ) );
 
         // Add an address.
         PromptForAddress( address_book.people.emplace_back( ) );
 
         // Write the new address book back to disk.
-        save_file( argv[ 1 ], sds::json::serialize( address_book ) );
+        save_file( argv[ 1 ], spb::json::serialize( address_book ) );
     }
     catch( const std::exception & e )
     {

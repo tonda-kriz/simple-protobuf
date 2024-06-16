@@ -16,7 +16,7 @@ constexpr std::string_view file_pb_header_template = R"(
 //////////////////////////////////////////////////////////
 //- Protobuf serialize for $
 //////////////////////////////////////////////////////////
-namespace sds::pb
+namespace spb::pb
 {
 /**
  * @brief return protobuf serialized size in bytes
@@ -62,7 +62,7 @@ auto deserialize( std::string_view protobuf ) -> result;
 
 /**
  * @brief deserialize protobuf into variable
- *        use it like `auto value = sds::pb::deserialize< $ >( proto_string )`
+ *        use it like `auto value = spb::pb::deserialize< $ >( proto_string )`
  *
  * @param protobuf string with protobuf
  * @return deserialized protobuf or throw an exception
@@ -101,5 +101,5 @@ void deserialize_value( istream & stream, $ & value, uint32_t tag );
 auto is_empty( const $ & value ) noexcept -> bool;
 
 }// namespace detail
-}// namespace sds::pb
+}// namespace spb::pb
 )";

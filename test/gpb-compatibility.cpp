@@ -95,31 +95,31 @@ auto opt_size( const std::vector< T > & opt ) -> std::size_t
 }
 
 template < typename GPB, typename SDS >
-void gpb_test( const SDS & sds )
+void gpb_test( const SDS & spb )
 {
     SUBCASE( "serialize" )
     {
         auto gpb            = GPB( );
-        auto sds_serialized = sds::pb::serialize( sds );
+        auto sds_serialized = spb::pb::serialize( spb );
 
         REQUIRE( gpb.ParseFromString( sds_serialized ) );
         if constexpr( is_gpb_repeated< GPB > )
         {
-            REQUIRE( gpb.value( ).size( ) == opt_size( sds.value ) );
-            for( size_t i = 0; i < opt_size( sds.value ); ++i )
+            REQUIRE( gpb.value( ).size( ) == opt_size( spb.value ) );
+            for( size_t i = 0; i < opt_size( spb.value ); ++i )
             {
-                CHECK( gpb.value( i ) == sds.value[ i ] );
+                CHECK( gpb.value( i ) == spb.value[ i ] );
             }
         }
         else
         {
-            CHECK( sds.value == gpb.value( ) );
+            CHECK( spb.value == gpb.value( ) );
         }
         SUBCASE( "deserialize" )
         {
             auto gpb_serialized = std::string( );
             REQUIRE( gpb.SerializeToString( &gpb_serialized ) );
-            CHECK( sds::pb::deserialize< SDS >( gpb_serialized ) == sds );
+            CHECK( spb::pb::deserialize< SDS >( gpb_serialized ) == spb );
         }
     }
 }
@@ -432,67 +432,67 @@ TEST_CASE( "gpb-compatibility" )
         SUBCASE( "int" )
         {
             auto gpb            = Test::gpb::Variant( );
-            auto sds            = Test::Variant{ .oneof_field = 0x42U };
-            auto sds_serialized = sds::pb::serialize( sds );
+            auto spb            = Test::Variant{ .oneof_field = 0x42U };
+            auto sds_serialized = spb::pb::serialize( spb );
 
             REQUIRE( gpb.ParseFromString( sds_serialized ) );
-            CHECK( gpb.var_int( ) == std::get< 0 >( sds.oneof_field ) );
+            CHECK( gpb.var_int( ) == std::get< 0 >( spb.oneof_field ) );
 
             SUBCASE( "deserialize" )
             {
                 auto gpb_serialized = std::string( );
                 REQUIRE( gpb.SerializeToString( &gpb_serialized ) );
-                CHECK( sds::pb::deserialize< Test::Variant >( gpb_serialized ) == sds );
+                CHECK( spb::pb::deserialize< Test::Variant >( gpb_serialized ) == spb );
             }
         }
         SUBCASE( "string" )
         {
             auto gpb            = Test::gpb::Variant( );
-            auto sds            = Test::Variant{ .oneof_field = "hello" };
-            auto sds_serialized = sds::pb::serialize( sds );
+            auto spb            = Test::Variant{ .oneof_field = "hello" };
+            auto sds_serialized = spb::pb::serialize( spb );
 
             REQUIRE( gpb.ParseFromString( sds_serialized ) );
-            CHECK( gpb.var_string( ) == std::get< 1 >( sds.oneof_field ) );
+            CHECK( gpb.var_string( ) == std::get< 1 >( spb.oneof_field ) );
 
             SUBCASE( "deserialize" )
             {
                 auto gpb_serialized = std::string( );
                 REQUIRE( gpb.SerializeToString( &gpb_serialized ) );
-                CHECK( sds::pb::deserialize< Test::Variant >( gpb_serialized ) == sds );
+                CHECK( spb::pb::deserialize< Test::Variant >( gpb_serialized ) == spb );
             }
         }
         SUBCASE( "bytes" )
         {
             auto gpb            = Test::gpb::Variant( );
-            auto sds            = Test::Variant{ .oneof_field = to_bytes( "hello" ) };
-            auto sds_serialized = sds::pb::serialize( sds );
+            auto spb            = Test::Variant{ .oneof_field = to_bytes( "hello" ) };
+            auto sds_serialized = spb::pb::serialize( spb );
 
             REQUIRE( gpb.ParseFromString( sds_serialized ) );
-            CHECK( gpb.var_bytes( ) == std::get< 2 >( sds.oneof_field ) );
+            CHECK( gpb.var_bytes( ) == std::get< 2 >( spb.oneof_field ) );
 
             SUBCASE( "deserialize" )
             {
                 auto gpb_serialized = std::string( );
                 REQUIRE( gpb.SerializeToString( &gpb_serialized ) );
-                CHECK( sds::pb::deserialize< Test::Variant >( gpb_serialized ) == sds );
+                CHECK( spb::pb::deserialize< Test::Variant >( gpb_serialized ) == spb );
             }
         }
         SUBCASE( "name" )
         {
             auto gpb            = Test::gpb::Variant( );
-            auto sds            = Test::Variant{ .oneof_field = Test::Name{ .name = "John" } };
-            auto sds_serialized = sds::pb::serialize( sds );
+            auto spb            = Test::Variant{ .oneof_field = Test::Name{ .name = "John" } };
+            auto sds_serialized = spb::pb::serialize( spb );
 
             REQUIRE( gpb.ParseFromString( sds_serialized ) );
             REQUIRE( gpb.has_name( ) );
 
-            CHECK( gpb.name( ).name( ) == std::get< 3 >( sds.oneof_field ).name );
+            CHECK( gpb.name( ).name( ) == std::get< 3 >( spb.oneof_field ).name );
 
             SUBCASE( "deserialize" )
             {
                 auto gpb_serialized = std::string( );
                 REQUIRE( gpb.SerializeToString( &gpb_serialized ) );
-                CHECK( sds::pb::deserialize< Test::Variant >( gpb_serialized ) == sds );
+                CHECK( spb::pb::deserialize< Test::Variant >( gpb_serialized ) == spb );
             }
         }
     }
@@ -501,7 +501,7 @@ TEST_CASE( "gpb-compatibility" )
         SUBCASE( "serialize" )
         {
             auto gpb = PhoneBook::gpb::Person( );
-            auto sds = PhoneBook::Person{
+            auto spb = PhoneBook::Person{
                 .name   = "John Doe",
                 .id     = 123,
                 .email  = "QXUeh@example.com",
@@ -516,24 +516,24 @@ TEST_CASE( "gpb-compatibility" )
                     },
                 }
             };
-            auto sds_serialized = sds::pb::serialize( sds );
+            auto sds_serialized = spb::pb::serialize( spb );
 
             REQUIRE( gpb.ParseFromString( sds_serialized ) );
-            CHECK( gpb.name( ) == sds.name );
-            CHECK( gpb.id( ) == sds.id );
-            CHECK( gpb.email( ) == sds.email );
+            CHECK( gpb.name( ) == spb.name );
+            CHECK( gpb.id( ) == spb.id );
+            CHECK( gpb.email( ) == spb.email );
             REQUIRE( gpb.phones_size( ) == 2 );
             for( auto i = 0; i < gpb.phones_size( ); i++ )
             {
-                CHECK( gpb.phones( i ).number( ) == sds.phones[ i ].number );
-                CHECK( int( gpb.phones( i ).type( ) ) == int( sds.phones[ i ].type.value( ) ) );
+                CHECK( gpb.phones( i ).number( ) == spb.phones[ i ].number );
+                CHECK( int( gpb.phones( i ).type( ) ) == int( spb.phones[ i ].type.value( ) ) );
             }
 
             SUBCASE( "deserialize" )
             {
                 auto gpb_serialized = std::string( );
                 REQUIRE( gpb.SerializeToString( &gpb_serialized ) );
-                CHECK( sds::pb::deserialize< PhoneBook::Person >( gpb_serialized ) == sds );
+                CHECK( spb::pb::deserialize< PhoneBook::Person >( gpb_serialized ) == spb );
             }
         }
     }

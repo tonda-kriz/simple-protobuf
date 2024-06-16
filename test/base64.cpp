@@ -1,15 +1,15 @@
 #include <optional>
-#include <sds/json/serialize.hpp>
+#include <spb/json/serialize.hpp>
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
-#include <sds/json/base64.h>
+#include <spb/json/base64.h>
 
 namespace
 {
 auto base64_encode_size( std::string_view value ) -> size_t
 {
-    auto stream = sds::json::detail::ostream( nullptr );
-    sds::json::detail::base64_encode( stream, { reinterpret_cast< const std::byte * >( value.data( ) ), value.size( ) } );
+    auto stream = spb::json::detail::ostream( nullptr );
+    spb::json::detail::base64_encode( stream, { reinterpret_cast< const std::byte * >( value.data( ) ), value.size( ) } );
     return stream.size( );
 }
 
@@ -17,8 +17,8 @@ auto base64_encode( std::string_view value ) -> std::string
 {
     auto encode_size = base64_encode_size( value );
     auto result      = std::string( encode_size, '\0' );
-    auto stream      = sds::json::detail::ostream( result.data( ) );
-    sds::json::detail::base64_encode( stream, { reinterpret_cast< const std::byte * >( value.data( ) ), value.size( ) } );
+    auto stream      = spb::json::detail::ostream( result.data( ) );
+    spb::json::detail::base64_encode( stream, { reinterpret_cast< const std::byte * >( value.data( ) ), value.size( ) } );
     return result;
 }
 
@@ -26,7 +26,7 @@ auto base64_decode( std::string_view value ) -> std::string
 {
     auto result = std::vector< std::byte >( );
 
-    CHECK( sds::json::detail::base64_decode( result, value ) );
+    CHECK( spb::json::detail::base64_decode( result, value ) );
 
     return { std::string( reinterpret_cast< const char * >( result.data( ) ), reinterpret_cast< const char * >( result.data( ) + result.size( ) ) ) };
 }
@@ -52,9 +52,9 @@ TEST_CASE( "base64" )
         SUBCASE( "invalid" )
         {
             auto result = std::vector< std::byte >( );
-            CHECK( sds::json::detail::base64_decode( result, "Zg=" ) == false );
-            CHECK( sds::json::detail::base64_decode( result, "Zg" ) == false );
-            CHECK( sds::json::detail::base64_decode( result, "Z" ) == false );
+            CHECK( spb::json::detail::base64_decode( result, "Zg=" ) == false );
+            CHECK( spb::json::detail::base64_decode( result, "Zg" ) == false );
+            CHECK( spb::json::detail::base64_decode( result, "Z" ) == false );
         }
 
         CHECK( base64_decode( "" ) == "" );

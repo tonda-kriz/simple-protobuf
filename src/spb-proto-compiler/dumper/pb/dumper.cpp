@@ -84,8 +84,8 @@ void dump_prototypes( std::ostream & stream, const proto_file & file )
 void dump_cpp_includes( std::ostream & stream, std::string_view header_file_path )
 {
     stream << "#include \"" << header_file_path << "\"\n"
-           << "#include <sds/pb/deserialize.hpp>\n"
-              "#include <sds/pb/serialize.hpp>\n"
+           << "#include <spb/pb/deserialize.hpp>\n"
+              "#include <spb/pb/serialize.hpp>\n"
               "#include <type_traits>\n\n";
 }
 
@@ -327,7 +327,7 @@ void dump_pb_header( const proto_file & file, std::ostream & stream )
 void dump_pb_cpp( const proto_file & file, const std::filesystem::path & header_file, std::ostream & stream )
 {
     dump_cpp_includes( stream, header_file.string( ) );
-    dump_cpp_open_namespace( stream, "sds::pb" );
+    dump_cpp_open_namespace( stream, "spb::pb" );
     dump_cpp( stream, file );
-    dump_cpp_close_namespace( stream, "sds::pb" );
+    dump_cpp_close_namespace( stream, "spb::pb" );
 }

@@ -20,7 +20,7 @@
 #include <format>
 #include <iostream>
 #include <ranges>
-#include <sds/char_stream.h>
+#include <spb/char_stream.h>
 #include <set>
 #include <stdexcept>
 #include <string_view>

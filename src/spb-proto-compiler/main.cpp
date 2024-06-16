@@ -1,5 +1,5 @@
 /***************************************************************************\
-* Name        : sds-protoc                                                  *
+* Name        : spb-protoc                                                  *
 * Description : proto file compiler                                         *
 * Author      : antonin.kriz@gmail.com                                      *
 * ------------------------------------------------------------------------- *
@@ -33,7 +33,7 @@ constexpr auto opt_ipath      = "-IPATH="sv;
 
 void print_usage( )
 {
-    std::cout << "Usage: sds-protoc [OPTION] PROTO_FILES\n";
+    std::cout << "Usage: spb-protoc [OPTION] PROTO_FILES\n";
     std::cout << "Parse PROTO_FILES and generate C++ source files.\n";
     std::cout << "  -IPATH=, --proto_path=PATH  Specify the directory in which to search for imports.\n";
     std::cout << "May be specified multiple times. directories will be searched in order.\n";
@@ -79,7 +79,7 @@ auto main( int argc, char * argv[] ) -> int
         if( opt_version == argv[ 1 ] ||
             opt_v == argv[ 1 ] )
         {
-            std::cout << "sds-protoc version 0.1.0\n";
+            std::cout << "spb-protoc version 0.1.0\n";
             return 0;
         }
 

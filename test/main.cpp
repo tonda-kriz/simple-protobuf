@@ -42,8 +42,8 @@ auto main( int argc, char * argv[] ) -> int
         return 1;
     }
 
-    auto volume = sds::json::deserialize< mesos::Volume >( load_file( argv[ 1 ] ) );
-    auto json   = sds::json::serialize( volume );
+    auto volume = spb::json::deserialize< mesos::Volume >( load_file( argv[ 1 ] ) );
+    auto json   = spb::json::serialize( volume );
     save_file( argv[ 2 ], json );
     return 0;
 }

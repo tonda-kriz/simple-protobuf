@@ -16,7 +16,7 @@ constexpr std::string_view file_json_header_template = R"(
 //////////////////////////////////////////////////////////
 //- Json serialize for $
 //////////////////////////////////////////////////////////
-namespace sds::json
+namespace spb::json
 {
 /**
  * @brief return json-string serialized size in bytes
@@ -62,7 +62,7 @@ auto deserialize( std::string_view json ) -> result;
 
 /**
  * @brief deserialize json-string into variable
- *        use it like `auto value = sds::json::deserialize< $ >( json_string )`
+ *        use it like `auto value = spb::json::deserialize< $ >( json_string )`
  *
  * @param json string with json
  * @return deserialized json or throw an exception
@@ -100,5 +100,5 @@ auto deserialize_value( istream & stream, $ & value ) -> bool;
 auto is_empty( const $ & value ) noexcept -> bool;
 
 }// namespace detail
-}// namespace sds::json
+}// namespace spb::json
 )";
