@@ -1,17 +1,24 @@
 #include <cstdint>
+#include <gpb-name.pb.h>
 #include <gpb-person.pb.h>
 #include <gpb-scalar.pb.h>
-#include <memory>
 #include <name.pb.h>
 #include <optional>
 #include <person.pb.h>
 #include <scalar.pb.h>
 #include <string>
 #include <string_view>
-#include <type_traits>
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
+
+namespace std
+{
+auto operator==( const string & lhs, const vector< byte > & rhs ) noexcept -> bool
+{
+    return lhs.size( ) == rhs.size( ) && ( memcmp( lhs.data( ), rhs.data( ), lhs.size( ) ) == 0 );
+}
+}// namespace std
 
 namespace Test
 {
@@ -58,6 +65,12 @@ auto operator==( const Person & lhs, const Person & rhs ) noexcept -> bool
 
 namespace
 {
+auto to_bytes( std::string_view str ) -> std::vector< std::byte >
+{
+    auto span = std::span< std::byte >( ( std::byte * ) str.data( ), str.size( ) );
+    return { span.data( ), span.data( ) + span.size( ) };
+}
+
 template < typename T >
 concept is_gpb_repeated = requires( T t ) {
     {
@@ -151,41 +164,31 @@ TEST_CASE( "gpb-compatibility" )
             gpb_test< Test::Scalar::gpb::RepBool >( Test::Scalar::RepBool{ .value = { true, false } } );
         }
     }
-    /*SUBCASE( "int" )
+    SUBCASE( "int" )
     {
         SUBCASE( "varint32" )
         {
             SUBCASE( "required" )
             {
-                pb_test( Test::Scalar::ReqInt32{ .value = 0x42 }, "\x08\x42" );
-                pb_test( Test::Scalar::ReqInt32{ .value = 0xff }, "\x08\xff\x01" );
-                pb_test( Test::Scalar::ReqInt32{ .value = -2 }, "\x08\xfe\xff\xff\xff\x0f"sv );
-                CHECK_THROWS( sds::pb::deserialize< Test::Scalar::ReqInt32 >( "\x08" ) );
-                CHECK_THROWS( sds::pb::deserialize< Test::Scalar::ReqInt32 >( "\x08\xff" ) );
-                CHECK_THROWS( sds::pb::deserialize< Test::Scalar::ReqInt32 >( "\x08\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x01" ) );
+                gpb_test< Test::Scalar::gpb::ReqInt32 >( Test::Scalar::ReqInt32{ .value = 0x42 } );
+                gpb_test< Test::Scalar::gpb::ReqInt32 >( Test::Scalar::ReqInt32{ .value = 0xff } );
+                gpb_test< Test::Scalar::gpb::ReqInt32 >( Test::Scalar::ReqInt32{ .value = -2 } );
             }
             SUBCASE( "optional" )
             {
-                pb_test( Test::Scalar::OptInt32{ }, "" );
-                pb_test( Test::Scalar::OptInt32{ .value = 0x42 }, "\x08\x42" );
-                pb_test( Test::Scalar::OptInt32{ .value = 0xff }, "\x08\xff\x01" );
-                pb_test( Test::Scalar::OptInt32{ .value = -2 }, "\x08\xfe\xff\xff\xff\x0f"sv );
+                gpb_test< Test::Scalar::gpb::OptInt32 >( Test::Scalar::OptInt32{ .value = 0x42 } );
+                gpb_test< Test::Scalar::gpb::OptInt32 >( Test::Scalar::OptInt32{ .value = 0xff } );
+                gpb_test< Test::Scalar::gpb::OptInt32 >( Test::Scalar::OptInt32{ .value = -2 } );
             }
             SUBCASE( "repeated" )
             {
-                pb_test( Test::Scalar::RepInt32{ }, "" );
-                pb_test( Test::Scalar::RepInt32{ .value = { 0x42 } }, "\x08\x42" );
-                pb_test( Test::Scalar::RepInt32{ .value = { 0x42, 0x3 } }, "\x08\x42\x08\x03" );
-                pb_test( Test::Scalar::RepInt32{ .value = {} }, "" );
+                gpb_test< Test::Scalar::gpb::RepInt32 >( Test::Scalar::RepInt32{ .value = { 0x42 } } );
+                gpb_test< Test::Scalar::gpb::RepInt32 >( Test::Scalar::RepInt32{ .value = { 0x42, 0x3 } } );
 
                 SUBCASE( "packed" )
                 {
-                    pb_test( Test::Scalar::RepPackInt32{ }, "" );
-                    pb_test( Test::Scalar::RepPackInt32{ .value = { 0x42 } }, "\x0a\x01\x42" );
-                    pb_test( Test::Scalar::RepPackInt32{ .value = { 0x42, 0x3 } }, "\x0a\x02\x42\x03" );
-                    pb_test( Test::Scalar::RepPackInt32{ .value = {} }, "" );
-                    CHECK_THROWS( sds::pb::deserialize< Test::Scalar::RepPackInt32 >( "\x0a\x02\x42" ) );
-                    CHECK_THROWS( sds::pb::deserialize< Test::Scalar::RepPackInt32 >( "\x0a\x02\x42\xff" ) );
+                    gpb_test< Test::Scalar::gpb::RepPackInt32 >( Test::Scalar::RepPackInt32{ .value = { 0x42 } } );
+                    gpb_test< Test::Scalar::gpb::RepPackInt32 >( Test::Scalar::RepPackInt32{ .value = { 0x42, 0x3 } } );
                 }
             }
         }
@@ -193,35 +196,25 @@ TEST_CASE( "gpb-compatibility" )
         {
             SUBCASE( "required" )
             {
-                pb_test( Test::Scalar::ReqInt64{ .value = 0x42 }, "\x08\x42" );
-                pb_test( Test::Scalar::ReqInt64{ .value = 0xff }, "\x08\xff\x01" );
-                pb_test( Test::Scalar::ReqInt64{ .value = -2 }, "\x08\xfe\xff\xff\xff\xff\xff\xff\xff\xff\x01" );
-                CHECK_THROWS( sds::pb::deserialize< Test::Scalar::ReqInt32 >( "\x08" ) );
-                CHECK_THROWS( sds::pb::deserialize< Test::Scalar::ReqInt32 >( "\x08\xff" ) );
-                CHECK_THROWS( sds::pb::deserialize< Test::Scalar::ReqInt32 >( "\x08\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x01" ) );
+                gpb_test< Test::Scalar::gpb::ReqInt64 >( Test::Scalar::ReqInt64{ .value = 0x42 } );
+                gpb_test< Test::Scalar::gpb::ReqInt64 >( Test::Scalar::ReqInt64{ .value = 0xff } );
+                gpb_test< Test::Scalar::gpb::ReqInt64 >( Test::Scalar::ReqInt64{ .value = -2 } );
             }
             SUBCASE( "optional" )
             {
-                pb_test( Test::Scalar::OptInt64{ }, "" );
-                pb_test( Test::Scalar::OptInt64{ .value = 0x42 }, "\x08\x42" );
-                pb_test( Test::Scalar::OptInt64{ .value = 0xff }, "\x08\xff\x01" );
-                pb_test( Test::Scalar::OptInt64{ .value = -2 }, "\x08\xfe\xff\xff\xff\xff\xff\xff\xff\xff\x01" );
+                gpb_test< Test::Scalar::gpb::OptInt64 >( Test::Scalar::OptInt64{ .value = 0x42 } );
+                gpb_test< Test::Scalar::gpb::OptInt64 >( Test::Scalar::OptInt64{ .value = 0xff } );
+                gpb_test< Test::Scalar::gpb::OptInt64 >( Test::Scalar::OptInt64{ .value = -2 } );
             }
             SUBCASE( "repeated" )
             {
-                pb_test( Test::Scalar::RepInt64{ }, "" );
-                pb_test( Test::Scalar::RepInt64{ .value = { 0x42 } }, "\x08\x42" );
-                pb_test( Test::Scalar::RepInt64{ .value = { 0x42, 0x3 } }, "\x08\x42\x08\x03" );
-                pb_test( Test::Scalar::RepInt64{ .value = {} }, "" );
+                gpb_test< Test::Scalar::gpb::RepInt64 >( Test::Scalar::RepInt64{ .value = { 0x42 } } );
+                gpb_test< Test::Scalar::gpb::RepInt64 >( Test::Scalar::RepInt64{ .value = { 0x42, 0x3 } } );
 
                 SUBCASE( "packed" )
                 {
-                    pb_test( Test::Scalar::RepPackInt64{ }, "" );
-                    pb_test( Test::Scalar::RepPackInt64{ .value = { 0x42 } }, "\x0a\x01\x42" );
-                    pb_test( Test::Scalar::RepPackInt64{ .value = { 0x42, 0x3 } }, "\x0a\x02\x42\x03" );
-                    pb_test( Test::Scalar::RepPackInt64{ .value = {} }, "" );
-                    CHECK_THROWS( sds::pb::deserialize< Test::Scalar::RepPackInt64 >( "\x0a\x02\x42" ) );
-                    CHECK_THROWS( sds::pb::deserialize< Test::Scalar::RepPackInt64 >( "\x0a\x02\x42\xff" ) );
+                    gpb_test< Test::Scalar::gpb::RepPackInt64 >( Test::Scalar::RepPackInt64{ .value = { 0x42 } } );
+                    gpb_test< Test::Scalar::gpb::RepPackInt64 >( Test::Scalar::RepPackInt64{ .value = { 0x42, 0x3 } } );
                 }
             }
         }
@@ -229,34 +222,25 @@ TEST_CASE( "gpb-compatibility" )
         {
             SUBCASE( "required" )
             {
-                pb_test( Test::Scalar::ReqSint32{ .value = 0x42 }, "\x08\x84\x01"sv );
-                pb_test( Test::Scalar::ReqSint32{ .value = 0xff }, "\x08\xfe\x03"sv );
-                pb_test( Test::Scalar::ReqSint32{ .value = -2 }, "\x08\x03"sv );
-                CHECK_THROWS( sds::pb::deserialize< Test::Scalar::ReqSint32 >( "\x08" ) );
-                CHECK_THROWS( sds::pb::deserialize< Test::Scalar::ReqSint32 >( "\x08\xff" ) );
-                CHECK_THROWS( sds::pb::deserialize< Test::Scalar::ReqSint32 >( "\x08\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x01" ) );
+                gpb_test< Test::Scalar::gpb::ReqSint32 >( Test::Scalar::ReqSint32{ .value = 0x42 } );
+                gpb_test< Test::Scalar::gpb::ReqSint32 >( Test::Scalar::ReqSint32{ .value = 0xff } );
+                gpb_test< Test::Scalar::gpb::ReqSint32 >( Test::Scalar::ReqSint32{ .value = -2 } );
             }
             SUBCASE( "optional" )
             {
-                pb_test( Test::Scalar::OptSint32{ }, "" );
-                pb_test( Test::Scalar::OptSint32{ .value = 0x42 }, "\x08\x84\x01"sv );
-                pb_test( Test::Scalar::OptSint32{ .value = 0xff }, "\x08\xfe\x03"sv );
-                pb_test( Test::Scalar::OptSint32{ .value = -2 }, "\x08\x03"sv );
+                gpb_test< Test::Scalar::gpb::OptSint32 >( Test::Scalar::OptSint32{ .value = 0x42 } );
+                gpb_test< Test::Scalar::gpb::OptSint32 >( Test::Scalar::OptSint32{ .value = 0xff } );
+                gpb_test< Test::Scalar::gpb::OptSint32 >( Test::Scalar::OptSint32{ .value = -2 } );
             }
             SUBCASE( "repeated" )
             {
-                pb_test( Test::Scalar::RepSint32{ }, "" );
-                pb_test( Test::Scalar::RepSint32{ .value = { 0x42 } }, "\x08\x84\x01"sv );
-                pb_test( Test::Scalar::RepSint32{ .value = { 0x42, -2 } }, "\x08\x84\x01\x08\x03"sv );
-                pb_test( Test::Scalar::RepSint32{ .value = {} }, "" );
+                gpb_test< Test::Scalar::gpb::RepSint32 >( Test::Scalar::RepSint32{ .value = { 0x42 } } );
+                gpb_test< Test::Scalar::gpb::RepSint32 >( Test::Scalar::RepSint32{ .value = { 0x42, -2 } } );
 
                 SUBCASE( "packed" )
                 {
-                    pb_test( Test::Scalar::RepPackSint32{ .value = { 0x42 } }, "\x0a\x02\x84\x01"sv );
-                    pb_test( Test::Scalar::RepPackSint32{ .value = { 0x42, -2 } }, "\x0a\x03\x84\x01\x03"sv );
-                    pb_test( Test::Scalar::RepPackSint32{ .value = {} }, "" );
-                    CHECK_THROWS( sds::pb::deserialize< Test::Scalar::RepPackSint32 >( "\x0a\x02\x42" ) );
-                    CHECK_THROWS( sds::pb::deserialize< Test::Scalar::RepPackSint32 >( "\x0a\x02\x42\xff" ) );
+                    gpb_test< Test::Scalar::gpb::RepPackSint32 >( Test::Scalar::RepPackSint32{ .value = { 0x42 } } );
+                    gpb_test< Test::Scalar::gpb::RepPackSint32 >( Test::Scalar::RepPackSint32{ .value = { 0x42, -2 } } );
                 }
             }
         }
@@ -264,34 +248,25 @@ TEST_CASE( "gpb-compatibility" )
         {
             SUBCASE( "required" )
             {
-                pb_test( Test::Scalar::ReqSint64{ .value = 0x42 }, "\x08\x84\x01"sv );
-                pb_test( Test::Scalar::ReqSint64{ .value = 0xff }, "\x08\xfe\x03"sv );
-                pb_test( Test::Scalar::ReqSint64{ .value = -2 }, "\x08\x03"sv );
-                CHECK_THROWS( sds::pb::deserialize< Test::Scalar::ReqSint64 >( "\x08" ) );
-                CHECK_THROWS( sds::pb::deserialize< Test::Scalar::ReqSint64 >( "\x08\xff" ) );
-                CHECK_THROWS( sds::pb::deserialize< Test::Scalar::ReqSint64 >( "\x08\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x01" ) );
+                gpb_test< Test::Scalar::gpb::ReqSint64 >( Test::Scalar::ReqSint64{ .value = 0x42 } );
+                gpb_test< Test::Scalar::gpb::ReqSint64 >( Test::Scalar::ReqSint64{ .value = 0xff } );
+                gpb_test< Test::Scalar::gpb::ReqSint64 >( Test::Scalar::ReqSint64{ .value = -2 } );
             }
             SUBCASE( "optional" )
             {
-                pb_test( Test::Scalar::OptSint64{ }, "" );
-                pb_test( Test::Scalar::OptSint64{ .value = 0x42 }, "\x08\x84\x01"sv );
-                pb_test( Test::Scalar::OptSint64{ .value = 0xff }, "\x08\xfe\x03"sv );
-                pb_test( Test::Scalar::OptSint64{ .value = -2 }, "\x08\x03"sv );
+                gpb_test< Test::Scalar::gpb::OptSint64 >( Test::Scalar::OptSint64{ .value = 0x42 } );
+                gpb_test< Test::Scalar::gpb::OptSint64 >( Test::Scalar::OptSint64{ .value = 0xff } );
+                gpb_test< Test::Scalar::gpb::OptSint64 >( Test::Scalar::OptSint64{ .value = -2 } );
             }
             SUBCASE( "repeated" )
             {
-                pb_test( Test::Scalar::RepSint64{ }, "" );
-                pb_test( Test::Scalar::RepSint64{ .value = { 0x42 } }, "\x08\x84\x01"sv );
-                pb_test( Test::Scalar::RepSint64{ .value = { 0x42, -2 } }, "\x08\x84\x01\x08\x03"sv );
-                pb_test( Test::Scalar::RepSint64{ .value = {} }, "" );
+                gpb_test< Test::Scalar::gpb::RepSint64 >( Test::Scalar::RepSint64{ .value = { 0x42 } } );
+                gpb_test< Test::Scalar::gpb::RepSint64 >( Test::Scalar::RepSint64{ .value = { 0x42, -2 } } );
 
                 SUBCASE( "packed" )
                 {
-                    pb_test( Test::Scalar::RepPackSint64{ .value = { 0x42 } }, "\x0a\x02\x84\x01"sv );
-                    pb_test( Test::Scalar::RepPackSint64{ .value = { 0x42, -2 } }, "\x0a\x03\x84\x01\x03"sv );
-                    pb_test( Test::Scalar::RepPackSint64{ .value = {} }, "" );
-                    CHECK_THROWS( sds::pb::deserialize< Test::Scalar::RepPackSint64 >( "\x0a\x02\x84"sv ) );
-                    CHECK_THROWS( sds::pb::deserialize< Test::Scalar::RepPackSint64 >( "\x0a\x03\x84\x01"sv ) );
+                    gpb_test< Test::Scalar::gpb::RepPackSint64 >( Test::Scalar::RepPackSint64{ .value = { 0x42 } } );
+                    gpb_test< Test::Scalar::gpb::RepPackSint64 >( Test::Scalar::RepPackSint64{ .value = { 0x42, -2 } } );
                 }
             }
         }
@@ -299,29 +274,25 @@ TEST_CASE( "gpb-compatibility" )
         {
             SUBCASE( "required" )
             {
-                pb_test( Test::Scalar::ReqFixed32{ .value = 0x42 }, "\x0d\x42\x00\x00\x00"sv );
-                pb_test( Test::Scalar::ReqFixed32{ .value = 0xff }, "\x0d\xff\x00\x00\x00"sv );
-                pb_test( Test::Scalar::ReqFixed32{ .value = uint32_t( -2 ) }, "\x0d\xfe\xff\xff\xff"sv );
-                CHECK_THROWS( sds::pb::deserialize< Test::Scalar::ReqFixed32 >( "\x0d\x42\x00\x00"sv ) );
+                gpb_test< Test::Scalar::gpb::ReqFixed32 >( Test::Scalar::ReqFixed32{ .value = 0x42 } );
+                gpb_test< Test::Scalar::gpb::ReqFixed32 >( Test::Scalar::ReqFixed32{ .value = 0xff } );
+                gpb_test< Test::Scalar::gpb::ReqFixed32 >( Test::Scalar::ReqFixed32{ .value = uint32_t( -2 ) } );
             }
             SUBCASE( "optional" )
             {
-                pb_test( Test::Scalar::OptFixed32{ .value = 0x42 }, "\x0d\x42\x00\x00\x00"sv );
-                pb_test( Test::Scalar::OptFixed32{ .value = 0xff }, "\x0d\xff\x00\x00\x00"sv );
-                pb_test( Test::Scalar::OptFixed32{ .value = -2 }, "\x0d\xfe\xff\xff\xff"sv );
+                gpb_test< Test::Scalar::gpb::OptFixed32 >( Test::Scalar::OptFixed32{ .value = 0x42 } );
+                gpb_test< Test::Scalar::gpb::OptFixed32 >( Test::Scalar::OptFixed32{ .value = 0xff } );
+                gpb_test< Test::Scalar::gpb::OptFixed32 >( Test::Scalar::OptFixed32{ .value = -2 } );
             }
             SUBCASE( "repeated" )
             {
-                pb_test( Test::Scalar::RepFixed32{ .value = { 0x42 } }, "\x0d\x42\x00\x00\x00"sv );
-                pb_test( Test::Scalar::RepFixed32{ .value = { 0x42, 0x3 } }, "\x0d\x42\x00\x00\x00\x0d\x03\x00\x00\x00"sv );
-                pb_test( Test::Scalar::RepFixed32{ .value = {} }, ""sv );
+                gpb_test< Test::Scalar::gpb::RepFixed32 >( Test::Scalar::RepFixed32{ .value = { 0x42 } } );
+                gpb_test< Test::Scalar::gpb::RepFixed32 >( Test::Scalar::RepFixed32{ .value = { 0x42, 0x3 } } );
 
                 SUBCASE( "packed" )
                 {
-                    pb_test( Test::Scalar::RepPackFixed32{ .value = { 0x42 } }, "\x0a\x04\x42\x00\x00\x00"sv );
-                    pb_test( Test::Scalar::RepPackFixed32{ .value = { 0x42, 0x3 } }, "\x0a\x08\x42\x00\x00\x00\x03\x00\x00\x00"sv );
-                    pb_test( Test::Scalar::RepPackFixed32{ .value = {} }, ""sv );
-                    CHECK_THROWS( sds::pb::deserialize< Test::Scalar::RepPackFixed32 >( "\x0a\x08\x42\x00\x00\x00\x03\x00\x00"sv ) );
+                    gpb_test< Test::Scalar::gpb::RepPackFixed32 >( Test::Scalar::RepPackFixed32{ .value = { 0x42 } } );
+                    gpb_test< Test::Scalar::gpb::RepPackFixed32 >( Test::Scalar::RepPackFixed32{ .value = { 0x42, 0x3 } } );
                 }
             }
         }
@@ -329,27 +300,24 @@ TEST_CASE( "gpb-compatibility" )
         {
             SUBCASE( "required" )
             {
-                pb_test( Test::Scalar::ReqFixed64{ .value = 0x42 }, "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv );
-                pb_test( Test::Scalar::ReqFixed64{ .value = 0xff }, "\x09\xff\x00\x00\x00\x00\x00\x00\x00"sv );
-                pb_test( Test::Scalar::ReqFixed64{ .value = uint64_t( -2 ) }, "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv );
-                CHECK_THROWS( sds::pb::deserialize< Test::Scalar::ReqFixed32 >( "\x09\x42\x00\x00\x00\x00\x00\x00"sv ) );
+                gpb_test< Test::Scalar::gpb::ReqFixed64 >( Test::Scalar::ReqFixed64{ .value = 0x42 } );
+                gpb_test< Test::Scalar::gpb::ReqFixed64 >( Test::Scalar::ReqFixed64{ .value = 0xff } );
+                gpb_test< Test::Scalar::gpb::ReqFixed64 >( Test::Scalar::ReqFixed64{ .value = uint64_t( -2 ) } );
             }
             SUBCASE( "optional" )
             {
-                pb_test( Test::Scalar::OptFixed64{ .value = 0x42 }, "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv );
-                pb_test( Test::Scalar::OptFixed64{ .value = 0xff }, "\x09\xff\x00\x00\x00\x00\x00\x00\x00"sv );
-                pb_test( Test::Scalar::OptFixed64{ .value = -2 }, "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv );
+                gpb_test< Test::Scalar::gpb::OptFixed64 >( Test::Scalar::OptFixed64{ .value = 0x42 } );
+                gpb_test< Test::Scalar::gpb::OptFixed64 >( Test::Scalar::OptFixed64{ .value = 0xff } );
+                gpb_test< Test::Scalar::gpb::OptFixed64 >( Test::Scalar::OptFixed64{ .value = -2 } );
             }
             SUBCASE( "repeated" )
             {
-                pb_test( Test::Scalar::RepFixed64{ .value = { 0x42 } }, "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv );
-                pb_test( Test::Scalar::RepFixed64{ .value = { 0x42, 0x3 } }, "\x09\x42\x00\x00\x00\x00\x00\x00\x00\x09\x03\x00\x00\x00\x00\x00\x00\x00"sv );
-                pb_test( Test::Scalar::RepFixed64{ .value = {} }, ""sv );
+                gpb_test< Test::Scalar::gpb::RepFixed64 >( Test::Scalar::RepFixed64{ .value = { 0x42 } } );
+                gpb_test< Test::Scalar::gpb::RepFixed64 >( Test::Scalar::RepFixed64{ .value = { 0x42, 0x3 } } );
                 SUBCASE( "packed" )
                 {
-                    pb_test( Test::Scalar::RepPackFixed64{ .value = { 0x42 } }, "\x0a\x08\x42\x00\x00\x00\x00\x00\x00\x00"sv );
-                    pb_test( Test::Scalar::RepPackFixed64{ .value = { 0x42, 0x3 } }, "\x0a\x10\x42\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00"sv );
-                    pb_test( Test::Scalar::RepPackFixed64{ .value = {} }, ""sv );
+                    gpb_test< Test::Scalar::gpb::RepPackFixed64 >( Test::Scalar::RepPackFixed64{ .value = { 0x42 } } );
+                    gpb_test< Test::Scalar::gpb::RepPackFixed64 >( Test::Scalar::RepPackFixed64{ .value = { 0x42, 0x3 } } );
                 }
             }
         }
@@ -357,28 +325,25 @@ TEST_CASE( "gpb-compatibility" )
         {
             SUBCASE( "required" )
             {
-                pb_test( Test::Scalar::ReqSfixed32{ .value = 0x42 }, "\x0d\x42\x00\x00\x00"sv );
-                pb_test( Test::Scalar::ReqSfixed32{ .value = 0xff }, "\x0d\xff\x00\x00\x00"sv );
-                pb_test( Test::Scalar::ReqSfixed32{ .value = -2 }, "\x0d\xfe\xff\xff\xff"sv );
-                CHECK_THROWS( sds::pb::deserialize< Test::Scalar::ReqSfixed32 >( "\x0d\x42\x00\x00"sv ) );
+                gpb_test< Test::Scalar::gpb::ReqSfixed32 >( Test::Scalar::ReqSfixed32{ .value = 0x42 } );
+                gpb_test< Test::Scalar::gpb::ReqSfixed32 >( Test::Scalar::ReqSfixed32{ .value = 0xff } );
+                gpb_test< Test::Scalar::gpb::ReqSfixed32 >( Test::Scalar::ReqSfixed32{ .value = -2 } );
             }
             SUBCASE( "optional" )
             {
-                pb_test( Test::Scalar::ReqSfixed32{ .value = 0x42 }, "\x0d\x42\x00\x00\x00"sv );
-                pb_test( Test::Scalar::ReqSfixed32{ .value = 0xff }, "\x0d\xff\x00\x00\x00"sv );
-                pb_test( Test::Scalar::ReqSfixed32{ .value = -2 }, "\x0d\xfe\xff\xff\xff"sv );
+                gpb_test< Test::Scalar::gpb::OptSfixed32 >( Test::Scalar::OptSfixed32{ .value = 0x42 } );
+                gpb_test< Test::Scalar::gpb::OptSfixed32 >( Test::Scalar::OptSfixed32{ .value = 0xff } );
+                gpb_test< Test::Scalar::gpb::OptSfixed32 >( Test::Scalar::OptSfixed32{ .value = -2 } );
             }
             SUBCASE( "repeated" )
             {
-                pb_test( Test::Scalar::RepSfixed32{ .value = { 0x42 } }, "\x0d\x42\x00\x00\x00"sv );
-                pb_test( Test::Scalar::RepSfixed32{ .value = { 0x42, 0x3 } }, "\x0d\x42\x00\x00\x00\x0d\x03\x00\x00\x00"sv );
-                pb_test( Test::Scalar::RepSfixed32{ .value = {} }, ""sv );
+                gpb_test< Test::Scalar::gpb::RepSfixed32 >( Test::Scalar::RepSfixed32{ .value = { 0x42 } } );
+                gpb_test< Test::Scalar::gpb::RepSfixed32 >( Test::Scalar::RepSfixed32{ .value = { 0x42, 0x3 } } );
 
                 SUBCASE( "packed" )
                 {
-                    pb_test( Test::Scalar::RepPackSfixed32{ .value = { 0x42 } }, "\x0a\x04\x42\x00\x00\x00"sv );
-                    pb_test( Test::Scalar::RepPackSfixed32{ .value = { 0x42, 0x3 } }, "\x0a\x08\x42\x00\x00\x00\x03\x00\x00\x00"sv );
-                    pb_test( Test::Scalar::RepPackSfixed32{ .value = {} }, ""sv );
+                    gpb_test< Test::Scalar::gpb::RepPackSfixed32 >( Test::Scalar::RepPackSfixed32{ .value = { 0x42 } } );
+                    gpb_test< Test::Scalar::gpb::RepPackSfixed32 >( Test::Scalar::RepPackSfixed32{ .value = { 0x42, 0x3 } } );
                 }
             }
         }
@@ -386,27 +351,25 @@ TEST_CASE( "gpb-compatibility" )
         {
             SUBCASE( "required" )
             {
-                pb_test( Test::Scalar::ReqSfixed64{ .value = 0x42 }, "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv );
-                pb_test( Test::Scalar::ReqSfixed64{ .value = 0xff }, "\x09\xff\x00\x00\x00\x00\x00\x00\x00"sv );
-                pb_test( Test::Scalar::ReqSfixed64{ .value = -2 }, "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv );
-                CHECK_THROWS( sds::pb::deserialize< Test::Scalar::ReqSfixed64 >( "\x09\x42\x00\x00\x00\x00\x00\x00"sv ) );
+                gpb_test< Test::Scalar::gpb::ReqSfixed64 >( Test::Scalar::ReqSfixed64{ .value = 0x42 } );
+                gpb_test< Test::Scalar::gpb::ReqSfixed64 >( Test::Scalar::ReqSfixed64{ .value = 0xff } );
+                gpb_test< Test::Scalar::gpb::ReqSfixed64 >( Test::Scalar::ReqSfixed64{ .value = -2 } );
             }
             SUBCASE( "optional" )
             {
-                pb_test( Test::Scalar::OptSfixed64{ .value = 0x42 }, "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv );
-                pb_test( Test::Scalar::OptSfixed64{ .value = 0xff }, "\x09\xff\x00\x00\x00\x00\x00\x00\x00"sv );
-                pb_test( Test::Scalar::OptSfixed64{ .value = -2 }, "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv );
+                gpb_test< Test::Scalar::gpb::OptSfixed64 >( Test::Scalar::OptSfixed64{ .value = 0x42 } );
+                gpb_test< Test::Scalar::gpb::OptSfixed64 >( Test::Scalar::OptSfixed64{ .value = 0xff } );
+                gpb_test< Test::Scalar::gpb::OptSfixed64 >( Test::Scalar::OptSfixed64{ .value = -2 } );
             }
             SUBCASE( "repeated" )
             {
-                pb_test( Test::Scalar::RepSfixed64{ .value = { 0x42 } }, "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv );
-                pb_test( Test::Scalar::RepSfixed64{ .value = { 0x42, 0x3 } }, "\x09\x42\x00\x00\x00\x00\x00\x00\x00\x09\x03\x00\x00\x00\x00\x00\x00\x00"sv );
-                pb_test( Test::Scalar::RepSfixed64{ .value = {} }, ""sv );
+                gpb_test< Test::Scalar::gpb::RepSfixed64 >( Test::Scalar::RepSfixed64{ .value = { 0x42 } } );
+                gpb_test< Test::Scalar::gpb::RepSfixed64 >( Test::Scalar::RepSfixed64{ .value = { 0x42, 0x3 } } );
+
                 SUBCASE( "packed" )
                 {
-                    pb_test( Test::Scalar::RepPackSfixed64{ .value = { 0x42 } }, "\x0a\x08\x42\x00\x00\x00\x00\x00\x00\x00"sv );
-                    pb_test( Test::Scalar::RepPackSfixed64{ .value = { 0x42, 0x3 } }, "\x0a\x10\x42\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00"sv );
-                    pb_test( Test::Scalar::RepPackSfixed64{ .value = {} }, ""sv );
+                    gpb_test< Test::Scalar::gpb::RepPackSfixed64 >( Test::Scalar::RepPackSfixed64{ .value = { 0x42 } } );
+                    gpb_test< Test::Scalar::gpb::RepPackSfixed64 >( Test::Scalar::RepPackSfixed64{ .value = { 0x42, 0x3 } } );
                 }
             }
         }
@@ -415,83 +378,124 @@ TEST_CASE( "gpb-compatibility" )
     {
         SUBCASE( "required" )
         {
-            pb_test( Test::Scalar::ReqFloat{ .value = 42.0 }, "\x0d\x00\x00\x28\x42"sv );
-            CHECK_THROWS( sds::pb::deserialize< Test::Scalar::ReqFloat >( "\x0d\x00\x00\x28"sv ) );
+            gpb_test< Test::Scalar::gpb::ReqFloat >( Test::Scalar::ReqFloat{ .value = 42.0 } );
         }
         SUBCASE( "optional" )
         {
-            pb_test( Test::Scalar::OptFloat{ .value = 42.3 }, "\x0d\x33\x33\x29\x42"sv );
+            gpb_test< Test::Scalar::gpb::OptFloat >( Test::Scalar::OptFloat{ .value = 42.3 } );
         }
         SUBCASE( "repeated" )
         {
-            pb_test( Test::Scalar::RepFloat{ .value = { 42.3 } }, "\x0d\x33\x33\x29\x42"sv );
-            pb_test( Test::Scalar::RepFloat{ .value = { 42.0, 42.3 } }, "\x0d\x00\x00\x28\x42\x0d\x33\x33\x29\x42"sv );
-            pb_test( Test::Scalar::RepFloat{ .value = {} }, ""sv );
+            gpb_test< Test::Scalar::gpb::RepFloat >( Test::Scalar::RepFloat{ .value = { 42.3 } } );
+            gpb_test< Test::Scalar::gpb::RepFloat >( Test::Scalar::RepFloat{ .value = { 42.0, 42.3 } } );
         }
     }
     SUBCASE( "double" )
     {
         SUBCASE( "required" )
         {
-            pb_test( Test::Scalar::ReqDouble{ .value = 42.0 }, "\x09\x00\x00\x00\x00\x00\x00\x45\x40"sv );
-            CHECK_THROWS( sds::pb::deserialize< Test::Scalar::ReqDouble >( "\x0d\x00\x00\x28"sv ) );
+            gpb_test< Test::Scalar::gpb::ReqDouble >( Test::Scalar::ReqDouble{ .value = 42.0 } );
         }
         SUBCASE( "optional" )
         {
-            pb_test( Test::Scalar::OptDouble{ .value = 42.3 }, "\x09\x66\x66\x66\x66\x66\x26\x45\x40"sv );
+            gpb_test< Test::Scalar::gpb::OptDouble >( Test::Scalar::OptDouble{ .value = 42.3 } );
         }
         SUBCASE( "repeated" )
         {
-            pb_test( Test::Scalar::RepDouble{ .value = { 42.3 } }, "\x09\x66\x66\x66\x66\x66\x26\x45\x40"sv );
-            pb_test( Test::Scalar::RepDouble{ .value = { 42.3, 3.0 } }, "\x09\x66\x66\x66\x66\x66\x26\x45\x40\x09\x00\x00\x00\x00\x00\x00\x08\x40"sv );
-            pb_test( Test::Scalar::RepDouble{ .value = {} }, ""sv );
+            gpb_test< Test::Scalar::gpb::RepDouble >( Test::Scalar::RepDouble{ .value = { 42.3 } } );
+            gpb_test< Test::Scalar::gpb::RepDouble >( Test::Scalar::RepDouble{ .value = { 42.3, 3.0 } } );
         }
     }
     SUBCASE( "bytes" )
     {
         SUBCASE( "required" )
         {
-            pb_test( Test::Scalar::ReqBytes{ }, "" );
-            pb_test( Test::Scalar::ReqBytes{ .value = to_bytes( "hello" ) }, "\x0a\x05hello"sv );
-            pb_test( Test::Scalar::ReqBytes{ .value = to_bytes( "\x00\x01\x02"sv ) }, "\x0a\x03\x00\x01\x02"sv );
-            pb_test( Test::Scalar::ReqBytes{ .value = to_bytes( "\x00\x01\x02\x03\x04"sv ) }, "\x0a\x05\x00\x01\x02\x03\x04"sv );
-            CHECK_THROWS( sds::pb::deserialize< Test::Scalar::ReqBytes >( "\x0a\x05hell"sv ) );
+            gpb_test< Test::Scalar::gpb::ReqBytes >( Test::Scalar::ReqBytes{ .value = to_bytes( "hello" ) } );
+            gpb_test< Test::Scalar::gpb::ReqBytes >( Test::Scalar::ReqBytes{ .value = to_bytes( "\x00\x01\x02"sv ) } );
+            gpb_test< Test::Scalar::gpb::ReqBytes >( Test::Scalar::ReqBytes{ .value = to_bytes( "\x00\x01\x02\x03\x04"sv ) } );
         }
         SUBCASE( "optional" )
         {
-            pb_test( Test::Scalar::OptBytes{ }, "" );
-            pb_test( Test::Scalar::OptBytes{ .value = to_bytes( "hello" ) }, "\x0a\x05hello"sv );
-            pb_test( Test::Scalar::OptBytes{ .value = to_bytes( "\x00\x01\x02"sv ) }, "\x0a\x03\x00\x01\x02"sv );
-            pb_test( Test::Scalar::OptBytes{ .value = to_bytes( "\x00\x01\x02\x03\x04"sv ) }, "\x0a\x05\x00\x01\x02\x03\x04"sv );
+            gpb_test< Test::Scalar::gpb::OptBytes >( Test::Scalar::OptBytes{ .value = to_bytes( "hello" ) } );
+            gpb_test< Test::Scalar::gpb::OptBytes >( Test::Scalar::OptBytes{ .value = to_bytes( "\x00\x01\x02"sv ) } );
+            gpb_test< Test::Scalar::gpb::OptBytes >( Test::Scalar::OptBytes{ .value = to_bytes( "\x00\x01\x02\x03\x04"sv ) } );
         }
         SUBCASE( "repeated" )
         {
-            pb_test( Test::Scalar::RepBytes{ }, "" );
-            pb_test( Test::Scalar::RepBytes{ .value = { to_bytes( "hello" ) } }, "\x0a\x05hello"sv );
-            pb_test( Test::Scalar::RepBytes{ .value = { to_bytes( "\x00\x01\x02"sv ) } }, "\x0a\x03\x00\x01\x02"sv );
-            pb_test( Test::Scalar::RepBytes{ .value = { to_bytes( "\x00\x01\x02\x03\x04"sv ) } }, "\x0a\x05\x00\x01\x02\x03\x04"sv );
+            gpb_test< Test::Scalar::gpb::RepBytes >( Test::Scalar::RepBytes{ .value = { to_bytes( "hello" ) } } );
+            gpb_test< Test::Scalar::gpb::RepBytes >( Test::Scalar::RepBytes{ .value = { to_bytes( "\x00\x01\x02"sv ) } } );
+            gpb_test< Test::Scalar::gpb::RepBytes >( Test::Scalar::RepBytes{ .value = { to_bytes( "\x00\x01\x02\x03\x04"sv ) } } );
         }
     }
     SUBCASE( "variant" )
     {
         SUBCASE( "int" )
         {
-            pb_test( Test::Variant{ .oneof_field = 0x42U }, "\x08\x42" );
+            auto gpb            = Test::gpb::Variant( );
+            auto sds            = Test::Variant{ .oneof_field = 0x42U };
+            auto sds_serialized = sds::pb::serialize( sds );
+
+            REQUIRE( gpb.ParseFromString( sds_serialized ) );
+            CHECK( gpb.var_int( ) == std::get< 0 >( sds.oneof_field ) );
+
+            SUBCASE( "deserialize" )
+            {
+                auto gpb_serialized = std::string( );
+                REQUIRE( gpb.SerializeToString( &gpb_serialized ) );
+                CHECK( sds::pb::deserialize< Test::Variant >( gpb_serialized ) == sds );
+            }
         }
         SUBCASE( "string" )
         {
-            pb_test( Test::Variant{ .oneof_field = "hello" }, "\x12\x05hello" );
+            auto gpb            = Test::gpb::Variant( );
+            auto sds            = Test::Variant{ .oneof_field = "hello" };
+            auto sds_serialized = sds::pb::serialize( sds );
+
+            REQUIRE( gpb.ParseFromString( sds_serialized ) );
+            CHECK( gpb.var_string( ) == std::get< 1 >( sds.oneof_field ) );
+
+            SUBCASE( "deserialize" )
+            {
+                auto gpb_serialized = std::string( );
+                REQUIRE( gpb.SerializeToString( &gpb_serialized ) );
+                CHECK( sds::pb::deserialize< Test::Variant >( gpb_serialized ) == sds );
+            }
         }
         SUBCASE( "bytes" )
         {
-            pb_test( Test::Variant{ .oneof_field = std::vector< std::byte >{ std::byte( 'h' ), std::byte( 'e' ), std::byte( 'l' ), std::byte( 'l' ), std::byte( 'o' ) } }, "\x1A\x05hello" );
+            auto gpb            = Test::gpb::Variant( );
+            auto sds            = Test::Variant{ .oneof_field = to_bytes( "hello" ) };
+            auto sds_serialized = sds::pb::serialize( sds );
+
+            REQUIRE( gpb.ParseFromString( sds_serialized ) );
+            CHECK( gpb.var_bytes( ) == std::get< 2 >( sds.oneof_field ) );
+
+            SUBCASE( "deserialize" )
+            {
+                auto gpb_serialized = std::string( );
+                REQUIRE( gpb.SerializeToString( &gpb_serialized ) );
+                CHECK( sds::pb::deserialize< Test::Variant >( gpb_serialized ) == sds );
+            }
         }
         SUBCASE( "name" )
         {
-            pb_test( Test::Variant{ .oneof_field = Test::Name{ .name = "John" } }, "\x22\x06\x0A\x04John" );
+            auto gpb            = Test::gpb::Variant( );
+            auto sds            = Test::Variant{ .oneof_field = Test::Name{ .name = "John" } };
+            auto sds_serialized = sds::pb::serialize( sds );
+
+            REQUIRE( gpb.ParseFromString( sds_serialized ) );
+            REQUIRE( gpb.has_name( ) );
+
+            CHECK( gpb.name( ).name( ) == std::get< 3 >( sds.oneof_field ).name );
+
+            SUBCASE( "deserialize" )
+            {
+                auto gpb_serialized = std::string( );
+                REQUIRE( gpb.SerializeToString( &gpb_serialized ) );
+                CHECK( sds::pb::deserialize< Test::Variant >( gpb_serialized ) == sds );
+            }
         }
     }
-    */
     SUBCASE( "person" )
     {
         SUBCASE( "serialize" )
@@ -518,7 +522,7 @@ TEST_CASE( "gpb-compatibility" )
             CHECK( gpb.name( ) == sds.name );
             CHECK( gpb.id( ) == sds.id );
             CHECK( gpb.email( ) == sds.email );
-            CHECK( gpb.phones_size( ) == 2 );
+            REQUIRE( gpb.phones_size( ) == 2 );
             for( auto i = 0; i < gpb.phones_size( ); i++ )
             {
                 CHECK( gpb.phones( i ).number( ) == sds.phones[ i ].number );
