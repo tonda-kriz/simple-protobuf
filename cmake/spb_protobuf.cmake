@@ -1,12 +1,12 @@
 include(CMakeParseArguments)
 
-if(SDS_PROTO_USE_CLANG_FORMAT)
+if(SPB_PROTO_USE_CLANG_FORMAT)
     find_program(CLANG_FORMAT clang-format)
 endif()
 
-function(sds_protobuf_generate SRCS HDRS)
+function(spb_protobuf_generate SRCS HDRS)
     if (NOT ARGN)
-        message(FATAL_ERROR "Error: sds_protobuf_generate() called without any proto files")
+        message(FATAL_ERROR "Error: spb_protobuf_generate() called without any proto files")
         return()
     endif ()
     
@@ -27,7 +27,7 @@ function(sds_protobuf_generate SRCS HDRS)
 
         file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
-        if(SDS_PROTO_USE_CLANG_FORMAT AND CLANG_FORMAT)
+        if(SPB_PROTO_USE_CLANG_FORMAT AND CLANG_FORMAT)
             add_custom_command(
                 OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${FILE_NAME}.pb.cc"
                        "${CMAKE_CURRENT_BINARY_DIR}/${FILE_NAME}.pb.h"
@@ -53,4 +53,4 @@ function(sds_protobuf_generate SRCS HDRS)
     set_source_files_properties(${${SRCS}} ${${HDRS}} PROPERTIES GENERATED TRUE)
     set(${SRCS} ${${SRCS}} PARENT_SCOPE)
     set(${HDRS} ${${HDRS}} PARENT_SCOPE)
-endfunction(sds_protobuf_generate)
+endfunction(spb_protobuf_generate)
