@@ -1,12 +1,11 @@
-#include "sds/pb/wire-types.h"
 #include <cstdint>
+#include <gpb-person.pb.h>
+#include <gpb-scalar.pb.h>
 #include <memory>
 #include <name.pb.h>
 #include <optional>
 #include <person.pb.h>
 #include <scalar.pb.h>
-#include <sds/pb/deserialize.hpp>
-#include <sds/pb/serialize.hpp>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -27,6 +26,7 @@ auto operator==( const Test::Variant & lhs, const Test::Variant & rhs ) noexcept
 
 namespace Scalar
 {
+
 template < typename T >
 concept HasValueMember = requires( T t ) {
     {
@@ -58,132 +58,100 @@ auto operator==( const Person & lhs, const Person & rhs ) noexcept -> bool
 
 namespace
 {
-auto to_bytes( std::string_view str ) -> std::vector< std::byte >
+template < typename T >
+concept is_gpb_repeated = requires( T t ) {
+    {
+        t.value( 0 )
+    };
+};
+
+template < typename T >
+auto opt_size( const std::optional< T > & opt ) -> std::size_t
 {
-    auto span = std::span< std::byte >( ( std::byte * ) str.data( ), str.size( ) );
-    return { span.data( ), span.data( ) + span.size( ) };
+    if( opt.has_value( ) )
+    {
+        return opt.value( ).size( );
+    }
+    return 0;
 }
 
 template < typename T >
-auto pb_serialize( const T & value ) -> std::string
+auto opt_size( const std::vector< T > & opt ) -> std::size_t
 {
-    auto size_stream = sds::pb::detail::ostream( nullptr );
-    sds::pb::detail::serialize( size_stream, 1, value );
-    const auto size = size_stream.size( );
-    auto result     = std::string( size, '\0' );
-    auto stream     = sds::pb::detail::ostream( result.data( ) );
-    sds::pb::detail::serialize( stream, 1, value );
-    return result;
+    return opt.size( );
 }
 
-template < sds::pb::detail::scalar_encoder encoder, typename T >
-auto pb_serialize_as( const T & value ) -> std::string
+template < typename GPB, typename SDS >
+void gpb_test( const SDS & sds )
 {
-    auto size_stream = sds::pb::detail::ostream( nullptr );
-    sds::pb::detail::serialize_as< encoder >( size_stream, 1, value );
-    const auto size = size_stream.size( );
-    auto result     = std::string( size, '\0' );
-    auto stream     = sds::pb::detail::ostream( result.data( ) );
-    sds::pb::detail::serialize_as< encoder >( stream, 1, value );
-    return result;
-}
+    SUBCASE( "serialize" )
+    {
+        auto gpb            = GPB( );
+        auto sds_serialized = sds::pb::serialize( sds );
 
-template < typename T >
-void pb_test( const T & value, std::string_view protobuf )
-{
-    {
-        auto serialized = sds::pb::serialize( value );
-        CHECK( serialized == protobuf );
-    }
-
-    {
-        auto size   = sds::pb::serialize_size( value );
-        auto buffer = std::string( size, '\0' );
-        sds::pb::serialize( value, buffer.data( ) );
-        CHECK( buffer == protobuf );
-    }
-
-    {
-        auto deserialized = sds::pb::deserialize< T >( protobuf );
-        CHECK( deserialized == value );
-    }
-    {
-        auto deserialized = T( );
-        sds::pb::deserialize( deserialized, protobuf );
-        CHECK( deserialized == value );
+        REQUIRE( gpb.ParseFromString( sds_serialized ) );
+        if constexpr( is_gpb_repeated< GPB > )
+        {
+            REQUIRE( gpb.value( ).size( ) == opt_size( sds.value ) );
+            for( size_t i = 0; i < opt_size( sds.value ); ++i )
+            {
+                CHECK( gpb.value( i ) == sds.value[ i ] );
+            }
+        }
+        else
+        {
+            CHECK( sds.value == gpb.value( ) );
+        }
+        SUBCASE( "deserialize" )
+        {
+            auto gpb_serialized = std::string( );
+            REQUIRE( gpb.SerializeToString( &gpb_serialized ) );
+            CHECK( sds::pb::deserialize< SDS >( gpb_serialized ) == sds );
+        }
     }
 }
-
-using sds::pb::detail::scalar_encoder;
-using sds::pb::detail::wire_type;
 
 }// namespace
+
 using namespace std::literals;
 
-TEST_CASE( "protobuf" )
+TEST_CASE( "gpb-compatibility" )
 {
     SUBCASE( "string" )
     {
         SUBCASE( "required" )
         {
-            pb_test( Test::Scalar::ReqString{ }, "" );
-            pb_test( Test::Scalar::ReqString{ .value = "hello" }, "\x0a\x05hello" );
-            CHECK_THROWS( sds::pb::deserialize< Test::Scalar::ReqString >( "\x0a\x05hell"sv ) );
+            gpb_test< Test::Scalar::gpb::ReqString >( Test::Scalar::ReqString{ .value = "hello" } );
         }
         SUBCASE( "optional" )
         {
-            pb_test( Test::Scalar::OptString{ }, "" );
-            pb_test( Test::Scalar::OptString{ .value = "hello" }, "\x0a\x05hello" );
-            CHECK_THROWS( sds::pb::deserialize< Test::Scalar::OptString >( "\x08\x05hello"sv ) );
+            gpb_test< Test::Scalar::gpb::OptString >( Test::Scalar::OptString{ .value = "hello" } );
         }
         SUBCASE( "repeated" )
         {
-            pb_test( Test::Scalar::RepString{ }, "" );
-            pb_test( Test::Scalar::RepString{ .value = { "hello" } }, "\x0a\x05hello" );
-            pb_test( Test::Scalar::RepString{ .value = { "hello", "world" } }, "\x0a\x05hello\x0a\x05world" );
-        }
-    }
-    SUBCASE( "string_view" )
-    {
-        CHECK( pb_serialize( "john"sv ) == "\x0a\x04john" );
-        CHECK( pb_serialize( ""sv ) == "" );
-        SUBCASE( "optional" )
-        {
-            CHECK( pb_serialize< std::optional< std::string_view > >( std::nullopt ) == "" );
-            CHECK( pb_serialize< std::optional< std::string_view > >( "hello" ) == "\x0a\x05hello" );
-        }
-        SUBCASE( "array" )
-        {
-            CHECK( pb_serialize< std::vector< std::string_view > >( { "hello", "world" } ) == "\x0a\x05hello\x0a\x05world" );
-            CHECK( pb_serialize< std::vector< std::string_view > >( { } ) == "" );
+            gpb_test< Test::Scalar::gpb::RepString >( Test::Scalar::RepString{ .value = { "hello" } } );
+            gpb_test< Test::Scalar::gpb::RepString >( Test::Scalar::RepString{ .value = { "hello", "world" } } );
         }
     }
     SUBCASE( "bool" )
     {
         SUBCASE( "required" )
         {
-            pb_test( Test::Scalar::ReqBool{ }, "\x08\x00"sv );
-            pb_test( Test::Scalar::ReqBool{ .value = true }, "\x08\x01" );
-            pb_test( Test::Scalar::ReqBool{ .value = false }, "\x08\x00"sv );
-            CHECK_THROWS( sds::pb::deserialize< Test::Scalar::ReqBool >( "\x08\x02"sv ) );
-            CHECK_THROWS( sds::pb::deserialize< Test::Scalar::ReqBool >( "\x08\xff\x01"sv ) );
+            gpb_test< Test::Scalar::gpb::ReqBool >( Test::Scalar::ReqBool{ .value = true } );
+            gpb_test< Test::Scalar::gpb::ReqBool >( Test::Scalar::ReqBool{ .value = false } );
         }
         SUBCASE( "optional" )
         {
-            pb_test( Test::Scalar::OptBool{ }, "" );
-            pb_test( Test::Scalar::OptBool{ .value = true }, "\x08\x01" );
-            pb_test( Test::Scalar::OptBool{ .value = false }, "\x08\x00"sv );
+            gpb_test< Test::Scalar::gpb::OptBool >( Test::Scalar::OptBool{ .value = true } );
+            gpb_test< Test::Scalar::gpb::OptBool >( Test::Scalar::OptBool{ .value = false } );
         }
         SUBCASE( "repeated" )
         {
-            pb_test( Test::Scalar::RepBool{ }, "" );
-            pb_test( Test::Scalar::RepBool{ .value = { true } }, "\x08\x01" );
-            pb_test( Test::Scalar::RepBool{ .value = { true, false } }, "\x08\x01\x08\x00"sv );
-            pb_test( Test::Scalar::RepBool{ .value = {} }, "" );
-            CHECK_THROWS( sds::pb::deserialize< Test::Scalar::RepBool >( "\x08\x01\x08"sv ) );
+            gpb_test< Test::Scalar::gpb::RepBool >( Test::Scalar::RepBool{ .value = { true } } );
+            gpb_test< Test::Scalar::gpb::RepBool >( Test::Scalar::RepBool{ .value = { true, false } } );
         }
     }
-    SUBCASE( "int" )
+    /*SUBCASE( "int" )
     {
         SUBCASE( "varint32" )
         {
@@ -523,48 +491,46 @@ TEST_CASE( "protobuf" )
             pb_test( Test::Variant{ .oneof_field = Test::Name{ .name = "John" } }, "\x22\x06\x0A\x04John" );
         }
     }
-    SUBCASE( "map" )
-    {
-        SUBCASE( "int32/int32" )
-        {
-            CHECK( pb_serialize_as< combine( sds::pb::detail::scalar_encoder::varint, sds::pb::detail::scalar_encoder::varint ) >( std::map< int32_t, int32_t >{ { 1, 2 } } ) == "\x0a\x04\x08\x01\x10\x02" );
-            CHECK( pb_serialize_as< combine( sds::pb::detail::scalar_encoder::varint, sds::pb::detail::scalar_encoder::varint ) >( std::map< int32_t, int32_t >{ { 1, 2 }, { 2, 3 } } ) == "\x0a\x08\x08\x01\x10\x02\x08\x02\x10\x03" );
-        }
-        SUBCASE( "string/string" )
-        {
-            CHECK( pb_serialize_as< combine( sds::pb::detail::scalar_encoder::varint, sds::pb::detail::scalar_encoder::varint ) >( std::map< std::string, std::string >{ { "hello", "world" } } ) == "\x0a\x0e\x0a\x05hello\x12\x05world" );
-        }
-        SUBCASE( "int32/string" )
-        {
-            CHECK( pb_serialize_as< combine( sds::pb::detail::scalar_encoder::varint, sds::pb::detail::scalar_encoder::varint ) >( std::map< int32_t, std::string >{ { 1, "hello" } } ) == "\x0a\x09\x08\x01\x12\x05hello" );
-        }
-        SUBCASE( "string/int32" )
-        {
-            CHECK( pb_serialize_as< combine( sds::pb::detail::scalar_encoder::varint, sds::pb::detail::scalar_encoder::varint ) >( std::map< std::string, int32_t >{ { "hello", 2 } } ) == "\x0a\x09\x0a\x05hello\x10\x02" );
-        }
-        SUBCASE( "string/name" )
-        {
-            CHECK( pb_serialize_as< combine( sds::pb::detail::scalar_encoder::varint, sds::pb::detail::scalar_encoder::varint ) >( std::map< std::string, Test::Name >{ { "hello", { .name = "john" } } } ) == "\x0a\x0f\x0a\x05hello\x12\x06\x0A\x04john" );
-        }
-    }
+    */
     SUBCASE( "person" )
     {
-        pb_test( PhoneBook::Person{
-                     .name   = "John Doe",
-                     .id     = 123,
-                     .email  = "QXUeh@example.com",
-                     .phones = {
-                         PhoneBook::Person::PhoneNumber{
-                             .number = "555-4321",
-                             .type   = PhoneBook::Person::PhoneType::HOME,
-                         },
-                     },
-                 },
-                 "\x0a\x08John Doe\x10\x7b\x1a\x11QXUeh@example.com\x22\x0c\x0A\x08"
-                 "555-4321\x10\x01" );
-    }
-    SUBCASE( "name" )
-    {
-        pb_test( Test::Name{ }, "" );
+        SUBCASE( "serialize" )
+        {
+            auto gpb = PhoneBook::gpb::Person( );
+            auto sds = PhoneBook::Person{
+                .name   = "John Doe",
+                .id     = 123,
+                .email  = "QXUeh@example.com",
+                .phones = {
+                    PhoneBook::Person::PhoneNumber{
+                        .number = "555-4321",
+                        .type   = PhoneBook::Person::PhoneType::HOME,
+                    },
+                    PhoneBook::Person::PhoneNumber{
+                        .number = "999-1234",
+                        .type   = PhoneBook::Person::PhoneType::MOBILE,
+                    },
+                }
+            };
+            auto sds_serialized = sds::pb::serialize( sds );
+
+            REQUIRE( gpb.ParseFromString( sds_serialized ) );
+            CHECK( gpb.name( ) == sds.name );
+            CHECK( gpb.id( ) == sds.id );
+            CHECK( gpb.email( ) == sds.email );
+            CHECK( gpb.phones_size( ) == 2 );
+            for( auto i = 0; i < gpb.phones_size( ); i++ )
+            {
+                CHECK( gpb.phones( i ).number( ) == sds.phones[ i ].number );
+                CHECK( int( gpb.phones( i ).type( ) ) == int( sds.phones[ i ].type.value( ) ) );
+            }
+
+            SUBCASE( "deserialize" )
+            {
+                auto gpb_serialized = std::string( );
+                REQUIRE( gpb.SerializeToString( &gpb_serialized ) );
+                CHECK( sds::pb::deserialize< PhoneBook::Person >( gpb_serialized ) == sds );
+            }
+        }
     }
 }
