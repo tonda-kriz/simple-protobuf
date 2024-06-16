@@ -1,12 +1,32 @@
 include(cmake/doctest.cmake)
+find_package(Protobuf REQUIRED)
 
 FILE(GLOB protos ${CMAKE_CURRENT_SOURCE_DIR}/proto/*.proto)
 
-sds_protobuf_generate(PROTO_SRCS PROTO_HDRS ${protos})
-sds_protobuf_generate(PROTO_PERSON_SRC PROTO_PERSON_HDR proto/person/person.proto)
-sds_protobuf_generate(PROTO_NAME_SRC PROTO_NAME_HDR proto/name/name.proto)
+SET(PB_PACKAGE "")
+configure_file(proto/scalar/scalar.proto.in ${CMAKE_CURRENT_BINARY_DIR}/scalar.proto @ONLY)
+configure_file(proto/person/person.proto.in ${CMAKE_CURRENT_BINARY_DIR}/person.proto @ONLY)
+configure_file(proto/name/name.proto.in ${CMAKE_CURRENT_BINARY_DIR}/name.proto @ONLY)
+
+SET(PB_PACKAGE ".gpb")
+configure_file(proto/scalar/scalar.proto.in ${CMAKE_CURRENT_BINARY_DIR}/gpb-scalar.proto @ONLY)
+configure_file(proto/person/person.proto.in ${CMAKE_CURRENT_BINARY_DIR}/gpb-person.proto @ONLY)
+configure_file(proto/name/name.proto.in ${CMAKE_CURRENT_BINARY_DIR}/gpb-name.proto @ONLY)
+
+sds_protobuf_generate(SDS_PROTO_SRCS SDS_PROTO_HDRS ${protos})
+sds_protobuf_generate(SDS_PROTO_PERSON_SRC SDS_PROTO_PERSON_HDR ${CMAKE_CURRENT_BINARY_DIR}/person.proto)
+sds_protobuf_generate(SDS_PROTO_NAME_SRC SDS_PROTO_NAME_HDR ${CMAKE_CURRENT_BINARY_DIR}/name.proto)
+sds_protobuf_generate(SDS_PROTO_SCALAR_SRC SDS_PROTO_SCALAR_HDR ${CMAKE_CURRENT_BINARY_DIR}/scalar.proto)
+
+PROTOBUF_GENERATE_CPP(PROTO_PERSON_SRC PROTO_PERSON_HDR ${CMAKE_CURRENT_BINARY_DIR}/gpb-person.proto)
+PROTOBUF_GENERATE_CPP(PROTO_NAME_SRC PROTO_NAME_HDR ${CMAKE_CURRENT_BINARY_DIR}/gpb-name.proto)
+PROTOBUF_GENERATE_CPP(PROTO_SCALAR_SRC PROTO_SCALAR_HDR ${CMAKE_CURRENT_BINARY_DIR}/gpb-scalar.proto)
 
 add_custom_target(unit_tests)
+
+add_library(gpb-proto STATIC ${PROTO_SCALAR_SRC} ${PROTO_PERSON_SRC} ${PROTO_NAME_SRC})
+target_link_libraries(gpb-proto PUBLIC protobuf::libprotobuf absl_log_internal_check_op absl_log_internal_message)
+target_compile_features(gpb-proto INTERFACE cxx_std_20)
 
 add_executable(base64-test base64.cpp)
 target_compile_options(base64-test PUBLIC -Wall -Wpedantic -Werror -Wno-missing-field-initializers)
@@ -14,13 +34,25 @@ target_link_libraries(base64-test PUBLIC sds-proto)
 add_dependencies(unit_tests base64-test)
 doctest_discover_tests(base64-test)
 
-add_executable(json-detail-test json-detail.cpp ${PROTO_PERSON_SRC} ${PROTO_NAME_SRC})
+add_executable(json-detail-test json-detail.cpp ${SDS_PROTO_PERSON_SRC} ${SDS_PROTO_NAME_SRC})
 target_compile_options(json-detail-test PUBLIC -Wall -Wpedantic -Werror -Wno-missing-field-initializers)
 target_link_libraries(json-detail-test PUBLIC sds-proto)
 add_dependencies(unit_tests json-detail-test)
 doctest_discover_tests(json-detail-test)
 
-add_executable(compiled-protos main.cpp ${PROTO_SRCS} ${PROTO_HDRS})
+add_executable(pb-detail-test pb-detail.cpp ${SDS_PROTO_PERSON_SRC} ${SDS_PROTO_NAME_SRC} ${SDS_PROTO_SCALAR_SRC})
+target_compile_options(pb-detail-test PUBLIC -Wall -Wpedantic -Werror -Wno-missing-field-initializers)
+target_link_libraries(pb-detail-test PUBLIC sds-proto)
+add_dependencies(unit_tests pb-detail-test)
+doctest_discover_tests(pb-detail-test)
+
+add_executable(gpb-compatibility-test gpb-compatibility.cpp ${SDS_PROTO_PERSON_SRC} ${SDS_PROTO_NAME_SRC} ${SDS_PROTO_SCALAR_SRC})
+target_compile_options(gpb-compatibility-test PUBLIC -Wall -Wpedantic -Werror -Wno-missing-field-initializers)
+target_link_libraries(gpb-compatibility-test PUBLIC sds-proto gpb-proto)
+add_dependencies(unit_tests gpb-compatibility-test)
+doctest_discover_tests(gpb-compatibility-test)
+
+add_executable(compiled-protos main.cpp ${SDS_PROTO_SRCS} ${SDS_PROTO_HDRS})
 target_compile_options(compiled-protos PUBLIC -Wno-deprecated-declarations -Wno-deprecated -Wall -Wpedantic -Werror)
 target_link_libraries(compiled-protos PUBLIC sds-proto)
 

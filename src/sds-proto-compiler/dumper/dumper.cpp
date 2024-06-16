@@ -11,6 +11,7 @@
 #include "dumper.h"
 #include "header.h"
 #include "io/file.h"
+#include "pb/dumper.h"
 #include "json/dumper.h"
 
 void dump_cpp_header( const proto_file & file, const std::filesystem::path & file_path )
@@ -19,6 +20,7 @@ void dump_cpp_header( const proto_file & file, const std::filesystem::path & fil
 
     dump_cpp_header( file, stream );
     dump_json_header( file, stream );
+    dump_pb_header( file, stream );
 
     save_file( file_path, stream.str( ) );
 }
@@ -28,6 +30,7 @@ void dump_cpp( const proto_file & file, const std::filesystem::path & header_fil
     auto stream = std::stringstream( );
 
     dump_json_cpp( file, header_file.string( ), stream );
+    dump_pb_cpp( file, header_file.string( ), stream );
 
     save_file( file_path, stream.str( ) );
 }

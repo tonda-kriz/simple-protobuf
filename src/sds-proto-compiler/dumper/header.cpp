@@ -230,7 +230,7 @@ auto convert_to_ctype( std::string_view type ) -> std::string
         { "fixed32", "uint32_t" },
         { "fixed64", "uint64_t" },
         { "sfixed32", "int32_t" },
-        { "sfixed64", "uint64_t" },
+        { "sfixed64", "int64_t" },
         { "string", "std::string" },
         { "bytes", "std::vector< std::byte >" },
     } };

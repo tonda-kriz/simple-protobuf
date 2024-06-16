@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package Test;
+package Test@PB_PACKAGE@;
 
 message Name { string name = 1; }
 

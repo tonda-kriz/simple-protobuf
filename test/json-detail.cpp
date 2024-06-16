@@ -119,9 +119,9 @@ TEST_CASE( "json" )
             CHECK( sds::json::detail::deserialize< bool >( "false" ) == false );
             CHECK_THROWS( sds::json::detail::deserialize< bool >( "hello" ) );
             auto value = false;
-            CHECK_NOTHROW( sds::json::detail::deserialize( "true", value ) );
+            CHECK_NOTHROW( sds::json::detail::deserialize( value, "true" ) );
             CHECK( value );
-            CHECK_NOTHROW( sds::json::detail::deserialize( "false", value ) );
+            CHECK_NOTHROW( sds::json::detail::deserialize( value, "false" ) );
             CHECK( value == false );
             SUBCASE( "array" )
             {
@@ -143,9 +143,9 @@ TEST_CASE( "json" )
                 CHECK_THROWS( sds::json::detail::deserialize< std::optional< bool > >( R"()" ) );
 
                 auto value = std::optional< bool >( );
-                CHECK_NOTHROW( sds::json::detail::deserialize( "true", value ) );
+                CHECK_NOTHROW( sds::json::detail::deserialize( value, "true" ) );
                 CHECK( value == true );
-                CHECK_NOTHROW( sds::json::detail::deserialize( "false", value ) );
+                CHECK_NOTHROW( sds::json::detail::deserialize( value, "false" ) );
                 CHECK( value == false );
             }
             SUBCASE( "ptr" )
@@ -157,9 +157,9 @@ TEST_CASE( "json" )
                 CHECK_THROWS( sds::json::detail::deserialize< std::unique_ptr< bool > >( R"()" ) );
 
                 auto value = std::unique_ptr< bool >( );
-                CHECK_NOTHROW( sds::json::detail::deserialize( "true", value ) );
+                CHECK_NOTHROW( sds::json::detail::deserialize( value, "true" ) );
                 CHECK( *value == true );
-                CHECK_NOTHROW( sds::json::detail::deserialize( "false", value ) );
+                CHECK_NOTHROW( sds::json::detail::deserialize( value, "false" ) );
                 CHECK( *value == false );
             }
         }
@@ -195,13 +195,13 @@ TEST_CASE( "json" )
             SUBCASE( "optional" )
             {
                 auto value = std::optional< float >( );
-                CHECK_NOTHROW( sds::json::detail::deserialize( "42", value ) );
+                CHECK_NOTHROW( sds::json::detail::deserialize( value, "42" ) );
                 CHECK( *value == 42.0f );
-                CHECK_NOTHROW( sds::json::detail::deserialize( "3.14", value ) );
+                CHECK_NOTHROW( sds::json::detail::deserialize( value, "3.14" ) );
                 CHECK( *value == 3.14f );
-                CHECK_NOTHROW( sds::json::detail::deserialize( "0.0", value ) );
+                CHECK_NOTHROW( sds::json::detail::deserialize( value, "0.0" ) );
                 CHECK( *value == 0.0f );
-                CHECK_NOTHROW( sds::json::detail::deserialize( "-3.14", value ) );
+                CHECK_NOTHROW( sds::json::detail::deserialize( value, "-3.14" ) );
                 CHECK( *value == -3.14f );
                 CHECK( sds::json::detail::deserialize< std::optional< float > >( "42" ) == 42 );
                 CHECK( sds::json::detail::deserialize< std::optional< float > >( "null" ) == std::nullopt );
@@ -246,17 +246,17 @@ TEST_CASE( "json" )
             SUBCASE( "ptr" )
             {
                 auto value = std::unique_ptr< int32_t >( );
-                CHECK_NOTHROW( sds::json::detail::deserialize( "42", value ) );
+                CHECK_NOTHROW( sds::json::detail::deserialize( value, "42" ) );
                 CHECK( *value == 42 );
-                CHECK_NOTHROW( sds::json::detail::deserialize( "-42", value ) );
+                CHECK_NOTHROW( sds::json::detail::deserialize( value, "-42" ) );
                 CHECK( *value == -42 );
-                CHECK_NOTHROW( sds::json::detail::deserialize( "0", value ) );
+                CHECK_NOTHROW( sds::json::detail::deserialize( value, "0" ) );
                 CHECK( *value == 0 );
-                CHECK_NOTHROW( sds::json::detail::deserialize( "2147483647", value ) );
+                CHECK_NOTHROW( sds::json::detail::deserialize( value, "2147483647" ) );
                 CHECK( *value == 2147483647 );
-                CHECK_NOTHROW( sds::json::detail::deserialize( "-2147483648", value ) );
+                CHECK_NOTHROW( sds::json::detail::deserialize( value, "-2147483648" ) );
                 CHECK( *value == -2147483648 );
-                CHECK_NOTHROW( sds::json::detail::deserialize( "null", value ) );
+                CHECK_NOTHROW( sds::json::detail::deserialize( value, "null" ) );
                 CHECK( value == nullptr );
             }
         }

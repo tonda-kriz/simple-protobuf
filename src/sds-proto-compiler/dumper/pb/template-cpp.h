@@ -1,6 +1,6 @@
 /***************************************************************************\
-* Name        : json dumper                                                 *
-* Description : C++ template used for json de/serialization                 *
+* Name        : protobuf dumper                                             *
+* Description : C++ template used for protobuf de/serialization             *
 * Author      : antonin.kriz@gmail.com                                      *
 * ------------------------------------------------------------------------- *
 * This is free software; you can redistribute it and/or modify it under the *
@@ -12,7 +12,7 @@
 
 #include <string_view>
 
-constexpr std::string_view file_json_cpp_template = R"(
+constexpr std::string_view file_pb_cpp_template = R"(
 auto serialize_size( const $ & value ) noexcept -> size_t
 {
     return detail::serialize_size( value );
@@ -29,14 +29,14 @@ auto serialize( const $ & value, void * buffer ) -> size_t
 }
 
 template <>
-auto deserialize< $ >( std::string_view json ) -> $
+auto deserialize< $ >( std::string_view protobuf ) -> $
 {
-    return detail::deserialize< $ >( json );
+    return detail::deserialize< $ >( protobuf );
 }
 
-void deserialize( $ & result, std::string_view json )
+void deserialize( $ & result, std::string_view protobuf )
 {
-    return detail::deserialize( result, json );
+    return detail::deserialize( result, protobuf );
 }
 
 )";

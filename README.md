@@ -134,4 +134,4 @@ project is in an early stage of development, expect bugs, API changes and defini
 - [x] parser for proto files (supported syntax: `proto2` and `proto3`)
 - [x] compile proto message to C++ data struct
 - [x] generate json de/serializer for generated C++ data struct (serialized json has to be compatible with GPB)
-- [ ] generate protobuf de/serializer for generated C++ data struct (serialized pb has to be compatible with GPB)
+- [x] generate protobuf de/serializer for generated C++ data struct (serialized pb has to be compatible with GPB)
