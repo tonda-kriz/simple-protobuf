@@ -516,7 +516,7 @@ TEST_CASE( "protobuf" )
         }
         SUBCASE( "bytes" )
         {
-            pb_test( Test::Variant{ .oneof_field = std::vector< std::byte >{ std::byte( 'h' ), std::byte( 'e' ), std::byte( 'l' ), std::byte( 'l' ), std::byte( 'o' ) } }, "\x1A\x05hello" );
+            pb_test( Test::Variant{ .oneof_field = to_bytes( "hello" ) }, "\x1A\x05hello" );
         }
         SUBCASE( "name" )
         {
