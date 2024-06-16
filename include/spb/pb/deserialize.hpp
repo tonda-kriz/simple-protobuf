@@ -24,7 +24,7 @@
 #include <type_traits>
 #include <vector>
 
-namespace sds::pb::detail
+namespace spb::pb::detail
 {
 
 struct istream
@@ -489,4 +489,4 @@ static inline void deserialize( auto & value, std::string_view string )
     detail::deserialize( stream, value, detail::wire_type::length_delimited );
 }
 
-}// namespace sds::pb::detail
+}// namespace spb::pb::detail

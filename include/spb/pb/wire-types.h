@@ -13,7 +13,7 @@
 #include <cstdint>
 #include <type_traits>
 
-namespace sds::pb::detail
+namespace spb::pb::detail
 {
 
 //- https://protobuf.dev/programming-guides/encoding/
@@ -86,4 +86,4 @@ static constexpr auto wire_type_from_scalar_encoder( scalar_encoder a ) noexcept
     }
 }
 
-}// namespace sds::pb::detail
+}// namespace spb::pb::detail

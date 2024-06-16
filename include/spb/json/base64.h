@@ -16,7 +16,7 @@
 #include <string_view>
 #include <vector>
 
-namespace sds::json::detail
+namespace spb::json::detail
 {
 template < typename ostream >
 static inline void base64_encode( ostream & output, std::span< const std::byte > input )
@@ -130,4 +130,4 @@ static inline void base64_encode( ostream & output, std::span< const std::byte >
     output.resize( size_t( p_out - output.data( ) - padding_size ) );
     return ( mask & 128 ) == 0;
 }
-}// namespace sds::json::detail
+}// namespace spb::json::detail

@@ -11,7 +11,7 @@
 
 #include <type_traits>
 
-namespace sds::pb::detail
+namespace spb::pb::detail
 {
 template < class T >
 concept is_struct = ::std::is_class_v< T >;
@@ -22,4 +22,4 @@ concept is_enum = ::std::is_enum_v< T >;
 template < class T >
 concept is_int_or_float = ::std::is_integral_v< T > || ::std::is_floating_point_v< T >;
 
-}// namespace sds::pb::detail
+}// namespace spb::pb::detail

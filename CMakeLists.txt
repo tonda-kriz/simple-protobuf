@@ -1,11 +1,11 @@
 cmake_minimum_required( VERSION 3.12 )
 
-project(sds-proto VERSION 1.0.0 LANGUAGES CXX)
+project(spb-proto VERSION 1.0.0 LANGUAGES CXX)
 
 # the main serialization library is header only
-add_library(sds-proto INTERFACE)
-target_include_directories(sds-proto INTERFACE include)
-target_compile_features(sds-proto INTERFACE cxx_std_20)
+add_library(spb-proto INTERFACE)
+target_include_directories(spb-proto INTERFACE include)
+target_compile_features(spb-proto INTERFACE cxx_std_20)
 
 add_subdirectory(src)
 

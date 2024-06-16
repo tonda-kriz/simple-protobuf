@@ -13,7 +13,7 @@
 #include <cctype>
 #include <string_view>
 
-namespace sds
+namespace spb
 {
 
 struct char_stream
@@ -141,4 +141,4 @@ public:
         return { begin( ), size_t( end( ) - begin( ) ) };
     }
 };
-}// namespace sds
+}// namespace spb

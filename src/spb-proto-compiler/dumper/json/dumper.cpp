@@ -21,7 +21,7 @@
 #include <cctype>
 #include <cstdint>
 #include <map>
-#include <sds/json/deserialize.hpp>
+#include <spb/json/deserialize.hpp>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -171,8 +171,8 @@ void dump_prototypes( std::ostream & stream, const proto_file & file )
 void dump_cpp_includes( std::ostream & stream, std::string_view header_file_path )
 {
     stream << "#include \"" << header_file_path << "\"\n"
-           << "#include <sds/json/deserialize.hpp>\n"
-              "#include <sds/json/serialize.hpp>\n"
+           << "#include <spb/json/deserialize.hpp>\n"
+              "#include <spb/json/serialize.hpp>\n"
               "#include <type_traits>\n\n";
 }
 
@@ -238,7 +238,7 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_enum & my_en
     auto name_map = std::multimap< uint32_t, std::string_view >( );
     for( const auto & field : my_enum.fields )
     {
-        name_map.emplace( sds::json::detail::djb2_hash( field.name ), field.name );
+        name_map.emplace( spb::json::detail::djb2_hash( field.name ), field.name );
     }
 
     stream << "auto deserialize_value( detail::istream & stream, " << full_name << " & value ) -> bool\n{\n";
@@ -322,14 +322,14 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & me
     for( const auto & field : message.fields )
     {
         const auto field_name = json_field_name_or_camelCase( field );
-        name_map.emplace( sds::json::detail::djb2_hash( field_name ),
+        name_map.emplace( spb::json::detail::djb2_hash( field_name ),
                           one_field{
                               .parsed_name = field_name,
                               .name        = field.name,
                           } );
         if( field_name != field.name )
         {
-            name_map.emplace( sds::json::detail::djb2_hash( field.name ),
+            name_map.emplace( spb::json::detail::djb2_hash( field.name ),
                               one_field{
                                   .parsed_name = std::string( field.name ),
                                   .name        = field.name,
@@ -339,14 +339,14 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & me
     for( const auto & field : message.maps )
     {
         const auto field_name = json_field_name_or_camelCase( field );
-        name_map.emplace( sds::json::detail::djb2_hash( field_name ),
+        name_map.emplace( spb::json::detail::djb2_hash( field_name ),
                           one_field{
                               .parsed_name = field_name,
                               .name        = field.name,
                           } );
         if( field_name != field.name )
         {
-            name_map.emplace( sds::json::detail::djb2_hash( field.name ),
+            name_map.emplace( spb::json::detail::djb2_hash( field.name ),
                               one_field{ .parsed_name = std::string( field.name ),
                                          .name        = field.name } );
         }
@@ -356,7 +356,7 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & me
         for( size_t i = 0; i < oneof.fields.size( ); ++i )
         {
             const auto field_name = json_field_name_or_camelCase( oneof.fields[ i ] );
-            name_map.emplace( sds::json::detail::djb2_hash( field_name ),
+            name_map.emplace( spb::json::detail::djb2_hash( field_name ),
                               one_field{
                                   .parsed_name = field_name,
                                   .name        = oneof.name,
@@ -364,7 +364,7 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & me
                               } );
             if( field_name != oneof.fields[ i ].name )
             {
-                name_map.emplace( sds::json::detail::djb2_hash( oneof.fields[ i ].name ),
+                name_map.emplace( spb::json::detail::djb2_hash( oneof.fields[ i ].name ),
                                   one_field{
                                       .parsed_name = std::string( oneof.fields[ i ].name ),
                                       .name        = oneof.name,
@@ -473,7 +473,7 @@ void dump_json_header( const proto_file & file, std::ostream & stream )
 void dump_json_cpp( const proto_file & file, const std::filesystem::path & header_file, std::ostream & stream )
 {
     dump_cpp_includes( stream, header_file.string( ) );
-    dump_cpp_open_namespace( stream, "sds::json" );
+    dump_cpp_open_namespace( stream, "spb::json" );
     dump_cpp( stream, file );
-    dump_cpp_close_namespace( stream, "sds::json" );
+    dump_cpp_close_namespace( stream, "spb::json" );
 }

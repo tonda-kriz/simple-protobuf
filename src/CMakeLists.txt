@@ -1,1 +1,1 @@
-add_subdirectory(sds-proto-compiler)
+add_subdirectory(spb-proto-compiler)
