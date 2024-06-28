@@ -17,7 +17,6 @@
 #include <concepts>
 #include <cstdio>
 #include <filesystem>
-#include <format>
 #include <spb/char_stream.h>
 #include <stdexcept>
 #include <string_view>
@@ -71,7 +70,7 @@ void consume_or_fail( spb::char_stream & stream, char c )
 {
     if( !stream.consume( c ) )
     {
-        return throw_parse_error( stream, std::format( R"(expecting "{}")", c ) );
+        return throw_parse_error( stream, "(expecting '" + std::string( 1, c ) + "')" );
     }
 }
 
@@ -79,7 +78,7 @@ void consume_or_fail( spb::char_stream & stream, std::string_view token )
 {
     if( !stream.consume( token ) )
     {
-        return throw_parse_error( stream, std::format( R"(expecting "{}")", token ) );
+        return throw_parse_error( stream, "(expecting '" + std::string( token ) + "')" );
     }
 }
 
@@ -362,7 +361,7 @@ void parse_top_level_import( spb::char_stream & stream, proto_imports & imports,
     // "import" [ "weak" | "public" ] strLit ";"
     consume_or_fail( stream, "import" );
     stream.consume( "weak" ) || stream.consume( "public" );
-    imports.emplace_back( parse_string_literal( stream ), std::move( comment ) );
+    imports.emplace_back( proto_import{ .file_name = parse_string_literal( stream ), .comments = std::move( comment ) } );
     consume_statement_end( stream, imports.back( ).comments );
 }
 
@@ -572,7 +571,7 @@ void parse_enum_field( spb::char_stream & stream, proto_enum & new_enum, proto_c
 {
     //- enumBody = "{" { option | enumField | emptyStatement | reserved } "}"
 
-    auto new_enum = proto_enum( proto_base{ .name = parse_ident( stream ), .comment = std::move( enum_comment ) } );
+    auto new_enum = proto_enum{ proto_base{ .name = parse_ident( stream ), .comment = std::move( enum_comment ) } };
 
     consume_or_fail( stream, '{' );
 
@@ -702,10 +701,10 @@ void parse_oneof_field( spb::char_stream & stream, proto_fields & fields, proto_
 [[nodiscard]] auto parse_oneof_body( spb::char_stream & stream, proto_comment && oneof_comment ) -> proto_oneof
 {
     //- oneof = "oneof" oneofName "{" { option | oneofField } "}"
-    auto new_oneof = proto_oneof( proto_base{
+    auto new_oneof = proto_oneof{ proto_base{
         .name    = parse_ident( stream ),
         .comment = std::move( oneof_comment ),
-    } );
+    } };
     consume_or_fail( stream, '{' );
     while( !stream.consume( '}' ) )
     {
@@ -739,10 +738,10 @@ void parse_oneof_field( spb::char_stream & stream, proto_fields & fields, proto_
 void parse_message_body( spb::char_stream & stream, proto_messages & messages, proto_comment && message_comment )
 {
     //- messageBody = messageName "{" { field | enum | message | extend | extensions | group | option | oneof | mapField | reserved | emptyStatement } "}"
-    auto new_message = proto_message( proto_base{
+    auto new_message = proto_message{ proto_base{
         .name    = parse_ident( stream ),
         .comment = std::move( message_comment ),
-    } );
+    } };
 
     consume_or_fail( stream, '{' );
     while( !stream.consume( '}' ) )

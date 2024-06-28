@@ -20,7 +20,6 @@
 #include <array>
 #include <cctype>
 #include <cstdint>
-#include <format>
 #include <map>
 #include <sstream>
 #include <stdexcept>
@@ -113,7 +112,7 @@ auto is_packed_array( const proto_field & field ) -> bool
     return p_packed != field.options.end( ) && p_packed->second == "true";
 }
 
-auto scalar_encoder_from_type( std::string_view type ) -> std::string_view
+auto scalar_encoder_from_type( std::string_view type ) -> std::string
 {
     if( type == "int32" ||
         type == "uint32" ||
@@ -149,7 +148,7 @@ auto scalar_encoder_from_type( std::string_view type ) -> std::string_view
 
 auto map_encoder_type( std::string_view key_type, std::string_view value_type ) -> std::string
 {
-    return std::format( "_as< combine( {}, {} ) >", scalar_encoder_from_type( key_type ), scalar_encoder_from_type( value_type ) );
+    return "_as< combine( " + scalar_encoder_from_type( key_type ) + ", " + scalar_encoder_from_type( value_type ) + " ) >";
 }
 
 auto encoder_type( const proto_field & field ) -> std::string

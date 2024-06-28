@@ -17,11 +17,10 @@
 #include <algorithm>
 #include <array>
 #include <cstddef>
-#include <format>
 #include <iostream>
 #include <ranges>
-#include <spb/char_stream.h>
 #include <set>
+#include <spb/char_stream.h>
 #include <stdexcept>
 #include <string_view>
 #include <vector>
@@ -106,7 +105,7 @@ struct search_ctx
         switch( field.label )
         {
         case proto_field::Label::LABEL_NONE:
-            throw std::runtime_error( std::format( "Field '{}' cannot be self-referencing (make it optional)", field.name ) );
+            throw std::runtime_error( "Field '" + std::string( field.name ) + "' cannot be self-referencing (make it optional)" );
         case proto_field::Label::LABEL_OPTIONAL:
             field.label = proto_field::Label::LABEL_PTR;
             return true;
@@ -186,7 +185,7 @@ struct search_ctx
         switch( field.label )
         {
         case proto_field::Label::LABEL_NONE:
-            throw std::runtime_error( std::format( "Field '{}' cannot reference parent (make it optional)", field.name ) );
+            throw std::runtime_error( "Field '" + std::string( field.name ) + "' cannot reference parent (make it optional)" );
         case proto_field::Label::LABEL_OPTIONAL:
             field.label = proto_field::Label::LABEL_PTR;
             return true;
@@ -324,7 +323,7 @@ void dump_unresolved_messages( const proto_messages & messages, std::string_view
     {
         if( message.resolved == 0 )
         {
-            const auto full_name = std::format( "{}.{}", parent, message.name );
+            const auto full_name = std::string( parent ) + "." + std::string( message.name );
             std::cout << "unresolved message " << full_name << '\n';
             dump_unresolved_messages( message.messages, full_name );
         }

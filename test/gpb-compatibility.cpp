@@ -6,6 +6,7 @@
 #include <optional>
 #include <person.pb.h>
 #include <scalar.pb.h>
+#include <span>
 #include <string>
 #include <string_view>
 
