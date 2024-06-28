@@ -361,7 +361,7 @@ void parse_top_level_import( spb::char_stream & stream, proto_imports & imports,
     // "import" [ "weak" | "public" ] strLit ";"
     consume_or_fail( stream, "import" );
     stream.consume( "weak" ) || stream.consume( "public" );
-    imports.emplace_back( parse_string_literal( stream ), std::move( comment ) );
+    imports.emplace_back( proto_import{ .file_name = parse_string_literal( stream ), .comments = std::move( comment ) } );
     consume_statement_end( stream, imports.back( ).comments );
 }
 
