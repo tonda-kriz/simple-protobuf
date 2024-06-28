@@ -25,9 +25,26 @@ jobs:
             build_type: Release
             version: '13'
           - os: ubuntu-latest
+            compiler: gcc
+            build_type: Release
+            version: '14'
+          - os: ubuntu-latest
             compiler: clang
             build_type: Release
             version: '14'
+          - os: ubuntu-latest
+            compiler: clang
+            build_type: Release
+            version: '15'
+          - os: ubuntu-latest
+            compiler: clang
+            build_type: Release
+            version: '16'
+          - os: ubuntu-latest
+            compiler: clang
+            build_type: Release
+            version: '17'
+
     steps:
     - uses: actions/checkout@v4
 
@@ -67,7 +84,7 @@ jobs:
         cmake -B ${{ steps.strings.outputs.build-output-dir }}
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
         -DSPB_PROTO_BUILD_TESTS=ON
-        -DSPB_PROTO_BUILD_EXAMPLE=ON
+        -DSPB_PROTO_BUILD_EXAMPLES=ON
         -S ${{ github.workspace }}
 
     - name: Build
