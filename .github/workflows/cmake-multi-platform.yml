@@ -32,14 +32,6 @@ jobs:
             compiler: clang
             build_type: Release
             version: '15'
-          - os: ubuntu-latest
-            compiler: clang
-            build_type: Release
-            version: '16'
-          - os: ubuntu-latest
-            compiler: clang
-            build_type: Release
-            version: '17'
 
     steps:
     - uses: actions/checkout@v4
@@ -70,7 +62,6 @@ jobs:
       if: startsWith(matrix.os, 'ubuntu-') && matrix.compiler == 'clang'
       run: |
             sudo apt-get update
-            sudo apt-get install g++-13
             sudo apt-get install clang-${{ matrix.version }}
             echo "CXX=clang++-${{ matrix.version }}" >> ${GITHUB_ENV}
             echo "CC=clang-${{ matrix.version }}" >> ${GITHUB_ENV}

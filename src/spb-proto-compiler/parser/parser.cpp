@@ -17,7 +17,6 @@
 #include <concepts>
 #include <cstdio>
 #include <filesystem>
-#include <format>
 #include <spb/char_stream.h>
 #include <stdexcept>
 #include <string_view>
@@ -71,7 +70,7 @@ void consume_or_fail( spb::char_stream & stream, char c )
 {
     if( !stream.consume( c ) )
     {
-        return throw_parse_error( stream, std::format( R"(expecting "{}")", c ) );
+        return throw_parse_error( stream, "(expecting '" + std::string( 1, c ) + "')" );
     }
 }
 
@@ -79,7 +78,7 @@ void consume_or_fail( spb::char_stream & stream, std::string_view token )
 {
     if( !stream.consume( token ) )
     {
-        return throw_parse_error( stream, std::format( R"(expecting "{}")", token ) );
+        return throw_parse_error( stream, "(expecting '" + std::string( token ) + "')" );
     }
 }
 
