@@ -151,9 +151,19 @@ template < typename T >
                     value = T( value );
                 }
                 auto result = T( value );
-                if( result == value )
+                if constexpr( std::is_signed_v< T > )
                 {
-                    return result;
+                    if( result == std::make_signed_t< T >( value ) )
+                    {
+                        return result;
+                    }
+                }
+                else
+                {
+                    if( result == value )
+                    {
+                        return result;
+                    }
                 }
 
                 break;
