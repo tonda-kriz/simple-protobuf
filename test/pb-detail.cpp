@@ -5,6 +5,7 @@
 #include <optional>
 #include <person.pb.h>
 #include <scalar.pb.h>
+#include <span>
 #include <spb/pb/deserialize.hpp>
 #include <spb/pb/serialize.hpp>
 #include <string>
