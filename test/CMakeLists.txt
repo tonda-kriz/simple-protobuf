@@ -25,7 +25,13 @@ PROTOBUF_GENERATE_CPP(PROTO_SCALAR_SRC PROTO_SCALAR_HDR ${CMAKE_CURRENT_BINARY_D
 add_custom_target(unit_tests)
 
 add_library(gpb-proto STATIC ${PROTO_SCALAR_SRC} ${PROTO_PERSON_SRC} ${PROTO_NAME_SRC})
-target_link_libraries(gpb-proto PUBLIC protobuf::libprotobuf absl_log_internal_check_op absl_log_internal_message)
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND EXISTS "/etc/arch-release")
+  # On Arch Linux protobuf::libprotobuf needs to be linked with absl
+  target_link_libraries(gpb-proto PUBLIC protobuf::libprotobuf absl_log_internal_check_op absl_log_internal_message)    
+else()
+  target_link_libraries(gpb-proto PUBLIC protobuf::libprotobuf)
+endif()
 target_compile_features(gpb-proto INTERFACE cxx_std_20)
 
 add_executable(base64-test base64.cpp)
