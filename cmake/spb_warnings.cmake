@@ -1,6 +1,6 @@
 function(spb_enable_warnings TARGET)
     if(MSVC)
-        target_compile_options(${TARGET} PRIVATE /W4 /WX)
+        target_compile_options(${TARGET} PRIVATE /W4 /WX /wd4996)
         target_compile_definitions(${TARGET} PRIVATE _CRT_SECURE_NO_WARNINGS)
     else()
         target_compile_options(${TARGET} PRIVATE -Wall -Wextra -Wpedantic -Werror -Wno-missing-field-initializers)

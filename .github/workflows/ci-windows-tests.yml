@@ -25,7 +25,6 @@ jobs:
       # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
       run: >
         cmake -B ${{ steps.strings.outputs.build-output-dir }}
-        -DCMAKE_BUILD_TYPE=Release
         -DSPB_PROTO_BUILD_TESTS=ON
         -DSPB_PROTO_BUILD_EXAMPLES=ON
         -S ${{ github.workspace }}
