@@ -375,15 +375,15 @@ TEST_CASE( "json" )
                 CHECK_THROWS( spb::json::detail::deserialize< std::string >( R"("hello)" ) );
                 SUBCASE( "escaped" )
                 {
-                    CHECK( spb::json::detail::deserialize< std::string >( R"("\"")" ) == "\"" );
+                    CHECK( spb::json::detail::deserialize< std::string >( R"("\"")"s ) == "\"" );
                     CHECK( spb::json::detail::deserialize< std::string >( R"("\\")" ) == "\\" );
-                    CHECK( spb::json::detail::deserialize< std::string >( R"("\/")" ) == "/" );
+                    CHECK( spb::json::detail::deserialize< std::string >( R"("\/")"s ) == "/" );
                     CHECK( spb::json::detail::deserialize< std::string >( R"("\b")" ) == "\b" );
                     CHECK( spb::json::detail::deserialize< std::string >( R"("\f")" ) == "\f" );
                     CHECK( spb::json::detail::deserialize< std::string >( R"("\n")" ) == "\n" );
                     CHECK( spb::json::detail::deserialize< std::string >( R"("\r")" ) == "\r" );
                     CHECK( spb::json::detail::deserialize< std::string >( R"("\t")" ) == "\t" );
-                    CHECK( spb::json::detail::deserialize< std::string >( R"("\"\b\f\n\r\t\"")" ) == "\"\b\f\n\r\t\"" );
+                    CHECK( spb::json::detail::deserialize< std::string >( R"("\"\b\f\n\r\t\"")"s ) == "\"\b\f\n\r\t\"" );
                     CHECK( spb::json::detail::deserialize< std::string >( R"("\nhell\to")" ) == "\nhell\to" );
                 }
             }
