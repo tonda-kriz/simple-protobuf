@@ -12,6 +12,7 @@
 #include "../ast/ast.h"
 #include "../io/file.h"
 #include "ast/proto-file.h"
+#include <array>
 #include <cctype>
 #include <charconv>
 #include <concepts>
