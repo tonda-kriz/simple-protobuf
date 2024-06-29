@@ -173,6 +173,7 @@ void dump_cpp_includes( std::ostream & stream, std::string_view header_file_path
     stream << "#include \"" << header_file_path << "\"\n"
            << "#include <spb/json/deserialize.hpp>\n"
               "#include <spb/json/serialize.hpp>\n"
+              "#include <system_error>\n"
               "#include <type_traits>\n\n";
 }
 
