@@ -375,9 +375,9 @@ TEST_CASE( "json" )
                 CHECK_THROWS( spb::json::detail::deserialize< std::string >( R"("hello)" ) );
                 SUBCASE( "escaped" )
                 {
-                    CHECK( spb::json::detail::deserialize< std::string >( R"("\"")"s ) == "\"" );
+                    CHECK( spb::json::detail::deserialize< std::string >( R"("\"")" ) == "\"" );
                     CHECK( spb::json::detail::deserialize< std::string >( R"("\\")" ) == "\\" );
-                    CHECK( spb::json::detail::deserialize< std::string >( R"("\/")"s ) == "/" );
+                    CHECK( spb::json::detail::deserialize< std::string >( R"("\/")" ) == "/" );
                     CHECK( spb::json::detail::deserialize< std::string >( R"("\b")" ) == "\b" );
                     CHECK( spb::json::detail::deserialize< std::string >( R"("\f")" ) == "\f" );
                     CHECK( spb::json::detail::deserialize< std::string >( R"("\n")" ) == "\n" );
