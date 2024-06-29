@@ -1,5 +1,4 @@
 include(cmake/doctest.cmake)
-find_package(Protobuf REQUIRED)
 
 FILE(GLOB protos ${CMAKE_CURRENT_SOURCE_DIR}/proto/*.proto)
 
@@ -18,21 +17,7 @@ spb_protobuf_generate(SPB_PROTO_PERSON_SRC SPB_PROTO_PERSON_HDR ${CMAKE_CURRENT_
 spb_protobuf_generate(SPB_PROTO_NAME_SRC SPB_PROTO_NAME_HDR ${CMAKE_CURRENT_BINARY_DIR}/name.proto)
 spb_protobuf_generate(SPB_PROTO_SCALAR_SRC SPB_PROTO_SCALAR_HDR ${CMAKE_CURRENT_BINARY_DIR}/scalar.proto)
 
-PROTOBUF_GENERATE_CPP(PROTO_PERSON_SRC PROTO_PERSON_HDR ${CMAKE_CURRENT_BINARY_DIR}/gpb-person.proto)
-PROTOBUF_GENERATE_CPP(PROTO_NAME_SRC PROTO_NAME_HDR ${CMAKE_CURRENT_BINARY_DIR}/gpb-name.proto)
-PROTOBUF_GENERATE_CPP(PROTO_SCALAR_SRC PROTO_SCALAR_HDR ${CMAKE_CURRENT_BINARY_DIR}/gpb-scalar.proto)
-
 add_custom_target(unit_tests)
-
-add_library(gpb-proto STATIC ${PROTO_SCALAR_SRC} ${PROTO_PERSON_SRC} ${PROTO_NAME_SRC})
-
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND EXISTS "/etc/arch-release")
-  # On Arch Linux protobuf::libprotobuf needs to be linked with absl
-  target_link_libraries(gpb-proto PUBLIC protobuf::libprotobuf absl_log_internal_check_op absl_log_internal_message)    
-else()
-  target_link_libraries(gpb-proto PUBLIC protobuf::libprotobuf)
-endif()
-target_compile_features(gpb-proto INTERFACE cxx_std_20)
 
 add_executable(base64-test base64.cpp)
 target_compile_options(base64-test PUBLIC -Wall -Wpedantic -Werror -Wno-missing-field-initializers)
@@ -52,19 +37,36 @@ target_link_libraries(pb-detail-test PUBLIC spb-proto)
 add_dependencies(unit_tests pb-detail-test)
 doctest_discover_tests(pb-detail-test)
 
-add_executable(gpb-compatibility-test gpb-compatibility.cpp ${SPB_PROTO_PERSON_SRC} ${SPB_PROTO_NAME_SRC} ${SPB_PROTO_SCALAR_SRC})
-target_compile_options(gpb-compatibility-test PUBLIC -Wall -Wpedantic -Werror -Wno-missing-field-initializers)
-target_link_libraries(gpb-compatibility-test PUBLIC spb-proto gpb-proto)
-add_dependencies(unit_tests gpb-compatibility-test)
-doctest_discover_tests(gpb-compatibility-test)
+include(CheckIPOSupported)
+check_ipo_supported(RESULT IPO_ENABLED)
 
 add_executable(compiled-protos main.cpp ${SPB_PROTO_SRCS} ${SPB_PROTO_HDRS})
 target_compile_options(compiled-protos PUBLIC -Wno-deprecated-declarations -Wno-deprecated -Wall -Wpedantic -Werror)
 target_link_libraries(compiled-protos PUBLIC spb-proto)
+set_target_properties(compiled-protos PROPERTIES INTERPROCEDURAL_OPTIMIZATION IPO_ENABLED)
 
-include(CheckIPOSupported)
-check_ipo_supported(RESULT result)
-if(result)
-  set_target_properties(compiled-protos PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)  
+if(SPB_PROTO_BUILD_COMPATIBILITY_TESTS)
+  find_package(Protobuf REQUIRED)
+
+  PROTOBUF_GENERATE_CPP(PROTO_PERSON_SRC PROTO_PERSON_HDR ${CMAKE_CURRENT_BINARY_DIR}/gpb-person.proto)
+  PROTOBUF_GENERATE_CPP(PROTO_NAME_SRC PROTO_NAME_HDR ${CMAKE_CURRENT_BINARY_DIR}/gpb-name.proto)
+  PROTOBUF_GENERATE_CPP(PROTO_SCALAR_SRC PROTO_SCALAR_HDR ${CMAKE_CURRENT_BINARY_DIR}/gpb-scalar.proto)
+
+  add_library(gpb-proto STATIC ${PROTO_SCALAR_SRC} ${PROTO_PERSON_SRC} ${PROTO_NAME_SRC})
+
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND EXISTS "/etc/arch-release")
+    # On Arch Linux protobuf::libprotobuf needs to be linked with absl
+    target_link_libraries(gpb-proto PUBLIC protobuf::libprotobuf absl_log_internal_check_op absl_log_internal_message)    
+  else()
+    target_link_libraries(gpb-proto PUBLIC protobuf::libprotobuf)
+  endif()
+  target_compile_features(gpb-proto INTERFACE cxx_std_20)
+
+  add_executable(gpb-compatibility-test gpb-compatibility.cpp ${SPB_PROTO_PERSON_SRC} ${SPB_PROTO_NAME_SRC} ${SPB_PROTO_SCALAR_SRC})
+  target_compile_options(gpb-compatibility-test PUBLIC -Wall -Wpedantic -Werror -Wno-missing-field-initializers)
+  target_link_libraries(gpb-compatibility-test PUBLIC spb-proto gpb-proto)
+  add_dependencies(unit_tests gpb-compatibility-test)
+  doctest_discover_tests(gpb-compatibility-test)
 endif()
+
 

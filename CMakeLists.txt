@@ -15,6 +15,7 @@ target_compile_features(spb-proto INTERFACE cxx_std_20)
 add_subdirectory(src)
 
 option(SPB_PROTO_BUILD_TESTS "Build tests" OFF)
+option(SPB_PROTO_BUILD_COMPATIBILITY_TESTS "Build gpb compatibility tests" OFF)
 option(SPB_PROTO_BUILD_EXAMPLES "Build examples" OFF)
 option(SPB_PROTO_USE_CLANG_FORMAT "Enable clang format for generated code" ON)
 option(SPB_PROTO_USE_COVERAGE "Enable code coverage" OFF)

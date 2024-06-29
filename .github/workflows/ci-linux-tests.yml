@@ -71,6 +71,7 @@ jobs:
         -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
         -DSPB_PROTO_BUILD_TESTS=ON
         -DSPB_PROTO_BUILD_EXAMPLES=ON
+        -DSPB_PROTO_BUILD_COMPATIBILITY_TESTS=ON
         -S ${{ github.workspace }}
 
     - name: Build
