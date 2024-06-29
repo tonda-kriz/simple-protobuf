@@ -1,5 +1,6 @@
 function(spb_enable_warnings TARGET)
     if(MSVC)
+        # https://developercommunity.visualstudio.com/t/c2017-illegal-escape-sequence-when-using-in-a-raw/919371
         target_compile_options(${TARGET} PRIVATE /W4 /WX /wd4996 /Zc:preprocessor)
         target_compile_definitions(${TARGET} PRIVATE _CRT_SECURE_NO_WARNINGS)
     else()

@@ -15,6 +15,17 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
 
+namespace
+{
+template < typename T >
+concept HasValueMember = requires( T t ) {
+    {
+        t.value
+    };
+};
+
+}
+
 namespace Test
 {
 auto operator==( const Test::Name & lhs, const Test::Name & rhs ) noexcept -> bool
@@ -26,22 +37,6 @@ auto operator==( const Test::Variant & lhs, const Test::Variant & rhs ) noexcept
     return lhs.oneof_field == rhs.oneof_field;
 }
 
-namespace Scalar
-{
-template < typename T >
-concept HasValueMember = requires( T t ) {
-    {
-        t.value
-    };
-};
-
-template < typename T >
-    requires HasValueMember< T >
-auto operator==( const T & lhs, const T & rhs ) noexcept -> bool
-{
-    return lhs.value == rhs.value;
-}
-}// namespace Scalar
 }// namespace Test
 
 namespace PhoneBook
@@ -106,12 +101,26 @@ void pb_test( const T & value, std::string_view protobuf )
 
     {
         auto deserialized = spb::pb::deserialize< T >( protobuf );
-        CHECK( deserialized == value );
+        if constexpr( HasValueMember< T > )
+        {
+            CHECK( deserialized.value == value.value );
+        }
+        else
+        {
+            CHECK( deserialized == value );
+        }
     }
     {
         auto deserialized = T( );
         spb::pb::deserialize( deserialized, protobuf );
-        CHECK( deserialized == value );
+        if constexpr( HasValueMember< T > )
+        {
+            CHECK( deserialized.value == value.value );
+        }
+        else
+        {
+            CHECK( deserialized == value );
+        }
     }
 }
 
