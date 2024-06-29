@@ -448,17 +448,17 @@ TEST_CASE( "protobuf" )
     {
         SUBCASE( "required" )
         {
-            pb_test( Test::Scalar::ReqFloat{ .value = 42.0 }, "\x0d\x00\x00\x28\x42"sv );
+            pb_test( Test::Scalar::ReqFloat{ .value = 42.0f }, "\x0d\x00\x00\x28\x42"sv );
             CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqFloat >( "\x0d\x00\x00\x28"sv ) );
         }
         SUBCASE( "optional" )
         {
-            pb_test( Test::Scalar::OptFloat{ .value = 42.3 }, "\x0d\x33\x33\x29\x42"sv );
+            pb_test( Test::Scalar::OptFloat{ .value = 42.3f }, "\x0d\x33\x33\x29\x42"sv );
         }
         SUBCASE( "repeated" )
         {
-            pb_test( Test::Scalar::RepFloat{ .value = { 42.3 } }, "\x0d\x33\x33\x29\x42"sv );
-            pb_test( Test::Scalar::RepFloat{ .value = { 42.0, 42.3 } }, "\x0d\x00\x00\x28\x42\x0d\x33\x33\x29\x42"sv );
+            pb_test( Test::Scalar::RepFloat{ .value = { 42.3f } }, "\x0d\x33\x33\x29\x42"sv );
+            pb_test( Test::Scalar::RepFloat{ .value = { 42.0f, 42.3f } }, "\x0d\x00\x00\x28\x42\x0d\x33\x33\x29\x42"sv );
             pb_test( Test::Scalar::RepFloat{ .value = {} }, ""sv );
         }
     }

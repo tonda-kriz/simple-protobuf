@@ -26,7 +26,7 @@ auto load_file( const std::filesystem::path & file_path ) -> std::string
         return file_content;
     }
 
-    perror( file_path.c_str( ) );
+    perror( file_path.string( ).c_str( ) );
     throw std::system_error( std::make_error_code( std::errc( errno ) ) );
 }
 
