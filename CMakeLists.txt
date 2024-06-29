@@ -12,16 +12,19 @@ add_library(spb-proto INTERFACE)
 target_include_directories(spb-proto INTERFACE include)
 target_compile_features(spb-proto INTERFACE cxx_std_20)
 
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/spb_protobuf.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/spb_warnings.cmake)
+
 add_subdirectory(src)
 
 option(SPB_PROTO_BUILD_TESTS "Build tests" OFF)
+option(SPB_PROTO_BUILD_COMPATIBILITY_TESTS "Build gpb compatibility tests" OFF)
 option(SPB_PROTO_BUILD_EXAMPLES "Build examples" OFF)
 option(SPB_PROTO_USE_CLANG_FORMAT "Enable clang format for generated code" ON)
 option(SPB_PROTO_USE_COVERAGE "Enable code coverage" OFF)
 option(SPB_PROTO_USE_ADDRESS_SANITIZER "Enable address sanitizer" OFF)
 option(SPB_PROTO_USE_UB_SANITIZER "Enable undefined behavior sanitizer" OFF)
 
-include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/spb_protobuf.cmake)
 
 if(SPB_PROTO_USE_COVERAGE)
     find_program(GCOV gcov)

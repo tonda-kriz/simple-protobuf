@@ -115,14 +115,16 @@ TEST_CASE( "json" )
         }
         SUBCASE( "bool" )
         {
-            CHECK( spb::json::detail::deserialize< bool >( "true" ) == true );
-            CHECK( spb::json::detail::deserialize< bool >( "false" ) == false );
-            CHECK_THROWS( spb::json::detail::deserialize< bool >( "hello" ) );
-            auto value = false;
-            CHECK_NOTHROW( spb::json::detail::deserialize( value, "true" ) );
-            CHECK( value );
-            CHECK_NOTHROW( spb::json::detail::deserialize( value, "false" ) );
-            CHECK( value == false );
+            {
+                CHECK( spb::json::detail::deserialize< bool >( "true" ) == true );
+                CHECK( spb::json::detail::deserialize< bool >( "false" ) == false );
+                CHECK_THROWS( spb::json::detail::deserialize< bool >( "hello" ) );
+                auto value = false;
+                CHECK_NOTHROW( spb::json::detail::deserialize( value, "true" ) );
+                CHECK( value );
+                CHECK_NOTHROW( spb::json::detail::deserialize( value, "false" ) );
+                CHECK( value == false );
+            }
             SUBCASE( "array" )
             {
                 CHECK( spb::json::detail::deserialize< std::vector< bool > >( R"([true,false])" ) == std::vector< bool >{ true, false } );
@@ -359,7 +361,7 @@ TEST_CASE( "json" )
                 {
                     const auto esc = c == '"' || c == '\\' || c == '/' || c == 'b' || c == 'f' || c == 'n' || c == 'r' || c == 't';
 
-                    CHECK( spb::json::detail::is_escape( c ) == esc );
+                    CHECK( spb::json::detail::is_escape( char( c ) ) == esc );
                     char buffer[] = { '"', '\\', char( c ), '"', 0 };
                     if( !esc )
                     {
@@ -381,7 +383,7 @@ TEST_CASE( "json" )
                     CHECK( spb::json::detail::deserialize< std::string >( R"("\n")" ) == "\n" );
                     CHECK( spb::json::detail::deserialize< std::string >( R"("\r")" ) == "\r" );
                     CHECK( spb::json::detail::deserialize< std::string >( R"("\t")" ) == "\t" );
-                    CHECK( spb::json::detail::deserialize< std::string >( R"("\"\b\f\n\r\t\"")" ) == "\"\b\f\n\r\t\"" );
+                    CHECK( spb::json::detail::deserialize< std::string >( R"("\"\b\f\n\r\t\"")"s ) == "\"\b\f\n\r\t\"" );
                     CHECK( spb::json::detail::deserialize< std::string >( R"("\nhell\to")" ) == "\nhell\to" );
                 }
             }

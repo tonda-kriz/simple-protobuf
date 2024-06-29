@@ -1,5 +1,8 @@
 # simple-protobuf
 
+![Linux-build](https://github.com/tonda-kriz/simple-protobuf/actions/workflows/ci-linux-tests.yml/badge.svg)
+![Windows-build](https://github.com/tonda-kriz/simple-protobuf/actions/workflows/ci-windows-tests.yml/badge.svg)
+
 **simple data struct** serialization library for C++. With this library you can serialize and deserialize C++ structs directly to [JSON](https://json.org) or [protobuf](https://github.com/protocolbuffers/protobuf).
 
 ```CPP

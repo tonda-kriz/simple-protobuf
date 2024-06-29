@@ -15,6 +15,17 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
 
+namespace
+{
+template < typename T >
+concept HasValueMember = requires( T t ) {
+    {
+        t.value
+    };
+};
+
+}
+
 namespace Test
 {
 auto operator==( const Test::Name & lhs, const Test::Name & rhs ) noexcept -> bool
@@ -26,22 +37,6 @@ auto operator==( const Test::Variant & lhs, const Test::Variant & rhs ) noexcept
     return lhs.oneof_field == rhs.oneof_field;
 }
 
-namespace Scalar
-{
-template < typename T >
-concept HasValueMember = requires( T t ) {
-    {
-        t.value
-    };
-};
-
-template < typename T >
-    requires HasValueMember< T >
-auto operator==( const T & lhs, const T & rhs ) noexcept -> bool
-{
-    return lhs.value == rhs.value;
-}
-}// namespace Scalar
 }// namespace Test
 
 namespace PhoneBook
@@ -106,12 +101,26 @@ void pb_test( const T & value, std::string_view protobuf )
 
     {
         auto deserialized = spb::pb::deserialize< T >( protobuf );
-        CHECK( deserialized == value );
+        if constexpr( HasValueMember< T > )
+        {
+            CHECK( deserialized.value == value.value );
+        }
+        else
+        {
+            CHECK( deserialized == value );
+        }
     }
     {
         auto deserialized = T( );
         spb::pb::deserialize( deserialized, protobuf );
-        CHECK( deserialized == value );
+        if constexpr( HasValueMember< T > )
+        {
+            CHECK( deserialized.value == value.value );
+        }
+        else
+        {
+            CHECK( deserialized == value );
+        }
     }
 }
 
@@ -448,17 +457,17 @@ TEST_CASE( "protobuf" )
     {
         SUBCASE( "required" )
         {
-            pb_test( Test::Scalar::ReqFloat{ .value = 42.0 }, "\x0d\x00\x00\x28\x42"sv );
+            pb_test( Test::Scalar::ReqFloat{ .value = 42.0f }, "\x0d\x00\x00\x28\x42"sv );
             CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqFloat >( "\x0d\x00\x00\x28"sv ) );
         }
         SUBCASE( "optional" )
         {
-            pb_test( Test::Scalar::OptFloat{ .value = 42.3 }, "\x0d\x33\x33\x29\x42"sv );
+            pb_test( Test::Scalar::OptFloat{ .value = 42.3f }, "\x0d\x33\x33\x29\x42"sv );
         }
         SUBCASE( "repeated" )
         {
-            pb_test( Test::Scalar::RepFloat{ .value = { 42.3 } }, "\x0d\x33\x33\x29\x42"sv );
-            pb_test( Test::Scalar::RepFloat{ .value = { 42.0, 42.3 } }, "\x0d\x00\x00\x28\x42\x0d\x33\x33\x29\x42"sv );
+            pb_test( Test::Scalar::RepFloat{ .value = { 42.3f } }, "\x0d\x33\x33\x29\x42"sv );
+            pb_test( Test::Scalar::RepFloat{ .value = { 42.0f, 42.3f } }, "\x0d\x00\x00\x28\x42\x0d\x33\x33\x29\x42"sv );
             pb_test( Test::Scalar::RepFloat{ .value = {} }, ""sv );
         }
     }

@@ -12,6 +12,7 @@
 
 #include "base64.h"
 #include <algorithm>
+#include <array>
 #include <cctype>
 #include <charconv>
 #include <concepts>
