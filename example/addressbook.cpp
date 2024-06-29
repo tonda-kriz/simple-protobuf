@@ -18,7 +18,7 @@ auto load_file( const std::filesystem::path & file_path ) -> std::string
     const auto file_size = std::filesystem::file_size( file_path );
     auto file_content    = std::string( file_size, '\0' );
 
-    if( auto * p_file = fopen( file_path.c_str( ), "rb" ); p_file )
+    if( auto * p_file = fopen( file_path.string( ).c_str( ), "rb" ); p_file )
     {
         const auto read = fread( file_content.data( ), 1, file_content.size( ), p_file );
         fclose( p_file );
@@ -32,7 +32,7 @@ auto load_file( const std::filesystem::path & file_path ) -> std::string
 
 void save_file( const std::filesystem::path & file_path, std::string_view file_content )
 {
-    if( auto * p_file = fopen( file_path.c_str( ), "wb" ); p_file )
+    if( auto * p_file = fopen( file_path.string( ).c_str( ), "wb" ); p_file )
     {
         const auto written = fwrite( file_content.data( ), 1, file_content.size( ), p_file );
         fclose( p_file );
@@ -41,7 +41,7 @@ void save_file( const std::filesystem::path & file_path, std::string_view file_c
             return;
         }
     }
-    perror( file_path.c_str( ) );
+    perror( file_path.string( ).c_str( ) );
     throw std::system_error( std::make_error_code( std::errc( errno ) ) );
 }
 // This function fills in a Person message based on user input.
