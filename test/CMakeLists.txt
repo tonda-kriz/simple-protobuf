@@ -60,7 +60,7 @@ if(SPB_PROTO_BUILD_COMPATIBILITY_TESTS)
 
   if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND EXISTS "/etc/arch-release")
     # On Arch Linux protobuf::libprotobuf needs to be linked with absl
-    target_link_libraries(gpb-proto PUBLIC protobuf::libprotobuf absl_log_internal_check_op absl_log_internal_message)    
+    target_link_libraries(gpb-proto PUBLIC protobuf::libprotobuf absl_log_internal_check_op absl_log_internal_message absl_status)
   else()
     target_link_libraries(gpb-proto PUBLIC protobuf::libprotobuf)
   endif()

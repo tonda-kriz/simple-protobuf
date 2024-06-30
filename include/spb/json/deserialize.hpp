@@ -191,12 +191,27 @@ static inline void deserialize( istream & stream, std::string & value )
 
 static inline void deserialize_number( istream & stream, auto & value )
 {
-    auto result = std::from_chars( stream.begin( ), stream.end( ), value );
-    if( result.ec != std::errc{ } )
+    if( stream.current_char( ) == '"' ) [[unlikely]]
     {
-        throw std::runtime_error( "invalid number" );
+        //- https://protobuf.dev/programming-guides/proto2/#json
+        //- number can be a string
+        auto view = std::string_view{ };
+        deserialize( stream, view );
+        auto result = std::from_chars( view.data( ), view.data( ) + view.size( ), value );
+        if( result.ec != std::errc{ } )
+        {
+            throw std::runtime_error( "invalid number" );
+        }
     }
-    stream.skip_to( result.ptr );
+    else
+    {
+        auto result = std::from_chars( stream.begin( ), stream.end( ), value );
+        if( result.ec != std::errc{ } )
+        {
+            throw std::runtime_error( "invalid number" );
+        }
+        stream.skip_to( result.ptr );
+    }
 }
 
 static inline void deserialize( istream & stream, bool & value )
