@@ -197,7 +197,7 @@ static inline void deserialize_number( istream & stream, auto & value )
         //- number can be a string
         auto view = std::string_view{ };
         deserialize( stream, view );
-        auto result = std::from_chars( view.begin( ), view.end( ), value );
+        auto result = std::from_chars( view.data( ), view.data( ) + view.size( ), value );
         if( result.ec != std::errc{ } )
         {
             throw std::runtime_error( "invalid number" );
