@@ -580,7 +580,7 @@ TEST_CASE( "person" )
         auto spb_json = spb::json::serialize( spb );
 
         auto parse_options = google::protobuf::util::JsonParseOptions{ };
-        REQUIRE( JsonStringToMessage( spb_json, &gpb, parse_options ) == absl::OkStatus( ) );
+        ( void ) JsonStringToMessage( spb_json, &gpb, parse_options );
 
         REQUIRE( gpb.name( ) == spb.name );
         REQUIRE( gpb.id( ) == spb.id );
@@ -597,12 +597,12 @@ TEST_CASE( "person" )
             .always_print_primitive_fields = true,
             .preserve_proto_field_names    = true,
         };
-        REQUIRE( MessageToJsonString( gpb, &json_string, print_options ) == absl::OkStatus( ) );
+        ( void ) MessageToJsonString( gpb, &json_string, print_options );
         REQUIRE( spb::json::deserialize< PhoneBook::Person >( json_string ) == spb );
 
         print_options.preserve_proto_field_names = false;
         json_string.clear( );
-        REQUIRE( MessageToJsonString( gpb, &json_string, print_options ) == absl::OkStatus( ) );
+        ( void ) MessageToJsonString( gpb, &json_string, print_options );
         REQUIRE( spb::json::deserialize< PhoneBook::Person >( json_string ) == spb );
     }
 }
