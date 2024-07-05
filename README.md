@@ -14,9 +14,11 @@ auto john = PhoneBook::Person{
         .id    = 1234,
         .email = "jdoe@example.com",
     };
-auto json   = spb::json::serialize( john );
-auto person = spb::json::deserialize< PhoneBook::Person >( json );
-//- person is now john
+auto json    = spb::json::serialize( john );
+auto person  = spb::json::deserialize< PhoneBook::Person >( json );
+auto pb      = spb::pb::serialize( john );
+auto person2 = spb::pb::deserialize< PhoneBook::Person >( pb );
+//- john == person == person2
 ```
 
 ## goal
@@ -106,7 +108,7 @@ struct Person {
 }// namespace PhoneBook
 ```
 
-3. use `Person` struct natively and de/serialize
+3. use `Person` struct natively and de/serialize to/from json/pb
 
 ```CPP
 #include <person.pb.h>
@@ -116,9 +118,11 @@ auto john = PhoneBook::Person{
         .id    = 1234,
         .email = "jdoe@example.com",
     };
-auto json   = spb::json::serialize( john );
-auto person = spb::json::deserialize< PhoneBook::Person >( json );
-//- person is now john
+auto json    = spb::json::serialize( john );
+auto person  = spb::json::deserialize< PhoneBook::Person >( json );
+auto pb      = spb::pb::serialize( john );
+auto person2 = spb::pb::deserialize< PhoneBook::Person >( pb );
+//- john == person == person2
 ```
 
 ## example
@@ -127,10 +131,8 @@ navigate to the [example](example/) directory.
 
 ## status
 
-project is in an early stage of development, expect bugs, API changes and definitely do **NOT** use it in production, *yet*.
-
 - [x] Make it work
-- [ ] Make it right
+- [x] Make it right
 - [ ] Make it fast
 
 ### roadmap
