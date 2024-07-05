@@ -108,8 +108,6 @@ static inline void serialize( ostream & stream, uint32_t field_number, const std
 static inline void serialize( ostream & stream, uint32_t field_number, const std::vector< std::byte > & value );
 
 template < typename T >
-static inline void serialize( ostream & stream, uint32_t field_number, std::span< const T > value );
-template < typename T >
 static inline void serialize( ostream & stream, uint32_t field_number, const std::vector< T > & value );
 
 template < scalar_encoder encoder, typename T >
@@ -230,7 +228,7 @@ static inline void serialize_as( ostream & stream, uint32_t field_number, const 
 template < scalar_encoder encoder, typename T >
 static inline void serialize_packed_as( ostream & stream, const std::vector< T > & value )
 {
-    for( const auto & v : value )
+    for( auto && v : value )
     {
         serialize_as< encoder >( stream, v );
     }
@@ -256,7 +254,7 @@ static inline void serialize_as( ostream & stream, uint32_t field_number, const 
     }
     else
     {
-        for( const auto && v : value )
+        for( auto && v : value )
         {
             serialize_as< encoder >( stream, field_number, v );
         }
@@ -266,7 +264,7 @@ static inline void serialize_as( ostream & stream, uint32_t field_number, const 
 template < typename T >
 static inline void serialize( ostream & stream, uint32_t field_number, const std::vector< T > & value )
 {
-    for( const auto & v : value )
+    for( auto && v : value )
     {
         serialize( stream, field_number, v );
     }
