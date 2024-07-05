@@ -191,7 +191,7 @@ static inline void serialize( ostream & stream, std::string_view key, const is_e
 static inline void serialize( ostream & stream, std::string_view key, const std::string_view & value );
 static inline void serialize( ostream & stream, std::string_view key, const std::vector< bool > & value );
 template < typename T >
-static inline void serialize( ostream & stream, std::string_view key, const std::span< const T > & value );
+static inline void serialize( ostream & stream, std::string_view key, std::span< const T > value );
 template < typename T >
 static inline void serialize( ostream & stream, std::string_view key, const std::vector< T > & value );
 
@@ -270,14 +270,14 @@ static inline void serialize( ostream & stream, std::string_view key, const std:
     stream.put_comma = false;
     for( const auto & v : value )
     {
-        serialize( stream, { }, v );
+        serialize( stream, { }, bool( v ) );
     }
     stream.write( ']' );
     stream.put_comma = true;
 }
 
 template < typename T >
-static inline void serialize( ostream & stream, std::string_view key, const std::span< const T > & value )
+static inline void serialize( ostream & stream, std::string_view key, std::span< const T > value )
 {
     if( value.empty( ) )
     {
