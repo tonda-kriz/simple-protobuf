@@ -256,7 +256,7 @@ static inline void serialize_as( ostream & stream, uint32_t field_number, const 
     }
     else
     {
-        for( const auto & v : value )
+        for( const auto && v : value )
         {
             serialize_as< encoder >( stream, field_number, v );
         }
