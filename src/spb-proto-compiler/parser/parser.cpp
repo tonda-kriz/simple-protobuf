@@ -823,17 +823,6 @@ void parse_top_level( spb::char_stream & stream, proto_file & file, proto_commen
     }
 }
 
-void parse_proto_file_content( std::string_view file_content, proto_file & file )
-{
-    auto stream = spb::char_stream( file_content );
-
-    while( !stream.empty( ) )
-    {
-        auto comment = parse_comment( stream );
-        parse_top_level( stream, file, std::move( comment ) );
-    }
-}
-
 [[nodiscard]] auto parse_proto_file( const std::filesystem::path & file, parsed_files & already_parsed, std::span< const std::filesystem::path > import_paths ) -> proto_file
 {
     auto file_path = find_file_in_paths( file, import_paths );
@@ -851,6 +840,17 @@ void parse_proto_file_content( std::string_view file_content, proto_file & file 
 }
 
 }// namespace
+
+void parse_proto_file_content( std::string_view file_content, proto_file & file )
+{
+    auto stream = spb::char_stream( file_content );
+
+    while( !stream.empty( ) )
+    {
+        auto comment = parse_comment( stream );
+        parse_top_level( stream, file, std::move( comment ) );
+    }
+}
 
 auto parse_proto_file( const std::filesystem::path & file, std::span< const std::filesystem::path > import_paths ) -> proto_file
 {

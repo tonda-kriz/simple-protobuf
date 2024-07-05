@@ -73,4 +73,36 @@ if(SPB_PROTO_BUILD_COMPATIBILITY_TESTS)
   doctest_discover_tests(gpb-compatibility-test)
 endif()
 
+if(SPB_PROTO_BUILD_FUZZER_TESTS)
+  if(SPB_PROTO_USE_ADDRESS_SANITIZER)
+    add_compile_options("-fsanitize=fuzzer,address" -O1 -g)
+    add_link_options("-fsanitize=fuzzer,address")
+elseif(SPB_PROTO_USE_UB_SANITIZER)
+    message("-- Enable undefined behavior sanitizer" -O1 -g)
+    add_compile_options("-fsanitize=fuzzer,undefined")
+    add_link_options("-fsanitize=fuzzer,undefined")
+endif()
+
+  add_executable(spb-protoc-fuzzer fuzzer/spb-protoc-fuzzer.cpp 
+    ../../src/spb-proto-compiler/parser/parser.cpp 
+    ../../src/spb-proto-compiler/io/file.cpp
+    ../../src/spb-proto-compiler/ast/ast.cpp
+    )
+  target_include_directories(spb-protoc-fuzzer PUBLIC ${CMAKE_SOURCE_DIR}/src/spb-proto-compiler)
+  target_link_libraries(spb-protoc-fuzzer PUBLIC spb-proto)
+  target_compile_options(spb-protoc-fuzzer PRIVATE -Wno-deprecated-declarations -Wno-deprecated)
+
+  add_executable(spb-pb-fuzzer fuzzer/spb-pb-fuzzer.cpp 
+    ${SPB_PROTO_PERSON_SRC} ${SPB_PROTO_NAME_SRC} ${SPB_PROTO_SCALAR_SRC} ${SPB_PROTO_SRCS}
+  )
+  target_link_libraries(spb-pb-fuzzer PUBLIC spb-proto)
+  target_compile_options(spb-pb-fuzzer PRIVATE -Wno-deprecated-declarations -Wno-deprecated)
+
+  add_executable(spb-json-fuzzer fuzzer/spb-json-fuzzer.cpp 
+    ${SPB_PROTO_PERSON_SRC} ${SPB_PROTO_NAME_SRC} ${SPB_PROTO_SCALAR_SRC} ${SPB_PROTO_SRCS}
+  )
+  target_link_libraries(spb-json-fuzzer PUBLIC spb-proto)
+  target_compile_options(spb-json-fuzzer PRIVATE -Wno-deprecated-declarations -Wno-deprecated)
+endif()
+
 
