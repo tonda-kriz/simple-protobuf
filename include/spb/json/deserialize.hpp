@@ -74,7 +74,7 @@ private:
 
 public:
     istream( std::string_view content ) noexcept
-        : spb::char_stream( content.data( ) )
+        : spb::char_stream( content )
     {
     }
 
