@@ -216,8 +216,10 @@ TEST_CASE( "json" )
         SUBCASE( "int32" )
         {
             CHECK( spb::json::detail::deserialize< int32_t >( "42" ) == 42 );
+            CHECK( spb::json::detail::deserialize< int32_t >( "\"42\"" ) == 42 );
             CHECK( spb::json::detail::deserialize< int32_t >( "-42" ) == -42 );
             CHECK( spb::json::detail::deserialize< int32_t >( "0" ) == 0 );
+            CHECK( spb::json::detail::deserialize< int32_t >( "\"-0\"" ) == 0 );
             CHECK( spb::json::detail::deserialize< int32_t >( "2147483647" ) == 2147483647 );
             CHECK( spb::json::detail::deserialize< int32_t >( "-2147483648" ) == -2147483648 );
             CHECK_THROWS( spb::json::detail::deserialize< int32_t >( "hello" ) );
