@@ -11,6 +11,7 @@
 #pragma once
 
 #include "../char_stream.h"
+#include "../from_chars.h"
 #include "base64.h"
 #include <algorithm>
 #include <cctype>
@@ -191,7 +192,21 @@ static inline void deserialize( istream & stream, std::string & value )
 
 static inline void deserialize_number( istream & stream, auto & value )
 {
-    auto result = std::from_chars( stream.begin( ), stream.end( ), value );
+    if( stream.current_char( ) == '"' ) [[unlikely]]
+    {
+        //- https://protobuf.dev/programming-guides/proto2/#json
+        //- number can be a string
+        auto view = std::string_view{ };
+        deserialize( stream, view );
+        auto result = spb_std_emu::from_chars( view.data( ), view.data( ) + view.size( ), value );
+        if( result.ec != std::errc{ } )
+        {
+            throw std::runtime_error( "invalid number" );
+        }
+        return;
+    }
+
+    auto result = spb_std_emu::from_chars( stream.begin( ), stream.end( ), value );
     if( result.ec != std::errc{ } )
     {
         throw std::runtime_error( "invalid number" );

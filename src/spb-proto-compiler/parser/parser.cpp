@@ -19,6 +19,7 @@
 #include <cstdio>
 #include <filesystem>
 #include <spb/char_stream.h>
+#include <spb/from_chars.h>
 #include <stdexcept>
 #include <string_view>
 
@@ -111,7 +112,7 @@ auto consume_number( spb::char_stream & stream, std::integral auto & number ) ->
             return true;
         }
     }
-    auto result = std::from_chars( stream.begin( ), stream.end( ), number, base );
+    auto result = spb_std_emu::from_chars( stream.begin( ), stream.end( ), number, base );
     if( result.ec == std::errc{ } ) [[likely]]
     {
         stream.skip_to( result.ptr );
@@ -122,7 +123,7 @@ auto consume_number( spb::char_stream & stream, std::integral auto & number ) ->
 
 auto consume_number( spb::char_stream & stream, std::floating_point auto & number ) -> bool
 {
-    auto result = std::from_chars( stream.begin( ), stream.end( ), number );
+    auto result = spb_std_emu::from_chars( stream.begin( ), stream.end( ), number );
     if( result.ec == std::errc{ } ) [[likely]]
     {
         stream.skip_to( result.ptr );
@@ -156,7 +157,7 @@ auto parse_int_or_float( spb::char_stream & stream ) -> std::string_view
 {
     const auto * start = stream.begin( );
     auto number        = double( );
-    auto result        = std::from_chars( stream.begin( ), stream.end( ), number );
+    auto result        = spb_std_emu::from_chars( stream.begin( ), stream.end( ), number );
     if( result.ec == std::errc{ } ) [[likely]]
     {
         stream.skip_to( result.ptr );
