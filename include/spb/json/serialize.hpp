@@ -23,6 +23,7 @@
 #include <optional>
 #include <span>
 #include <stdexcept>
+#include <string>
 #include <string_view>
 #include <sys/types.h>
 #include <type_traits>
@@ -189,13 +190,14 @@ static inline void serialize( ostream & stream, std::string_view key, const auto
 static inline void serialize( ostream & stream, std::string_view key, const is_struct auto & value );
 static inline void serialize( ostream & stream, std::string_view key, const is_enum auto & value );
 static inline void serialize( ostream & stream, std::string_view key, const std::string_view & value );
+static inline void serialize( ostream & stream, std::string_view key, const std::vector< bool > & value );
 template < typename T >
 static inline void serialize( ostream & stream, std::string_view key, std::span< const T > value );
 template < typename T >
 static inline void serialize( ostream & stream, std::string_view key, const std::vector< T > & value );
 
 template < typename keyT, typename valueT >
-static inline void serialize( ostream & stream, std::string_view key, const std::map< keyT, valueT > & value );
+static inline void serialize( ostream & stream, std::string_view key, const std::map< keyT, valueT > & map );
 
 static inline void serialize( ostream & stream, bool value );
 static inline void serialize( ostream & stream, std::floating_point auto value );
@@ -269,7 +271,7 @@ static inline void serialize( ostream & stream, std::string_view key, const std:
     stream.put_comma = false;
     for( const auto & v : value )
     {
-        serialize( stream, { }, v );
+        serialize( stream, { }, bool( v ) );
     }
     stream.write( ']' );
     stream.put_comma = true;
