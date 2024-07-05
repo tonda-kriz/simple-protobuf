@@ -117,7 +117,7 @@ template < scalar_encoder encoder, typename keyT, typename valueT >
 static inline void serialize_as( ostream & stream, uint32_t field_number, const std::map< keyT, valueT > & value );
 
 template < scalar_encoder encoder >
-static inline void serialize_as( ostream & stream, uint32_t field_number, const is_int_or_float auto & value )
+static inline void serialize_as( ostream & stream, uint32_t field_number, is_int_or_float auto value )
 {
     serialize_tag( stream, field_number, wire_type_from_scalar_encoder( encoder ) );
     serialize_as< encoder >( stream, value );
