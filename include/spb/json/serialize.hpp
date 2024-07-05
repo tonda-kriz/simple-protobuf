@@ -23,6 +23,7 @@
 #include <optional>
 #include <span>
 #include <stdexcept>
+#include <string>
 #include <string_view>
 #include <sys/types.h>
 #include <type_traits>
