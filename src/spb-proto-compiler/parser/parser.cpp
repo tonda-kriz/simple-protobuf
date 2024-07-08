@@ -17,6 +17,7 @@
 #include <charconv>
 #include <concepts>
 #include <cstdio>
+#include <exception>
 #include <filesystem>
 #include <spb/char_stream.h>
 #include <spb/from_chars.h>
@@ -25,6 +26,7 @@
 
 namespace
 {
+
 using parsed_files = std::set< std::string >;
 [[nodiscard]] auto parse_proto_file( const std::filesystem::path & file, parsed_files &, std::span< const std::filesystem::path > import_paths ) -> proto_file;
 
@@ -55,9 +57,9 @@ auto find_file_in_paths( const std::filesystem::path & file_name, std::span< con
     throw std::runtime_error( "File not found: " + file_name.string( ) );
 }
 
-[[noreturn]] void throw_parse_error( spb::char_stream &, std::string_view message )
+[[noreturn]] void throw_parse_error( spb::char_stream & stream, std::string_view message )
 {
-    throw std::runtime_error( std::string( message ) );
+    throw std::runtime_error( std::to_string( stream.current_line( ) ) + ": " + std::string( message ) );
 }
 
 void parse_or_throw( bool parsed, spb::char_stream & stream, std::string_view message )
@@ -825,25 +827,32 @@ void parse_top_level( spb::char_stream & stream, proto_file & file, proto_commen
 
 [[nodiscard]] auto parse_proto_file( const std::filesystem::path & file, parsed_files & already_parsed, std::span< const std::filesystem::path > import_paths ) -> proto_file
 {
-    auto file_path = find_file_in_paths( file, import_paths );
+    try
+    {
+        auto file_path = find_file_in_paths( file, import_paths );
 
-    auto result = proto_file{
-        .path    = file_path,
-        .content = load_file( file_path ),
-    };
+        auto result = proto_file{
+            .path    = file_path,
+            .content = load_file( file_path ),
+        };
 
-    parse_proto_file_content( result.content, result );
-    already_parsed.insert( file.string( ) );
-    result.file_imports = parse_all_imports( result.imports, already_parsed, import_paths );
-    resolve_messages( result );
-    return result;
+        parse_proto_file_content( result );
+        already_parsed.insert( file.string( ) );
+        result.file_imports = parse_all_imports( result.imports, already_parsed, import_paths );
+        resolve_messages( result );
+        return result;
+    }
+    catch( const std::exception & e )
+    {
+        throw std::runtime_error( file.string( ) + ":" + e.what( ) );
+    }
 }
 
 }// namespace
 
-void parse_proto_file_content( std::string_view file_content, proto_file & file )
+void parse_proto_file_content( proto_file & file )
 {
-    auto stream = spb::char_stream( file_content );
+    auto stream = spb::char_stream( file.content );
 
     while( !stream.empty( ) )
     {

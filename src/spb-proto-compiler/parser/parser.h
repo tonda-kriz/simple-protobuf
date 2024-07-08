@@ -37,7 +37,6 @@ auto parse_proto_file( const std::filesystem::path & file_path, std::span< const
 /**
  * @brief parse proto file content, used for fuzzing
  *
- * @param file_content
- * @param file result
+ * @param file proto file
  */
-void parse_proto_file_content( std::string_view file_content, proto_file & file );
+void parse_proto_file_content( proto_file & file );

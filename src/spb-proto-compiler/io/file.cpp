@@ -10,7 +10,8 @@
 
 #include "file.h"
 #include <cstdio>
-#include <system_error>
+#include <cstring>
+#include <stdexcept>
 
 auto load_file( const std::filesystem::path & file_path ) -> std::string
 {
@@ -24,8 +25,7 @@ auto load_file( const std::filesystem::path & file_path ) -> std::string
         file_content.resize( read );
         return file_content;
     }
-    perror( file_path.string( ).c_str( ) );
-    throw std::system_error( std::make_error_code( std::errc( errno ) ) );
+    throw std::runtime_error( strerror( errno ) );
 }
 
 void save_file( const std::filesystem::path & file_path, std::string_view file_content )
@@ -39,6 +39,5 @@ void save_file( const std::filesystem::path & file_path, std::string_view file_c
             return;
         }
     }
-    perror( file_path.string( ).c_str( ) );
-    throw std::system_error( std::make_error_code( std::errc( errno ) ) );
+    throw std::runtime_error( strerror( errno ) );
 }

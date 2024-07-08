@@ -9,6 +9,7 @@
 \***************************************************************************/
 
 #pragma once
+#include <algorithm>
 #include <cassert>
 #include <cctype>
 #include <string_view>
@@ -19,9 +20,14 @@ namespace spb
 struct char_stream
 {
 private:
-    const char * m_begin = nullptr;
-    const char * m_end   = nullptr;
-    char m_current       = { };
+    //- start of the stream
+    const char * p_start = nullptr;
+    //- current position in the stream
+    const char * p_begin = nullptr;
+    //- end of the stream
+    const char * p_end = nullptr;
+    //- current char
+    char m_current = { };
 
     /**
      * @brief gets the next char from the stream
@@ -30,39 +36,40 @@ private:
      */
     void update_current( bool skip_white_space ) noexcept
     {
-        while( m_begin < m_end )
+        while( p_begin < p_end )
         {
-            m_current = *m_begin;
+            m_current = *p_begin;
             if( !skip_white_space || isspace( m_current ) == 0 )
             {
                 return;
             }
-            m_begin += 1;
+            p_begin += 1;
         }
         m_current = { };
     }
 
 public:
     explicit char_stream( std::string_view content ) noexcept
-        : m_begin( content.data( ) )
-        , m_end( m_begin + content.size( ) )
+        : p_start( content.data( ) )
+        , p_begin( p_start )
+        , p_end( p_begin + content.size( ) )
     {
         update_current( true );
     }
 
     [[nodiscard]] auto begin( ) const noexcept -> const char *
     {
-        return m_begin;
+        return p_begin;
     }
 
     [[nodiscard]] auto end( ) const noexcept -> const char *
     {
-        return m_end;
+        return p_end;
     }
 
     [[nodiscard]] auto empty( ) const noexcept -> bool
     {
-        return m_end <= m_begin;
+        return p_end <= p_begin;
     }
 
     [[nodiscard]] auto current_char( ) const noexcept -> char
@@ -98,7 +105,7 @@ public:
 
         if( content( ).starts_with( token ) )
         {
-            m_begin += token.size( );
+            p_begin += token.size( );
             update_current( false );
             auto next = current_char( );
             if( isspace( next ) || !isalnum( next ) )
@@ -115,7 +122,7 @@ public:
     {
         if( begin( ) < end( ) )
         {
-            m_begin += 1;
+            p_begin += 1;
             update_current( skip_white_space );
         }
     }
@@ -132,13 +139,24 @@ public:
     void skip_to( const char * ptr ) noexcept
     {
         assert( ptr >= begin( ) && ptr <= end( ) );
-        m_begin = ptr;
+        p_begin = ptr;
         update_current( true );
     }
 
     [[nodiscard]] auto content( ) const noexcept -> std::string_view
     {
         return { begin( ), size_t( end( ) - begin( ) ) };
+    }
+
+    [[nodiscard]] auto current_line( ) const noexcept -> size_t
+    {
+        return std::count( p_start, p_begin, '\n' ) + 1;
+    }
+    [[nodiscard]] auto current_column( ) const noexcept -> size_t
+    {
+        auto parsed = std::string_view( p_start, p_begin - p_start );
+        auto p      = parsed.rfind( '\n' );
+        return p == std::string_view::npos ? parsed.size( ) : parsed.size( ) - p - 1;
     }
 };
 }// namespace spb
