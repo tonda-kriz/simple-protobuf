@@ -59,7 +59,7 @@ auto find_file_in_paths( const std::filesystem::path & file_name, std::span< con
 
 [[noreturn]] void throw_parse_error( spb::char_stream & stream, std::string_view message )
 {
-    throw std::runtime_error( std::to_string( stream.current_line( ) ) + ": " + std::string( message ) );
+    throw std::runtime_error( std::to_string( stream.current_line( ) ) + ":" + std::to_string( stream.current_column( ) ) + ": " + std::string( message ) );
 }
 
 void parse_or_throw( bool parsed, spb::char_stream & stream, std::string_view message )

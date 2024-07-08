@@ -12,6 +12,7 @@
 #include "parser/parser.h"
 #include <cstdio>
 #include <cstring>
+#include <exception>
 #include <filesystem>
 #include <iostream>
 #include <vector>
@@ -46,12 +47,20 @@ void process_file( const std::filesystem::path & input_file,
                    std::span< const std::filesystem::path > import_paths,
                    const std::filesystem::path & output_dir )
 {
-    const auto parsed_file       = parse_proto_file( input_file, import_paths );
-    const auto output_cpp_header = cpp_file_name_from_proto( input_file, ".pb.h" );
-    const auto output_cpp        = cpp_file_name_from_proto( input_file, ".pb.cc" );
+    try
+    {
+        const auto parsed_file       = parse_proto_file( input_file, import_paths );
+        const auto output_cpp_header = cpp_file_name_from_proto( input_file, ".pb.h" );
+        const auto output_cpp        = cpp_file_name_from_proto( input_file, ".pb.cc" );
 
-    dump_cpp_header( parsed_file, output_dir / output_cpp_header );
-    dump_cpp( parsed_file, output_cpp_header, output_dir / output_cpp );
+        dump_cpp_header( parsed_file, output_dir / output_cpp_header );
+        dump_cpp( parsed_file, output_cpp_header, output_dir / output_cpp );
+    }
+    catch( const std::exception & e )
+    {
+        std::cerr << e.what( ) << '\n';
+        exit( 1 );
+    }
 }
 
 }// namespace

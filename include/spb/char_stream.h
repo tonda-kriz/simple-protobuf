@@ -155,8 +155,12 @@ public:
     [[nodiscard]] auto current_column( ) const noexcept -> size_t
     {
         auto parsed = std::string_view( p_start, p_begin - p_start );
-        auto p      = parsed.rfind( '\n' );
-        return p == std::string_view::npos ? parsed.size( ) : parsed.size( ) - p - 1;
+
+        if( auto p = parsed.rfind( '\n' ); p != std::string_view::npos )
+        {
+            parsed.remove_prefix( p );
+        }
+        return std::max< size_t >( parsed.size( ), 1 );
     }
 };
 }// namespace spb
