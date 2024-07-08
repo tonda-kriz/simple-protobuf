@@ -14,9 +14,11 @@
 #include "ast/proto-file.h"
 #include <array>
 #include <cctype>
+#include <cerrno>
 #include <charconv>
 #include <concepts>
 #include <cstdio>
+#include <cstring>
 #include <exception>
 #include <filesystem>
 #include <spb/char_stream.h>
@@ -54,7 +56,7 @@ auto find_file_in_paths( const std::filesystem::path & file_name, std::span< con
             return file_path;
         }
     }
-    throw std::runtime_error( "File not found: " + file_name.string( ) );
+    throw std::runtime_error( std::string( " " ) + strerror( ENOENT ) );
 }
 
 [[noreturn]] void throw_parse_error( spb::char_stream & stream, std::string_view message )

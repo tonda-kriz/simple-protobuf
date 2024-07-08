@@ -25,7 +25,7 @@ auto load_file( const std::filesystem::path & file_path ) -> std::string
         file_content.resize( read );
         return file_content;
     }
-    throw std::runtime_error( strerror( errno ) );
+    throw std::runtime_error( std::string( " " ) + strerror( errno ) );
 }
 
 void save_file( const std::filesystem::path & file_path, std::string_view file_content )
@@ -39,5 +39,5 @@ void save_file( const std::filesystem::path & file_path, std::string_view file_c
             return;
         }
     }
-    throw std::runtime_error( strerror( errno ) );
+    throw std::runtime_error( std::string( " " ) + strerror( errno ) );
 }
