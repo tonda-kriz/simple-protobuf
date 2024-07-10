@@ -12,6 +12,7 @@
 #include "parser/parser.h"
 #include <cstdio>
 #include <cstring>
+#include <exception>
 #include <filesystem>
 #include <iostream>
 #include <vector>
@@ -121,9 +122,18 @@ auto main( int argc, char * argv[] ) -> int
         return 1;
     }
 
-    for( const auto & input_file : input_files )
+    try
     {
-        process_file( input_file, import_paths, output_dir );
+
+        for( const auto & input_file : input_files )
+        {
+            process_file( input_file, import_paths, output_dir );
+        }
+    }
+    catch( const std::exception & e )
+    {
+        std::cerr << e.what( ) << '\n';
+        return 1;
     }
 
     return 0;
