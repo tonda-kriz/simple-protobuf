@@ -7,7 +7,27 @@
 **simple data struct** serialization library for C++. With this library you can serialize and deserialize C++ structs directly to [JSON](https://json.org) or [protobuf](https://github.com/protocolbuffers/protobuf).
 
 ```CPP
-#include <person.pb.h>
+namespace PhoneBook
+{
+struct Person {
+    enum class PhoneType : int32_t {
+        MOBILE = 0,
+        HOME   = 1,
+        WORK   = 2,
+    };
+    struct PhoneNumber {
+        // phone number is always required
+        std::string number;
+        std::optional< PhoneType > type;
+    };
+    std::optional< std::string > name;
+    // Unique ID number for this person.
+    std::optional< int32_t > id;
+    std::optional< std::string > email;
+    // all registered phones
+    std::vector< PhoneNumber > phones;
+};
+}// namespace PhoneBook
 
 auto john = PhoneBook::Person{
         .name  = "John Doe",
@@ -118,12 +138,35 @@ auto john = PhoneBook::Person{
         .id    = 1234,
         .email = "jdoe@example.com",
     };
+
 auto json    = spb::json::serialize( john );
 auto person  = spb::json::deserialize< PhoneBook::Person >( json );
 auto pb      = spb::pb::serialize( john );
 auto person2 = spb::pb::deserialize< PhoneBook::Person >( pb );
 //- john == person == person2
 ```
+
+## API
+
+all API is generated (for both **json** and **protobuf**) in `person.pb.h` for every message and enum type.
+
+```CPP
+//- return size in bytes of serialized value
+auto serialize_size( const PhoneBook::Person & value ) noexcept -> size_t;
+//- serialize value into std::string
+auto serialize( const PhoneBook::Person & value ) -> std::string;
+//- serialize value into buffer, return serialized size. 
+//- Warning: user is responsible for the buffer to be big enough.
+auto serialize( const PhoneBook::Person & value, void * buffer ) -> size_t;
+
+//- deserialize variable from data
+void deserialize( PhoneBook::Person & result, std::string_view data );
+//- return deserialized variable
+template<>
+auto deserialize< PhoneBook::Person >( std::string_view data ) -> PhoneBook::Person;
+```
+
+API is prefixed with `spb::json::` for **json** and `spb::pb::` for **protobuf**.
 
 ## example
 
