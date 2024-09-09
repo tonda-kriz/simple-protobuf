@@ -288,7 +288,6 @@ static inline void serialize( ostream & stream, std::string_view key, std::span<
     }
     else
     {
-
         serialize_key( stream, key );
         stream.write( '[' );
         stream.put_comma = false;
