@@ -24,7 +24,7 @@ concept HasValueMember = requires( T t ) {
     };
 };
 
-}
+}// namespace
 
 namespace Test
 {
@@ -155,17 +155,27 @@ TEST_CASE( "protobuf" )
     }
     SUBCASE( "string_view" )
     {
-        CHECK( pb_serialize( "john"sv ) == "\x0a\x04john" );
-        CHECK( pb_serialize( ""sv ) == "" );
+        SUBCASE( "type" )
+        {
+            REQUIRE( typeid( Test::Scalar::ReqStringView::value ) == typeid( std::string_view ) );
+        }
+        SUBCASE( "required" )
+        {
+            pb_test( Test::Scalar::ReqStringView{ }, "" );
+            pb_test( Test::Scalar::ReqStringView{ .value = "hello" }, "\x0a\x05hello" );
+            CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqString >( "\x0a\x05hell"sv ) );
+        }
         SUBCASE( "optional" )
         {
-            CHECK( pb_serialize< std::optional< std::string_view > >( std::nullopt ) == "" );
-            CHECK( pb_serialize< std::optional< std::string_view > >( "hello" ) == "\x0a\x05hello" );
+            pb_test( Test::Scalar::OptStringView{ }, "" );
+            pb_test( Test::Scalar::OptStringView{ .value = "hello" }, "\x0a\x05hello" );
+            CHECK_THROWS( spb::pb::deserialize< Test::Scalar::OptStringView >( "\x08\x05hello"sv ) );
         }
-        SUBCASE( "array" )
+        SUBCASE( "repeated" )
         {
-            CHECK( pb_serialize< std::vector< std::string_view > >( { "hello", "world" } ) == "\x0a\x05hello\x0a\x05world" );
-            CHECK( pb_serialize< std::vector< std::string_view > >( { } ) == "" );
+            pb_test( Test::Scalar::RepStringView{ }, "" );
+            pb_test( Test::Scalar::RepStringView{ .value = { "hello" } }, "\x0a\x05hello" );
+            pb_test( Test::Scalar::RepStringView{ .value = { "hello", "world" } }, "\x0a\x05hello\x0a\x05world" );
         }
     }
     SUBCASE( "bool" )

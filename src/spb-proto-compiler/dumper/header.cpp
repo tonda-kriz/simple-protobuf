@@ -10,6 +10,7 @@
 
 #include "header.h"
 #include "ast/ast.h"
+#include "ast/proto-common.h"
 #include "ast/proto-field.h"
 #include "ast/proto-file.h"
 #include "io/file.h"
@@ -131,12 +132,12 @@ auto contains_oneof( const proto_messages & messages ) -> bool
 
 void dump_std_includes( std::ostream & stream, const proto_file & file )
 {
-    stream << "#include <cstdint>\n#include <string>\n";
+    stream << "#include <cstdint>\n#include <string>\n#include <string_view>\n";
 
     if( contains_label( file.package.messages, proto_field::Label::LABEL_REPEATED ) ||
         contains_type( file.package.messages, "bytes" ) )
     {
-        stream << "#include <vector>\n#include <cstddef>\n";
+        stream << "#include <vector>\n#include <cstddef>\n#include <span>\n";
     }
     if( contains_label( file.package.messages, proto_field::Label::LABEL_OPTIONAL ) )
     {
@@ -218,7 +219,7 @@ auto type_literal_suffix( std::string_view type ) -> std::string_view
     return { };
 }
 
-auto convert_to_ctype( std::string_view type ) -> std::string
+auto convert_to_ctype( std::string_view type, const proto_options & options = { } ) -> std::string
 {
     static constexpr auto type_map = std::array< std::pair< std::string_view, std::string_view >, 12 >{ {
         { "int32", "int32_t" },
@@ -234,6 +235,17 @@ auto convert_to_ctype( std::string_view type ) -> std::string
         { "string", "std::string" },
         { "bytes", "std::vector< std::byte >" },
     } };
+
+    auto ctype = std::string_view( );
+    if( auto p_option_ctype = options.find( "ctype" ); p_option_ctype != options.end( ) )
+    {
+        ctype = p_option_ctype->second;
+    }
+
+    if( type == "string" )
+    {
+        return ( ctype == "STRING_PIECE" ) ? "std::string_view" : "std::string";
+    }
 
     for( auto [ proto_type, c_type ] : type_map )
     {
@@ -251,9 +263,9 @@ auto convert_to_ctype( std::string_view type ) -> std::string
     return field.type == "bytes";
 }*/
 
-void dump_field_type( std::ostream & stream, proto_field::Label label, std::string_view type )
+void dump_field_type( std::ostream & stream, proto_field::Label label, const proto_field & field )
 {
-    const auto ctype = convert_to_ctype( type );
+    const auto ctype = convert_to_ctype( field.type, field.options );
 
     switch( label )
     {
@@ -334,7 +346,7 @@ void dump_message_field( std::ostream & stream, const proto_field & field )
 {
     dump_comment( stream, field.comment );
     dump_deprecated_attribute( stream, field );
-    dump_field_type( stream, field.label, field.type );
+    dump_field_type( stream, field.label, field );
     stream << field.name;
     dump_default_value( stream, field );
     stream << ";\n";
