@@ -168,6 +168,35 @@ auto deserialize< PhoneBook::Person >( std::string_view data ) -> PhoneBook::Per
 
 API is prefixed with `spb::json::` for **json** and `spb::pb::` for **protobuf**.
 
+## Type mapping
+
+| proto type | CPP type    | Notes       |
+|------------|-------------|-------------|
+| `bool`     | `bool`      |             |
+| `float`    | `float`     |             |
+| `double`   | `double`    |             |
+| `int32`    | `int32_t`   |             |
+| `sint32`   | `int32_t`   | zig-zag encoded in pb |
+| `uint32`   | `uint32_t`  |             |
+| `int64`    | `int64_t`   |             |
+| `sint64`   | `int64_t`   | zig-zag encoded in pb |
+| `uint64`   | `uint64_t`  |             |
+| `int32`    | `int32_t`   |             |
+| `fixed32`  | `uint32_t`  | always encoded as 4 bytes in pb |
+| `sfixed32` | `int32_t`   | always encoded as 4 bytes in pb |
+| `fixed64`  | `uint64_t`  | always encoded as 8 bytes in pb |
+| `sfixed64` | `int64_t`   | always encoded as 8 bytes in pb |
+| `string`   | `std::string` |             |
+| `string`   | `std::string_view` | with `[ ctype = STRING_PIECE ]` |
+| `bytes`    | `std::vector< std::byte >` | base64 encoded in json            |
+| `bytes`    | `std::span< const std::byte >` | with `[ ctype = STRING_PIECE ]` |
+
+| proto type modifier | CPP type modifier   | Notes       |
+|---------------------|-------------|-------------|
+| `optional`          | `std::optional` |             |
+| `optional`          | `std::unique_ptr` | if there is cyclic dependency between messages ( A -> B, B -> A )|
+| `repeated`          | `std::vector`  |             |
+
 ## example
 
 navigate to the [example](example/) directory.
