@@ -249,3 +249,16 @@ message RepBytes
 {
     repeated bytes value = 1;
 }
+
+message OptBytesView
+{
+    optional bytes value = 1 [ctype = STRING_PIECE];
+}
+message ReqBytesView
+{
+    required bytes value = 1 [ctype = STRING_PIECE];
+}
+message RepBytesView
+{
+    repeated bytes value = 1 [ctype = STRING_PIECE];
+}

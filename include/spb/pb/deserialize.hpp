@@ -20,6 +20,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <span>
 #include <stdexcept>
 #include <string_view>
 #include <type_traits>
@@ -182,6 +183,7 @@ template < scalar_encoder encoder >
 static inline void deserialize_as( istream & stream, is_int_or_float auto & value, wire_type type );
 
 static inline void deserialize( istream & stream, std::vector< std::byte > & value, wire_type type );
+static inline void deserialize( istream & stream, std::span< const std::byte > & value, wire_type type );
 
 template < typename T >
 static inline void deserialize( istream & stream, std::vector< T > & value, wire_type type );
@@ -285,6 +287,13 @@ static inline void deserialize( istream & stream, std::unique_ptr< T > & value, 
 {
     value = std::make_unique< T >( );
     deserialize( stream, *value, type );
+}
+
+static inline void deserialize( istream & stream, std::span< const std::byte > & value, wire_type type )
+{
+    check_wire_type( type, wire_type::length_delimited );
+    value = std::span< const std::byte >( static_cast< const std::byte * >( stream.data( ) ), stream.size( ) );
+    stream.read( nullptr, stream.size( ) );
 }
 
 static inline void deserialize( istream & stream, std::vector< std::byte > & value, wire_type type )

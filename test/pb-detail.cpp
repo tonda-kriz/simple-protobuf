@@ -26,6 +26,14 @@ concept HasValueMember = requires( T t ) {
 
 }// namespace
 
+namespace std
+{
+auto operator==( const std::span< const std::byte > & lhs, const std::span< const std::byte > & rhs ) noexcept -> bool
+{
+    return lhs.size( ) == rhs.size( ) && memcmp( lhs.data( ), rhs.data( ), lhs.size( ) ) == 0;
+}
+}// namespace std
+
 namespace Test
 {
 auto operator==( const Test::Name & lhs, const Test::Name & rhs ) noexcept -> bool
@@ -522,6 +530,31 @@ TEST_CASE( "protobuf" )
             pb_test( Test::Scalar::RepBytes{ .value = { to_bytes( "hello" ) } }, "\x0a\x05hello"sv );
             pb_test( Test::Scalar::RepBytes{ .value = { to_bytes( "\x00\x01\x02"sv ) } }, "\x0a\x03\x00\x01\x02"sv );
             pb_test( Test::Scalar::RepBytes{ .value = { to_bytes( "\x00\x01\x02\x03\x04"sv ) } }, "\x0a\x05\x00\x01\x02\x03\x04"sv );
+        }
+    }
+    SUBCASE( "bytes_view" )
+    {
+        SUBCASE( "required" )
+        {
+            pb_test( Test::Scalar::ReqBytesView{ }, "" );
+            pb_test( Test::Scalar::ReqBytesView{ .value = to_bytes( "hello" ) }, "\x0a\x05hello"sv );
+            pb_test( Test::Scalar::ReqBytesView{ .value = to_bytes( "\x00\x01\x02"sv ) }, "\x0a\x03\x00\x01\x02"sv );
+            pb_test( Test::Scalar::ReqBytesView{ .value = to_bytes( "\x00\x01\x02\x03\x04"sv ) }, "\x0a\x05\x00\x01\x02\x03\x04"sv );
+            CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqBytesView >( "\x0a\x05hell"sv ) );
+        }
+        SUBCASE( "optional" )
+        {
+            pb_test( Test::Scalar::OptBytesView{ }, "" );
+            pb_test( Test::Scalar::OptBytesView{ .value = to_bytes( "hello" ) }, "\x0a\x05hello"sv );
+            pb_test( Test::Scalar::OptBytesView{ .value = to_bytes( "\x00\x01\x02"sv ) }, "\x0a\x03\x00\x01\x02"sv );
+            pb_test( Test::Scalar::OptBytesView{ .value = to_bytes( "\x00\x01\x02\x03\x04"sv ) }, "\x0a\x05\x00\x01\x02\x03\x04"sv );
+        }
+        SUBCASE( "repeated" )
+        {
+            pb_test( Test::Scalar::RepBytesView{ }, "" );
+            pb_test( Test::Scalar::RepBytesView{ .value = { to_bytes( "hello" ) } }, "\x0a\x05hello"sv );
+            pb_test( Test::Scalar::RepBytesView{ .value = { to_bytes( "\x00\x01\x02"sv ) } }, "\x0a\x03\x00\x01\x02"sv );
+            pb_test( Test::Scalar::RepBytesView{ .value = { to_bytes( "\x00\x01\x02\x03\x04"sv ) } }, "\x0a\x05\x00\x01\x02\x03\x04"sv );
         }
     }
     SUBCASE( "variant" )

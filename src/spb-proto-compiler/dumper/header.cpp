@@ -247,6 +247,11 @@ auto convert_to_ctype( std::string_view type, const proto_options & options = { 
         return ( ctype == "STRING_PIECE" ) ? "std::string_view" : "std::string";
     }
 
+    if( type == "bytes" )
+    {
+        return ( ctype == "STRING_PIECE" ) ? "std::span< const std::byte >" : "std::vector< std::byte >";
+    }
+
     for( auto [ proto_type, c_type ] : type_map )
     {
         if( type == proto_type )
