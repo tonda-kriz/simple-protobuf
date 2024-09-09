@@ -60,7 +60,9 @@ spb is an alternative implementation of [protobuf](https://github.com/protocolbu
 ### dependencies
 
 * C++ compiler (at least C++20)
+* cmake
 * std library
+* *(optional) clang-format for code formatting*
 
 ### cheat sheet
 
