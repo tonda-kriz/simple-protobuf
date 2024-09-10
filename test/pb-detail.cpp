@@ -165,7 +165,8 @@ TEST_CASE( "protobuf" )
     {
         SUBCASE( "type" )
         {
-            REQUIRE( typeid( Test::Scalar::ReqStringView::value ) == typeid( std::string_view ) );
+            auto value = Test::Scalar::ReqStringView{ };
+            REQUIRE( typeid( value.value ) == typeid( std::string_view ) );
         }
         SUBCASE( "required" )
         {
