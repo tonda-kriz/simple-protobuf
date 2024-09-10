@@ -8,6 +8,30 @@
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
 
+namespace std
+{
+auto operator==( const std::span< const std::byte > & lhs, const std::span< const std::byte > & rhs ) noexcept -> bool
+{
+    return lhs.size( ) == rhs.size( ) && memcmp( lhs.data( ), rhs.data( ), lhs.size( ) ) == 0;
+}
+}// namespace std
+
+namespace
+{
+
+auto to_span( std::string_view str ) -> std::span< const std::byte >
+{
+    return std::span< const std::byte >( ( const std::byte * ) str.data( ), str.size( ) );
+}
+
+auto to_bytes( std::string_view str ) -> std::vector< std::byte >
+{
+    auto span = std::span< std::byte >( ( std::byte * ) str.data( ), str.size( ) );
+    return { span.data( ), span.data( ) + span.size( ) };
+}
+
+}// namespace
+
 namespace Test
 {
 auto operator==( const Test::Name & lhs, const Test::Name & rhs ) noexcept -> bool
@@ -281,8 +305,8 @@ TEST_CASE( "json" )
         }
         SUBCASE( "bytes" )
         {
-            CHECK( spb::json::detail::deserialize< std::vector< std::byte > >( R"("AAECAwQ=")" ) == std::vector< std::byte >{ std::byte( 0 ), std::byte( 1 ), std::byte( 2 ), std::byte( 3 ), std::byte( 4 ) } );
-            CHECK( spb::json::detail::deserialize< std::vector< std::byte > >( R"("aGVsbG8=")" ) == std::vector< std::byte >{ std::byte( 'h' ), std::byte( 'e' ), std::byte( 'l' ), std::byte( 'l' ), std::byte( 'o' ) } );
+            CHECK( spb::json::detail::deserialize< std::vector< std::byte > >( R"("AAECAwQ=")" ) == to_bytes( "\x00\x01\x02\x03\x04"sv ) );
+            CHECK( spb::json::detail::deserialize< std::vector< std::byte > >( R"("aGVsbG8=")" ) == to_bytes( "hello" ) );
             CHECK( spb::json::detail::deserialize< std::vector< std::byte > >( R"(null)" ) == std::vector< std::byte >{ } );
             CHECK( spb::json::detail::deserialize< std::vector< std::byte > >( R"("")" ) == std::vector< std::byte >{ } );
             CHECK_THROWS( spb::json::detail::deserialize< std::vector< std::byte > >( R"(true)" ) );
@@ -291,8 +315,8 @@ TEST_CASE( "json" )
             CHECK_THROWS( spb::json::detail::deserialize< std::vector< std::byte > >( R"()" ) );
             SUBCASE( "array" )
             {
-                CHECK( spb::json::detail::deserialize< std::vector< std::vector< std::byte > > >( R"(["AAECAwQ="])" ) == std::vector< std::vector< std::byte > >{ std::vector< std::byte >{ std::byte( 0 ), std::byte( 1 ), std::byte( 2 ), std::byte( 3 ), std::byte( 4 ) } } );
-                CHECK( spb::json::detail::deserialize< std::vector< std::vector< std::byte > > >( R"(["AAECAwQ=","aGVsbG8="])" ) == std::vector< std::vector< std::byte > >{ std::vector< std::byte >{ std::byte( 0 ), std::byte( 1 ), std::byte( 2 ), std::byte( 3 ), std::byte( 4 ) }, std::vector< std::byte >{ std::byte( 'h' ), std::byte( 'e' ), std::byte( 'l' ), std::byte( 'l' ), std::byte( 'o' ) } } );
+                CHECK( spb::json::detail::deserialize< std::vector< std::vector< std::byte > > >( R"(["AAECAwQ="])" ) == std::vector< std::vector< std::byte > >{ to_bytes( "\x00\x01\x02\x03\x04"sv ) } );
+                CHECK( spb::json::detail::deserialize< std::vector< std::vector< std::byte > > >( R"(["AAECAwQ=","aGVsbG8="])" ) == std::vector< std::vector< std::byte > >{ to_bytes( "\x00\x01\x02\x03\x04"sv ), to_bytes( "hello" ) } );
                 CHECK( spb::json::detail::deserialize< std::vector< std::vector< std::byte > > >( R"([])" ) == std::vector< std::vector< std::byte > >{ } );
                 CHECK( spb::json::detail::deserialize< std::vector< std::vector< std::byte > > >( R"(null)" ) == std::vector< std::vector< std::byte > >{ } );
                 CHECK( spb::json::detail::deserialize< std::vector< std::vector< std::byte > > >( R"([""])" ) == std::vector< std::vector< std::byte > >{ std::vector< std::byte >{} } );
@@ -307,6 +331,34 @@ TEST_CASE( "json" )
                 CHECK_THROWS( spb::json::detail::deserialize< std::optional< std::vector< std::byte > > >( R"("AAECAwQ")" ) );
                 CHECK_THROWS( spb::json::detail::deserialize< std::optional< std::vector< std::byte > > >( R"([])" ) );
                 CHECK_THROWS( spb::json::detail::deserialize< std::optional< std::vector< std::byte > > >( R"()" ) );
+            }
+        }
+        SUBCASE( "bytes_view" )
+        {
+            CHECK( spb::json::detail::deserialize< std::span< const std::byte > >( R"("AAECAwQ=")" ) == to_span( "AAECAwQ=" ) );
+            CHECK( spb::json::detail::deserialize< std::span< const std::byte > >( R"("aGVsbG8=")" ) == to_bytes( "aGVsbG8=" ) );
+            CHECK( spb::json::detail::deserialize< std::span< const std::byte > >( R"(null)" ) == std::span< const std::byte >{ } );
+            CHECK( spb::json::detail::deserialize< std::span< const std::byte > >( R"("")" ) == std::span< const std::byte >{ } );
+            CHECK_THROWS( spb::json::detail::deserialize< std::span< const std::byte > >( R"(true)" ) );
+            CHECK_THROWS( spb::json::detail::deserialize< std::span< const std::byte > >( R"([])" ) );
+            CHECK_THROWS( spb::json::detail::deserialize< std::span< const std::byte > >( R"()" ) );
+            SUBCASE( "array" )
+            {
+                CHECK( spb::json::detail::deserialize< std::vector< std::span< const std::byte > > >( R"(["AAECAwQ="])" ) == std::vector< std::span< const std::byte > >{ to_span( "AAECAwQ=" ) } );
+                CHECK( spb::json::detail::deserialize< std::vector< std::span< const std::byte > > >( R"(["AAECAwQ=","aGVsbG8="])" ) == std::vector< std::span< const std::byte > >{ to_span( "AAECAwQ=" ), to_span( "aGVsbG8=" ) } );
+                CHECK( spb::json::detail::deserialize< std::vector< std::span< const std::byte > > >( R"([])" ) == std::vector< std::span< const std::byte > >{ } );
+                CHECK( spb::json::detail::deserialize< std::vector< std::span< const std::byte > > >( R"(null)" ) == std::vector< std::span< const std::byte > >{ } );
+                CHECK( spb::json::detail::deserialize< std::vector< std::span< const std::byte > > >( R"([""])" ) == std::vector< std::span< const std::byte > >{ std::span< const std::byte >{} } );
+            }
+            SUBCASE( "optional" )
+            {
+                CHECK( spb::json::detail::deserialize< std::optional< std::span< const std::byte > > >( R"(null)" ) == std::nullopt );
+                CHECK( spb::json::detail::deserialize< std::optional< std::span< const std::byte > > >( R"("AAECAwQ=")" ) == to_span( "AAECAwQ=" ) );
+                CHECK( spb::json::detail::deserialize< std::optional< std::span< const std::byte > > >( R"("aGVsbG8=")" ) == to_span( "aGVsbG8=" ) );
+                CHECK( spb::json::detail::deserialize< std::optional< std::span< const std::byte > > >( R"("")" ) == std::span< const std::byte >{ } );
+                CHECK_THROWS( spb::json::detail::deserialize< std::optional< std::span< const std::byte > > >( R"(true)" ) );
+                CHECK_THROWS( spb::json::detail::deserialize< std::optional< std::span< const std::byte > > >( R"([])" ) );
+                CHECK_THROWS( spb::json::detail::deserialize< std::optional< std::span< const std::byte > > >( R"()" ) );
             }
         }
         SUBCASE( "map" )
@@ -525,24 +577,46 @@ TEST_CASE( "json" )
         }
         SUBCASE( "bytes" )
         {
-            CHECK( spb::json::detail::serialize( std::vector< std::byte >{ std::byte{ 0 }, std::byte{ 1 }, std::byte{ 2 } } ) == R"("AAEC")" );
+            CHECK( spb::json::detail::serialize( to_bytes( "\x00\x01\x02"sv ) ) == R"("AAEC")" );
 
-            CHECK( spb::json::detail::serialize< std::vector< std::byte > >( { std::byte( 0 ), std::byte( 1 ), std::byte( 2 ), std::byte( 3 ), std::byte( 4 ) } ) == R"("AAECAwQ=")" );
-            CHECK( spb::json::detail::serialize< std::vector< std::byte > >( { std::byte( 'h' ), std::byte( 'e' ), std::byte( 'l' ), std::byte( 'l' ), std::byte( 'o' ) } ) == R"("aGVsbG8=")" );
+            CHECK( spb::json::detail::serialize< std::vector< std::byte > >( to_bytes( "\x00\x01\x02\x03\x04"sv ) ) == R"("AAECAwQ=")" );
+            CHECK( spb::json::detail::serialize< std::vector< std::byte > >( to_bytes( "hello"sv ) ) == R"("aGVsbG8=")" );
             CHECK( spb::json::detail::serialize< std::vector< std::byte > >( { } ) == "" );
 
             SUBCASE( "array" )
             {
-                CHECK( spb::json::detail::serialize< std::vector< std::vector< std::byte > > >( std::vector< std::vector< std::byte > >{ std::vector< std::byte >{ std::byte( 0 ), std::byte( 1 ), std::byte( 2 ), std::byte( 3 ), std::byte( 4 ) } } ) == R"(["AAECAwQ="])" );
-                CHECK( spb::json::detail::serialize< std::vector< std::vector< std::byte > > >( std::vector< std::vector< std::byte > >{ std::vector< std::byte >{ std::byte( 0 ), std::byte( 1 ), std::byte( 2 ), std::byte( 3 ), std::byte( 4 ) }, std::vector< std::byte >{ std::byte( 'h' ), std::byte( 'e' ), std::byte( 'l' ), std::byte( 'l' ), std::byte( 'o' ) } } ) == R"(["AAECAwQ=","aGVsbG8="])" );
+                CHECK( spb::json::detail::serialize< std::vector< std::vector< std::byte > > >( std::vector< std::vector< std::byte > >{ to_bytes( "\x00\x01\x02\x03\x04"sv ) } ) == R"(["AAECAwQ="])" );
+                CHECK( spb::json::detail::serialize< std::vector< std::vector< std::byte > > >( std::vector< std::vector< std::byte > >{ to_bytes( "\x00\x01\x02\x03\x04"sv ), to_bytes( "hello"sv ) } ) == R"(["AAECAwQ=","aGVsbG8="])" );
                 CHECK( spb::json::detail::serialize< std::vector< std::vector< std::byte > > >( std::vector< std::vector< std::byte > >{ } ) == "" );
             }
             SUBCASE( "optional" )
             {
                 CHECK( spb::json::detail::serialize< std::optional< std::vector< std::byte > > >( std::nullopt ) == "" );
-                CHECK( spb::json::detail::serialize< std::optional< std::vector< std::byte > > >( std::vector< std::byte >{ std::byte( 0 ), std::byte( 1 ), std::byte( 2 ), std::byte( 3 ), std::byte( 4 ) } ) == R"("AAECAwQ=")" );
-                CHECK( spb::json::detail::serialize< std::optional< std::vector< std::byte > > >( std::vector< std::byte >{ std::byte( 'h' ), std::byte( 'e' ), std::byte( 'l' ), std::byte( 'l' ), std::byte( 'o' ) } ) == R"("aGVsbG8=")" );
+                CHECK( spb::json::detail::serialize< std::optional< std::vector< std::byte > > >( std::vector< std::byte >{ to_bytes( "\x00\x01\x02\x03\x04"sv ) } ) == R"("AAECAwQ=")" );
+                CHECK( spb::json::detail::serialize< std::optional< std::vector< std::byte > > >( std::vector< std::byte >{ to_bytes( "hello"sv ) } ) == R"("aGVsbG8=")" );
                 CHECK( spb::json::detail::serialize< std::optional< std::vector< std::byte > > >( std::vector< std::byte >{ } ) == "" );
+            }
+        }
+        SUBCASE( "bytes_view" )
+        {
+            CHECK( spb::json::detail::serialize( to_span( "\x00\x01\x02"sv ) ) == R"("AAEC")" );
+
+            CHECK( spb::json::detail::serialize< std::span< const std::byte > >( to_span( "\x00\x01\x02\x03\x04"sv ) ) == R"("AAECAwQ=")" );
+            CHECK( spb::json::detail::serialize< std::span< const std::byte > >( to_span( "hello"sv ) ) == R"("aGVsbG8=")" );
+            CHECK( spb::json::detail::serialize< std::span< const std::byte > >( { } ) == "" );
+
+            SUBCASE( "array" )
+            {
+                CHECK( spb::json::detail::serialize< std::vector< std::span< const std::byte > > >( std::vector< std::span< const std::byte > >{ to_span( "\x00\x01\x02\x03\x04"sv ) } ) == R"(["AAECAwQ="])" );
+                CHECK( spb::json::detail::serialize< std::vector< std::span< const std::byte > > >( std::vector< std::span< const std::byte > >{ to_span( "\x00\x01\x02\x03\x04"sv ), to_span( "hello"sv ) } ) == R"(["AAECAwQ=","aGVsbG8="])" );
+                CHECK( spb::json::detail::serialize< std::vector< std::span< const std::byte > > >( std::vector< std::span< const std::byte > >{ } ) == "" );
+            }
+            SUBCASE( "optional" )
+            {
+                CHECK( spb::json::detail::serialize< std::optional< std::span< const std::byte > > >( std::nullopt ) == "" );
+                CHECK( spb::json::detail::serialize< std::optional< std::span< const std::byte > > >( std::span< const std::byte >{ to_span( "\x00\x01\x02\x03\x04"sv ) } ) == R"("AAECAwQ=")" );
+                CHECK( spb::json::detail::serialize< std::optional< std::span< const std::byte > > >( std::span< const std::byte >{ to_span( "hello"sv ) } ) == R"("aGVsbG8=")" );
+                CHECK( spb::json::detail::serialize< std::optional< std::span< const std::byte > > >( std::span< const std::byte >{ } ) == "" );
             }
         }
         SUBCASE( "variant" )

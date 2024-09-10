@@ -248,6 +248,18 @@ static inline void deserialize( istream & stream, std::map< keyT, valueT > & val
 template < typename T >
 static inline void deserialize( istream & stream, std::optional< T > & value );
 
+static inline void deserialize( istream & stream, std::span< const std::byte > & value )
+{
+    if( stream.consume( "null" ) )
+    {
+        value = { };
+        return;
+    }
+
+    auto encoded = stream.deserialize_string( );
+    value        = std::span< const std::byte >( ( const std::byte * ) encoded.data( ), encoded.size( ) );
+}
+
 template < typename T >
 static inline void deserialize( istream & stream, std::vector< T > & value )
 {

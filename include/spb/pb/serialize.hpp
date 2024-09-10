@@ -106,6 +106,7 @@ static inline void serialize( ostream & stream, uint32_t field_number, const is_
 static inline void serialize( ostream & stream, uint32_t field_number, const std::string_view & value );
 static inline void serialize( ostream & stream, uint32_t field_number, const std::string & value );
 static inline void serialize( ostream & stream, uint32_t field_number, const std::vector< std::byte > & value );
+static inline void serialize( ostream & stream, uint32_t field_number, std::span< const std::byte > value );
 
 template < typename T >
 static inline void serialize( ostream & stream, uint32_t field_number, const std::vector< T > & value );
@@ -177,6 +178,11 @@ static inline void serialize( ostream & stream, uint32_t field_number, const std
 }
 
 static inline void serialize( ostream & stream, uint32_t field_number, const std::vector< std::byte > & value )
+{
+    serialize( stream, field_number, std::span< const std::byte >( value ) );
+}
+
+static inline void serialize( ostream & stream, uint32_t field_number, std::span< const std::byte > value )
 {
     if( !value.empty( ) )
     {

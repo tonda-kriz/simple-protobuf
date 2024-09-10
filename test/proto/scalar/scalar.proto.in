@@ -224,6 +224,19 @@ message RepString
     repeated string value = 1;
 }
 
+message OptStringView
+{
+    optional string value = 1 [ctype = STRING_PIECE];
+}
+message ReqStringView
+{
+    required string value = 1 [ctype = STRING_PIECE];
+}
+message RepStringView
+{
+    repeated string value = 1 [ctype = STRING_PIECE];
+}
+
 message OptBytes
 {
     optional bytes value = 1;
@@ -235,4 +248,17 @@ message ReqBytes
 message RepBytes
 {
     repeated bytes value = 1;
+}
+
+message OptBytesView
+{
+    optional bytes value = 1 [ctype = STRING_PIECE];
+}
+message ReqBytesView
+{
+    required bytes value = 1 [ctype = STRING_PIECE];
+}
+message RepBytesView
+{
+    repeated bytes value = 1 [ctype = STRING_PIECE];
 }
