@@ -132,7 +132,7 @@ auto contains_oneof( const proto_messages & messages ) -> bool
 
 void dump_std_includes( std::ostream & stream, const proto_file & file )
 {
-    stream << "#include <spb/json.hpp>\n#include <cstdint>\n#include <string>\n#include <string_view>\n";
+    stream << "#include <spb/json.hpp>\n#include <spb/pb.hpp>\n#include <cstdint>\n#include <string>\n#include <string_view>\n";
 
     if( contains_label( file.package.messages, proto_field::Label::LABEL_REPEATED ) ||
         contains_type( file.package.messages, "bytes" ) )

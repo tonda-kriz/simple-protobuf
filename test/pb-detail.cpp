@@ -6,8 +6,7 @@
 #include <person.pb.h>
 #include <scalar.pb.h>
 #include <span>
-#include <spb/pb/deserialize.hpp>
-#include <spb/pb/serialize.hpp>
+#include <spb/pb.hpp>
 #include <string>
 #include <string_view>
 #include <type_traits>
@@ -75,7 +74,12 @@ auto pb_serialize( const T & value ) -> std::string
     spb::pb::detail::serialize( size_stream, 1, value );
     const auto size = size_stream.size( );
     auto result     = std::string( size, '\0' );
-    auto stream     = spb::pb::detail::ostream( result.data( ) );
+    auto writer     = [ ptr = result.data( ) ]( const void * data, size_t size ) mutable
+    {
+        memcpy( ptr, data, size );
+        ptr += size;
+    };
+    auto stream = spb::pb::detail::ostream( writer );
     spb::pb::detail::serialize( stream, 1, value );
     return result;
 }
@@ -87,7 +91,12 @@ auto pb_serialize_as( const T & value ) -> std::string
     spb::pb::detail::serialize_as< encoder >( size_stream, 1, value );
     const auto size = size_stream.size( );
     auto result     = std::string( size, '\0' );
-    auto stream     = spb::pb::detail::ostream( result.data( ) );
+    auto writer     = [ ptr = result.data( ) ]( const void * data, size_t size ) mutable
+    {
+        memcpy( ptr, data, size );
+        ptr += size;
+    };
+    auto stream = spb::pb::detail::ostream( writer );
     spb::pb::detail::serialize_as< encoder >( stream, 1, value );
     return result;
 }
@@ -98,13 +107,8 @@ void pb_test( const T & value, std::string_view protobuf )
     {
         auto serialized = spb::pb::serialize( value );
         CHECK( serialized == protobuf );
-    }
-
-    {
-        auto size   = spb::pb::serialize_size( value );
-        auto buffer = std::string( size, '\0' );
-        spb::pb::serialize( value, buffer.data( ) );
-        CHECK( buffer == protobuf );
+        auto size = spb::pb::serialize_size( value );
+        CHECK( size == protobuf.size( ) );
     }
 
     {

@@ -45,7 +45,7 @@ public:
     /**
      * @brief Construct a new ostream object
      *
-     * @param p_start if null, stream will skip all writes but will still count number of written chars
+     * @param writer if null, stream will skip all writes but will still count number of written chars
      */
     explicit ostream( spb::io::writer writer ) noexcept
         : on_write( writer )
