@@ -141,10 +141,9 @@ void gpb_json( const SPB & spb )
     {
         REQUIRE( spb.value == gpb.value( ) );
     }
-    auto json_string                            = std::string( );
-    auto print_options                          = google::protobuf::util::JsonPrintOptions( );
-    print_options.always_print_primitive_fields = true;
-    print_options.preserve_proto_field_names    = true;
+    auto json_string                         = std::string( );
+    auto print_options                       = google::protobuf::util::JsonPrintOptions( );
+    print_options.preserve_proto_field_names = true;
 
     ( void ) MessageToJsonString( gpb, &json_string, print_options );
     REQUIRE( spb::json::deserialize< SPB >( json_string ) == spb );
@@ -592,10 +591,9 @@ TEST_CASE( "person" )
             REQUIRE( int( gpb.phones( i ).type( ) ) == int( spb.phones[ i ].type.value( ) ) );
         }
 
-        auto json_string                            = std::string( );
-        auto print_options                          = google::protobuf::util::JsonPrintOptions( );
-        print_options.always_print_primitive_fields = true;
-        print_options.preserve_proto_field_names    = true;
+        auto json_string                         = std::string( );
+        auto print_options                       = google::protobuf::util::JsonPrintOptions( );
+        print_options.preserve_proto_field_names = true;
 
         ( void ) MessageToJsonString( gpb, &json_string, print_options );
         REQUIRE( spb::json::deserialize< PhoneBook::Person >( json_string ) == spb );

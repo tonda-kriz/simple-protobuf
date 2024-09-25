@@ -14,7 +14,6 @@
 #include "ast/proto-file.h"
 #include "io/file.h"
 #include "parser/parser.h"
-#include "template-cpp.h"
 #include "template-h.h"
 #include <algorithm>
 #include <array>
@@ -171,15 +170,9 @@ void dump_prototypes( std::ostream & stream, const proto_file & file )
 void dump_cpp_includes( std::ostream & stream, std::string_view header_file_path )
 {
     stream << "#include \"" << header_file_path << "\"\n"
-           << "#include <spb/json/deserialize.hpp>\n"
-              "#include <spb/json/serialize.hpp>\n"
+           << "#include <spb/json.hpp>\n"
               "#include <system_error>\n"
               "#include <type_traits>\n\n";
-}
-
-void dump_cpp_prototypes( std::ostream & stream, std::string_view type )
-{
-    stream << replace( file_json_cpp_template, "$", type );
 }
 
 void dump_cpp_close_namespace( std::ostream & stream, std::string_view name )
@@ -410,7 +403,6 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & me
 void dump_cpp_enum( std::ostream & stream, const proto_enum & my_enum, std::string_view parent )
 {
     const auto full_name = std::string( parent ) + "::" + std::string( my_enum.name );
-    dump_cpp_prototypes( stream, full_name );
     dump_cpp_open_namespace( stream, "detail" );
     dump_cpp_is_empty( stream, my_enum, full_name );
     dump_cpp_serialize_value( stream, my_enum, full_name );
@@ -439,7 +431,6 @@ void dump_cpp_message( std::ostream & stream, const proto_message & message, std
 
     dump_cpp_enums( stream, message.enums, full_name );
 
-    dump_cpp_prototypes( stream, full_name );
     dump_cpp_open_namespace( stream, "detail" );
     dump_cpp_is_empty( stream, message, full_name );
     dump_cpp_serialize_value( stream, message, full_name );
@@ -468,7 +459,10 @@ void dump_cpp( std::ostream & stream, const proto_file & file )
 
 void dump_json_header( const proto_file & file, std::ostream & stream )
 {
+    dump_cpp_open_namespace( stream, "spb::json::detail" );
+    stream << "struct ostream;\nstruct istream;\n";
     dump_prototypes( stream, file );
+    dump_cpp_close_namespace( stream, "spb::json::detail" );
 }
 
 void dump_json_cpp( const proto_file & file, const std::filesystem::path & header_file, std::ostream & stream )
