@@ -17,7 +17,16 @@ namespace spb::io
 //- generic writer used to write exactly `size` number of bytes from `p_data`
 using writer = spb::detail::function_ref< void( const void * p_data, size_t size ) >;
 
-//- generic reader used to read exactly `size` number of bytes into `p_data`
-using reader = spb::detail::function_ref< void( void * p_data, size_t size ) >;
+//-
+/**
+ * @brief generic reader used to read up to `size` number of bytes into `p_data`
+ *
+ * @param p_data output buffer (this is never nullptr)
+ * @param[in] size number of bytes to read (this is always > 0)
+ * @return number of bytes copied into `p_data`, could be less than `size`. 0 indicates end-of-file
+ * @throws any exception thrown will stop the `deserialize` process and will be propagated to the
+ *         caller of `spb::pb::deserialize` or `spb::json::deserialize`
+ */
+using reader = spb::detail::function_ref< size_t( void * p_data, size_t size ) >;
 
 }// namespace spb::io

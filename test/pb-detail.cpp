@@ -165,32 +165,6 @@ TEST_CASE( "protobuf" )
             pb_test( Test::Scalar::RepString{ .value = { "hello", "world" } }, "\x0a\x05hello\x0a\x05world" );
         }
     }
-    SUBCASE( "string_view" )
-    {
-        SUBCASE( "type" )
-        {
-            auto value = Test::Scalar::ReqStringView{ };
-            REQUIRE( typeid( value.value ) == typeid( std::string_view ) );
-        }
-        SUBCASE( "required" )
-        {
-            pb_test( Test::Scalar::ReqStringView{ }, "" );
-            pb_test( Test::Scalar::ReqStringView{ .value = "hello" }, "\x0a\x05hello" );
-            CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqString >( "\x0a\x05hell"sv ) );
-        }
-        SUBCASE( "optional" )
-        {
-            pb_test( Test::Scalar::OptStringView{ }, "" );
-            pb_test( Test::Scalar::OptStringView{ .value = "hello" }, "\x0a\x05hello" );
-            CHECK_THROWS( spb::pb::deserialize< Test::Scalar::OptStringView >( "\x08\x05hello"sv ) );
-        }
-        SUBCASE( "repeated" )
-        {
-            pb_test( Test::Scalar::RepStringView{ }, "" );
-            pb_test( Test::Scalar::RepStringView{ .value = { "hello" } }, "\x0a\x05hello" );
-            pb_test( Test::Scalar::RepStringView{ .value = { "hello", "world" } }, "\x0a\x05hello\x0a\x05world" );
-        }
-    }
     SUBCASE( "bool" )
     {
         SUBCASE( "required" )
@@ -535,31 +509,6 @@ TEST_CASE( "protobuf" )
             pb_test( Test::Scalar::RepBytes{ .value = { to_bytes( "hello" ) } }, "\x0a\x05hello"sv );
             pb_test( Test::Scalar::RepBytes{ .value = { to_bytes( "\x00\x01\x02"sv ) } }, "\x0a\x03\x00\x01\x02"sv );
             pb_test( Test::Scalar::RepBytes{ .value = { to_bytes( "\x00\x01\x02\x03\x04"sv ) } }, "\x0a\x05\x00\x01\x02\x03\x04"sv );
-        }
-    }
-    SUBCASE( "bytes_view" )
-    {
-        SUBCASE( "required" )
-        {
-            pb_test( Test::Scalar::ReqBytesView{ }, "" );
-            pb_test( Test::Scalar::ReqBytesView{ .value = to_bytes( "hello" ) }, "\x0a\x05hello"sv );
-            pb_test( Test::Scalar::ReqBytesView{ .value = to_bytes( "\x00\x01\x02"sv ) }, "\x0a\x03\x00\x01\x02"sv );
-            pb_test( Test::Scalar::ReqBytesView{ .value = to_bytes( "\x00\x01\x02\x03\x04"sv ) }, "\x0a\x05\x00\x01\x02\x03\x04"sv );
-            CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqBytesView >( "\x0a\x05hell"sv ) );
-        }
-        SUBCASE( "optional" )
-        {
-            pb_test( Test::Scalar::OptBytesView{ }, "" );
-            pb_test( Test::Scalar::OptBytesView{ .value = to_bytes( "hello" ) }, "\x0a\x05hello"sv );
-            pb_test( Test::Scalar::OptBytesView{ .value = to_bytes( "\x00\x01\x02"sv ) }, "\x0a\x03\x00\x01\x02"sv );
-            pb_test( Test::Scalar::OptBytesView{ .value = to_bytes( "\x00\x01\x02\x03\x04"sv ) }, "\x0a\x05\x00\x01\x02\x03\x04"sv );
-        }
-        SUBCASE( "repeated" )
-        {
-            pb_test( Test::Scalar::RepBytesView{ }, "" );
-            pb_test( Test::Scalar::RepBytesView{ .value = { to_bytes( "hello" ) } }, "\x0a\x05hello"sv );
-            pb_test( Test::Scalar::RepBytesView{ .value = { to_bytes( "\x00\x01\x02"sv ) } }, "\x0a\x03\x00\x01\x02"sv );
-            pb_test( Test::Scalar::RepBytesView{ .value = { to_bytes( "\x00\x01\x02\x03\x04"sv ) } }, "\x0a\x05\x00\x01\x02\x03\x04"sv );
         }
     }
     SUBCASE( "variant" )

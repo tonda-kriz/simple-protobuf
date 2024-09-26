@@ -21,6 +21,7 @@
 #include <memory>
 #include <optional>
 #include <span>
+#include <spb/io/io.hpp>
 #include <stdexcept>
 #include <string_view>
 #include <type_traits>
@@ -32,17 +33,18 @@ namespace spb::pb::detail
 struct istream
 {
 private:
-    const uint8_t * m_begin;
-    const uint8_t * m_end;
+    spb::io::reader on_read;
+    size_t m_size;
 
 public:
-    istream( const void * content, size_t size ) noexcept
-        : m_begin( static_cast< const uint8_t * >( content ) )
-        , m_end( m_begin + size )
+    istream( spb::io::reader reader, size_t size = std::numeric_limits< size_t >::max( ) ) noexcept
+        : on_read( reader )
+        , m_size( size )
     {
     }
 
     void skip( uint32_t tag );
+    void read_skip( size_t size );
 
     void deserialize( auto & value, uint32_t tag );
 
@@ -55,48 +57,61 @@ public:
     template < size_t ordinal, scalar_encoder encoder, typename T >
     void deserialize_variant_as( T & variant, uint32_t tag );
 
-    auto read_byte( ) -> uint8_t
+    [[nodiscard]] auto read_byte( ) -> uint8_t
     {
-        if( m_begin >= m_end ) [[unlikely]]
-        {
-            throw std::runtime_error( "unexpected end of stream" );
-        }
-        return *m_begin++;
+        uint8_t result = { };
+        read_exact( &result, sizeof( result ) );
+        return result;
     }
+
+    [[nodiscard]] auto read_byte_or_eof( ) -> int
+    {
+        uint8_t result = { };
+        if( on_read( &result, sizeof( result ) ) == 0 )
+        {
+            return -1;
+        }
+        return result;
+    }
+
     [[nodiscard]] auto size( ) const -> size_t
     {
-        return m_end - m_begin;
+        return m_size;
     }
 
-    [[nodiscard]] auto data( ) const -> const void *
-    {
-        return m_begin;
-    }
-
-    void read( void * data, size_t size )
+    void read_exact( void * data, size_t size )
     {
         if( this->size( ) < size ) [[unlikely]]
         {
             throw std::runtime_error( "unexpected end of stream" );
         }
 
-        if( data != nullptr )
+        while( size > 0 )
         {
-            memcpy( data, m_begin, size );
-        }
+            auto chunk_size = on_read( data, size );
+            if( chunk_size == 0 )
+            {
+                throw std::runtime_error( "unexpected end of stream" );
+            }
 
-        m_begin += size;
+            size -= chunk_size;
+            m_size -= chunk_size;
+        }
     }
 
     [[nodiscard]] auto empty( ) const -> bool
     {
-        return m_begin >= m_end;
+        return size( ) == 0;
     }
-    [[nodiscard]] auto sub_stream( size_t size ) -> istream
+
+    [[nodiscard]] auto sub_stream( size_t sub_size ) -> istream
     {
-        auto result = istream( m_begin, size );
-        read( nullptr, size );
-        return result;
+        if( size( ) < sub_size )
+        {
+            throw std::runtime_error( "unexpected end of stream" );
+        }
+        m_size -= sub_size;
+        return istream( on_read, sub_size );
     }
 };
 
@@ -110,12 +125,54 @@ public:
     return tag >> 3;
 }
 
+static inline void check_tag( uint32_t tag )
+{
+    if( field_from_tag( tag ) == 0 )
+    {
+        throw std::runtime_error( "invalid field id" );
+    }
+}
+
 static inline void check_wire_type( wire_type type1, wire_type type2 )
 {
     if( type1 != type2 )
     {
         throw std::runtime_error( "invalid wire type" );
     }
+}
+
+static inline void check_if_empty( istream & stream )
+{
+    if( !stream.empty( ) )
+    {
+        throw std::runtime_error( "unexpected data in stream" );
+    }
+}
+
+[[nodiscard]] static inline auto read_tag_or_eof( istream & stream ) -> uint32_t
+{
+    auto byte_or_eof = stream.read_byte_or_eof( );
+    if( byte_or_eof < 0 )
+    {
+        return 0;
+    }
+    auto byte = uint8_t( byte_or_eof );
+    auto tag  = uint32_t( byte );
+
+    for( size_t shift = CHAR_BIT - 1; ( byte & 0x80 ) != 0; shift += CHAR_BIT - 1 )
+    {
+        if( shift >= sizeof( tag ) * CHAR_BIT )
+        {
+            throw std::runtime_error( "invalid tag" );
+        }
+
+        byte = stream.read_byte( );
+        tag |= uint64_t( byte & 0x7F ) << shift;
+    }
+
+    check_tag( tag );
+
+    return tag;
 }
 
 template < typename T >
@@ -135,7 +192,6 @@ template < typename T >
     }
     else
     {
-
         auto value = uint64_t( 0 );
 
         for( auto shift = 0U; shift < sizeof( value ) * CHAR_BIT; shift += CHAR_BIT - 1 )
@@ -175,7 +231,6 @@ template < typename T >
     }
 }
 
-static inline void deserialize( istream & stream, std::string_view & value, wire_type type );
 static inline void deserialize( istream & stream, std::string & value, wire_type type );
 static inline void deserialize( istream & stream, is_struct auto & value, wire_type type );
 
@@ -183,7 +238,6 @@ template < scalar_encoder encoder >
 static inline void deserialize_as( istream & stream, is_int_or_float auto & value, wire_type type );
 
 static inline void deserialize( istream & stream, std::vector< std::byte > & value, wire_type type );
-static inline void deserialize( istream & stream, std::span< const std::byte > & value, wire_type type );
 
 template < typename T >
 static inline void deserialize( istream & stream, std::vector< T > & value, wire_type type );
@@ -232,7 +286,7 @@ static inline void deserialize_as( istream & stream, is_int_or_float auto & valu
             check_wire_type( type, wire_type::fixed32 );
         }
         static_assert( sizeof( value ) == sizeof( uint32_t ) );
-        stream.read( &value, sizeof( value ) );
+        stream.read_exact( &value, sizeof( value ) );
     }
     else if constexpr( type1( encoder ) == scalar_encoder::i64 )
     {
@@ -241,7 +295,7 @@ static inline void deserialize_as( istream & stream, is_int_or_float auto & valu
             check_wire_type( type, wire_type::fixed64 );
         }
         static_assert( sizeof( value ) == sizeof( uint64_t ) );
-        stream.read( &value, sizeof( value ) );
+        stream.read_exact( &value, sizeof( value ) );
     }
 }
 
@@ -268,18 +322,11 @@ static inline void deserialize_as( istream & stream, std::optional< T > & p_valu
     deserialize_as< encoder >( stream, value, type );
 }
 
-static inline void deserialize( istream & stream, std::string_view & value, wire_type type )
-{
-    check_wire_type( type, wire_type::length_delimited );
-    value = std::string_view( static_cast< const char * >( stream.data( ) ), stream.size( ) );
-    stream.read( nullptr, stream.size( ) );
-}
-
 static inline void deserialize( istream & stream, std::string & value, wire_type type )
 {
     check_wire_type( type, wire_type::length_delimited );
     value.resize( stream.size( ) );
-    stream.read( value.data( ), stream.size( ) );
+    stream.read_exact( value.data( ), stream.size( ) );
 }
 
 template < typename T >
@@ -289,18 +336,11 @@ static inline void deserialize( istream & stream, std::unique_ptr< T > & value, 
     deserialize( stream, *value, type );
 }
 
-static inline void deserialize( istream & stream, std::span< const std::byte > & value, wire_type type )
-{
-    check_wire_type( type, wire_type::length_delimited );
-    value = std::span< const std::byte >( static_cast< const std::byte * >( stream.data( ) ), stream.size( ) );
-    stream.read( nullptr, stream.size( ) );
-}
-
 static inline void deserialize( istream & stream, std::vector< std::byte > & value, wire_type type )
 {
     check_wire_type( type, wire_type::length_delimited );
     value.resize( stream.size( ) );
-    stream.read( value.data( ), stream.size( ) );
+    stream.read_exact( value.data( ), stream.size( ) );
 }
 
 template < typename T >
@@ -376,6 +416,7 @@ static inline void deserialize_as( istream & stream, std::map< keyT, valueT > & 
                     const auto size = read_varint< uint32_t >( stream );
                     auto substream  = stream.sub_stream( size );
                     deserialize( substream, pair.first, field_type );
+                    check_if_empty( substream );
                 }
                 else
                 {
@@ -396,6 +437,7 @@ static inline void deserialize_as( istream & stream, std::map< keyT, valueT > & 
                     const auto size = read_varint< uint32_t >( stream );
                     auto substream  = stream.sub_stream( size );
                     deserialize( substream, pair.second, field_type );
+                    check_if_empty( substream );
                 }
                 else
                 {
@@ -430,6 +472,31 @@ static inline void deserialize_variant_as( istream & stream, T & variant, wire_t
     deserialize_as< encoder >( stream, variant.template emplace< ordinal >( ), type );
 }
 
+static inline void deserialize_main( istream & stream, is_struct auto & value )
+{
+    for( ;; )
+    {
+        const auto tag = read_tag_or_eof( stream );
+        if( !tag )
+        {
+            break;
+        }
+        const auto field_type = wire_type_from_tag( tag );
+
+        if( field_type == wire_type::length_delimited )
+        {
+            const auto size = read_varint< uint32_t >( stream );
+            auto substream  = stream.sub_stream( size );
+            deserialize_value( substream, value, tag );
+            check_if_empty( substream );
+        }
+        else
+        {
+            deserialize_value( stream, value, tag );
+        }
+    }
+}
+
 static inline void deserialize( istream & stream, is_struct auto & value, wire_type type )
 {
     check_wire_type( type, wire_type::length_delimited );
@@ -444,6 +511,7 @@ static inline void deserialize( istream & stream, is_struct auto & value, wire_t
             const auto size = read_varint< uint32_t >( stream );
             auto substream  = stream.sub_stream( size );
             deserialize_value( substream, value, tag );
+            check_if_empty( substream );
         }
         else
         {
@@ -457,6 +525,17 @@ inline void istream::deserialize( auto & value, uint32_t tag )
     detail::deserialize( *this, value, wire_type_from_tag( tag ) );
 }
 
+inline void istream::read_skip( size_t size )
+{
+    uint8_t buffer[ 64 ];
+    while( size > 0 )
+    {
+        auto chunk_size = std::min( size, sizeof( buffer ) );
+        read_exact( buffer, chunk_size );
+        size -= chunk_size;
+    }
+}
+
 inline void istream::skip( uint32_t tag )
 {
     switch( wire_type_from_tag( tag ) )
@@ -464,11 +543,11 @@ inline void istream::skip( uint32_t tag )
     case wire_type::varint:
         return ( void ) read_varint< uint64_t >( *this );
     case wire_type::length_delimited:
-        return read( nullptr, read_varint< uint32_t >( *this ) );
+        return read_skip( read_varint< uint32_t >( *this ) );
     case wire_type::fixed32:
-        return read( nullptr, sizeof( uint32_t ) );
+        return read_skip( sizeof( uint32_t ) );
     case wire_type::fixed64:
-        return read( nullptr, sizeof( uint64_t ) );
+        return read_skip( sizeof( uint64_t ) );
     default:
         throw std::runtime_error( "invalid wire type" );
     }
@@ -492,21 +571,13 @@ inline void istream::deserialize_variant_as( T & variant, uint32_t tag )
     detail::deserialize_variant_as< ordinal, encoder >( *this, variant, wire_type_from_tag( tag ) );
 }
 
-template < typename Result >
-static inline auto deserialize( std::string_view protobuf ) -> Result
-{
-    auto stream = detail::istream( protobuf.data( ), protobuf.size( ) );
-    auto result = Result{ };
-    detail::deserialize( stream, result, detail::wire_type::length_delimited );
-    return result;
-}
-
-static inline void deserialize( auto & value, std::string_view string )
+static inline void deserialize( auto & value, spb::io::reader on_read )
 {
     using T = std::remove_cvref_t< decltype( value ) >;
     static_assert( is_struct< T > );
-    auto stream = detail::istream( string.data( ), string.size( ) );
-    detail::deserialize( stream, value, detail::wire_type::length_delimited );
+
+    auto stream = istream( on_read );
+    deserialize_main( stream, value );
 }
 
 }// namespace spb::pb::detail

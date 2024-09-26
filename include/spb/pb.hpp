@@ -12,8 +12,8 @@
 #include "pb/deserialize.hpp"
 #include "pb/serialize.hpp"
 #include "spb/io/io.hpp"
+#include <algorithm>
 #include <cstdint>
-#include <stdexcept>
 
 namespace spb::pb
 {
@@ -71,7 +71,16 @@ static inline auto serialize( const auto & message ) -> std::string
  */
 static inline void deserialize( auto & message, std::string_view protobuf )
 {
-    return detail::deserialize( message, protobuf );
+    auto reader = [ ptr = protobuf.data( ), end = protobuf.data( ) + protobuf.size( ) ]( void * data, size_t size ) mutable -> size_t
+    {
+        size_t bytes_left = end - ptr;
+
+        size = std::min( size, bytes_left );
+        memcpy( data, ptr, size );
+        ptr += size;
+        return size;
+    };
+    return detail::deserialize( message, reader );
 }
 
 /**
