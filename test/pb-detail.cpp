@@ -75,23 +75,6 @@ auto to_bytes( std::string_view str ) -> std::vector< std::byte >
     return { span.data( ), span.data( ) + span.size( ) };
 }
 
-template < typename T >
-auto pb_serialize( const T & value ) -> std::string
-{
-    auto size_stream = spb::pb::detail::ostream( nullptr );
-    spb::pb::detail::serialize( size_stream, 1, value );
-    const auto size = size_stream.size( );
-    auto result     = std::string( size, '\0' );
-    auto writer     = [ ptr = result.data( ) ]( const void * data, size_t size ) mutable
-    {
-        memcpy( ptr, data, size );
-        ptr += size;
-    };
-    auto stream = spb::pb::detail::ostream( writer );
-    spb::pb::detail::serialize( stream, 1, value );
-    return result;
-}
-
 template < spb::pb::detail::scalar_encoder encoder, typename T >
 auto pb_serialize_as( const T & value ) -> std::string
 {
@@ -158,13 +141,13 @@ TEST_CASE( "protobuf" )
         {
             pb_test( Test::Scalar::ReqString{ }, "" );
             pb_test( Test::Scalar::ReqString{ .value = "hello" }, "\x0a\x05hello" );
-            CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqString >( "\x0a\x05hell"sv ) );
+            CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqString >( "\x0a\x05hell"sv ) );
         }
         SUBCASE( "optional" )
         {
             pb_test( Test::Scalar::OptString{ }, "" );
             pb_test( Test::Scalar::OptString{ .value = "hello" }, "\x0a\x05hello" );
-            CHECK_THROWS( spb::pb::deserialize< Test::Scalar::OptString >( "\x08\x05hello"sv ) );
+            CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::OptString >( "\x08\x05hello"sv ) );
         }
         SUBCASE( "repeated" )
         {
@@ -180,8 +163,8 @@ TEST_CASE( "protobuf" )
             pb_test( Test::Scalar::ReqBool{ }, "\x08\x00"sv );
             pb_test( Test::Scalar::ReqBool{ .value = true }, "\x08\x01" );
             pb_test( Test::Scalar::ReqBool{ .value = false }, "\x08\x00"sv );
-            CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqBool >( "\x08\x02"sv ) );
-            CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqBool >( "\x08\xff\x01"sv ) );
+            CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqBool >( "\x08\x02"sv ) );
+            CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqBool >( "\x08\xff\x01"sv ) );
         }
         SUBCASE( "optional" )
         {
@@ -195,7 +178,7 @@ TEST_CASE( "protobuf" )
             pb_test( Test::Scalar::RepBool{ .value = { true } }, "\x08\x01" );
             pb_test( Test::Scalar::RepBool{ .value = { true, false } }, "\x08\x01\x08\x00"sv );
             pb_test( Test::Scalar::RepBool{ .value = {} }, "" );
-            CHECK_THROWS( spb::pb::deserialize< Test::Scalar::RepBool >( "\x08\x01\x08"sv ) );
+            CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::RepBool >( "\x08\x01\x08"sv ) );
 
             SUBCASE( "packed" )
             {
@@ -203,8 +186,8 @@ TEST_CASE( "protobuf" )
                 pb_test( Test::Scalar::RepPackBool{ .value = { true } }, "\x0a\x01\x01" );
                 pb_test( Test::Scalar::RepPackBool{ .value = { true, false } }, "\x0a\x02\x01\x00"sv );
                 pb_test( Test::Scalar::RepPackBool{ .value = {} }, "" );
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::RepPackBool >( "\x0a\x02\x08"sv ) );
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::RepPackBool >( "\x0a\x01\x08"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::RepPackBool >( "\x0a\x02\x08"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::RepPackBool >( "\x0a\x01\x08"sv ) );
             }
         }
     }
@@ -217,9 +200,9 @@ TEST_CASE( "protobuf" )
                 pb_test( Test::Scalar::ReqInt32{ .value = 0x42 }, "\x08\x42" );
                 pb_test( Test::Scalar::ReqInt32{ .value = 0xff }, "\x08\xff\x01" );
                 pb_test( Test::Scalar::ReqInt32{ .value = -2 }, "\x08\xfe\xff\xff\xff\x0f"sv );
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqInt32 >( "\x08" ) );
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqInt32 >( "\x08\xff" ) );
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqInt32 >( "\x08\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x01" ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqInt32 >( "\x08" ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqInt32 >( "\x08\xff" ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqInt32 >( "\x08\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x01" ) );
             }
             SUBCASE( "optional" )
             {
@@ -241,8 +224,8 @@ TEST_CASE( "protobuf" )
                     pb_test( Test::Scalar::RepPackInt32{ .value = { 0x42 } }, "\x0a\x01\x42" );
                     pb_test( Test::Scalar::RepPackInt32{ .value = { 0x42, 0x3 } }, "\x0a\x02\x42\x03" );
                     pb_test( Test::Scalar::RepPackInt32{ .value = {} }, "" );
-                    CHECK_THROWS( spb::pb::deserialize< Test::Scalar::RepPackInt32 >( "\x0a\x02\x42" ) );
-                    CHECK_THROWS( spb::pb::deserialize< Test::Scalar::RepPackInt32 >( "\x0a\x02\x42\xff" ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::RepPackInt32 >( "\x0a\x02\x42" ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::RepPackInt32 >( "\x0a\x02\x42\xff" ) );
                 }
             }
         }
@@ -252,10 +235,10 @@ TEST_CASE( "protobuf" )
             {
                 pb_test( Test::Scalar::ReqUint32{ .value = 0x42 }, "\x08\x42" );
                 pb_test( Test::Scalar::ReqUint32{ .value = 0xff }, "\x08\xff\x01" );
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqUint32 >( "\x08" ) );
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqUint32 >( "\x08\xff" ) );
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqUint32 >( "\x08\xff\xff\xff\xff\xff\x0f" ) );
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqUint32 >( "\x08\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x01" ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqUint32 >( "\x08" ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqUint32 >( "\x08\xff" ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqUint32 >( "\x08\xff\xff\xff\xff\xff\x0f" ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqUint32 >( "\x08\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x01" ) );
             }
             SUBCASE( "optional" )
             {
@@ -276,8 +259,8 @@ TEST_CASE( "protobuf" )
                     pb_test( Test::Scalar::RepPackUint32{ .value = { 0x42 } }, "\x0a\x01\x42" );
                     pb_test( Test::Scalar::RepPackUint32{ .value = { 0x42, 0x3 } }, "\x0a\x02\x42\x03" );
                     pb_test( Test::Scalar::RepPackUint32{ .value = {} }, "" );
-                    CHECK_THROWS( spb::pb::deserialize< Test::Scalar::RepPackUint32 >( "\x0a\x02\x42" ) );
-                    CHECK_THROWS( spb::pb::deserialize< Test::Scalar::RepPackUint32 >( "\x0a\x02\x42\xff" ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::RepPackUint32 >( "\x0a\x02\x42" ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::RepPackUint32 >( "\x0a\x02\x42\xff" ) );
                 }
             }
         }
@@ -288,9 +271,9 @@ TEST_CASE( "protobuf" )
                 pb_test( Test::Scalar::ReqInt64{ .value = 0x42 }, "\x08\x42" );
                 pb_test( Test::Scalar::ReqInt64{ .value = 0xff }, "\x08\xff\x01" );
                 pb_test( Test::Scalar::ReqInt64{ .value = -2 }, "\x08\xfe\xff\xff\xff\xff\xff\xff\xff\xff\x01" );
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqInt32 >( "\x08" ) );
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqInt32 >( "\x08\xff" ) );
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqInt32 >( "\x08\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x01" ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqInt32 >( "\x08" ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqInt32 >( "\x08\xff" ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqInt32 >( "\x08\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x01" ) );
             }
             SUBCASE( "optional" )
             {
@@ -312,8 +295,8 @@ TEST_CASE( "protobuf" )
                     pb_test( Test::Scalar::RepPackInt64{ .value = { 0x42 } }, "\x0a\x01\x42" );
                     pb_test( Test::Scalar::RepPackInt64{ .value = { 0x42, 0x3 } }, "\x0a\x02\x42\x03" );
                     pb_test( Test::Scalar::RepPackInt64{ .value = {} }, "" );
-                    CHECK_THROWS( spb::pb::deserialize< Test::Scalar::RepPackInt64 >( "\x0a\x02\x42" ) );
-                    CHECK_THROWS( spb::pb::deserialize< Test::Scalar::RepPackInt64 >( "\x0a\x02\x42\xff" ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::RepPackInt64 >( "\x0a\x02\x42" ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::RepPackInt64 >( "\x0a\x02\x42\xff" ) );
                 }
             }
         }
@@ -324,9 +307,9 @@ TEST_CASE( "protobuf" )
                 pb_test( Test::Scalar::ReqSint32{ .value = 0x42 }, "\x08\x84\x01"sv );
                 pb_test( Test::Scalar::ReqSint32{ .value = 0xff }, "\x08\xfe\x03"sv );
                 pb_test( Test::Scalar::ReqSint32{ .value = -2 }, "\x08\x03"sv );
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqSint32 >( "\x08" ) );
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqSint32 >( "\x08\xff" ) );
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqSint32 >( "\x08\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x01" ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSint32 >( "\x08" ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSint32 >( "\x08\xff" ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSint32 >( "\x08\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x01" ) );
             }
             SUBCASE( "optional" )
             {
@@ -347,8 +330,8 @@ TEST_CASE( "protobuf" )
                     pb_test( Test::Scalar::RepPackSint32{ .value = { 0x42 } }, "\x0a\x02\x84\x01"sv );
                     pb_test( Test::Scalar::RepPackSint32{ .value = { 0x42, -2 } }, "\x0a\x03\x84\x01\x03"sv );
                     pb_test( Test::Scalar::RepPackSint32{ .value = {} }, "" );
-                    CHECK_THROWS( spb::pb::deserialize< Test::Scalar::RepPackSint32 >( "\x0a\x02\x42" ) );
-                    CHECK_THROWS( spb::pb::deserialize< Test::Scalar::RepPackSint32 >( "\x0a\x02\x42\xff" ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::RepPackSint32 >( "\x0a\x02\x42" ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::RepPackSint32 >( "\x0a\x02\x42\xff" ) );
                 }
             }
         }
@@ -359,9 +342,9 @@ TEST_CASE( "protobuf" )
                 pb_test( Test::Scalar::ReqSint64{ .value = 0x42 }, "\x08\x84\x01"sv );
                 pb_test( Test::Scalar::ReqSint64{ .value = 0xff }, "\x08\xfe\x03"sv );
                 pb_test( Test::Scalar::ReqSint64{ .value = -2 }, "\x08\x03"sv );
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqSint64 >( "\x08" ) );
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqSint64 >( "\x08\xff" ) );
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqSint64 >( "\x08\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x01" ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSint64 >( "\x08" ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSint64 >( "\x08\xff" ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSint64 >( "\x08\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x01" ) );
             }
             SUBCASE( "optional" )
             {
@@ -382,8 +365,8 @@ TEST_CASE( "protobuf" )
                     pb_test( Test::Scalar::RepPackSint64{ .value = { 0x42 } }, "\x0a\x02\x84\x01"sv );
                     pb_test( Test::Scalar::RepPackSint64{ .value = { 0x42, -2 } }, "\x0a\x03\x84\x01\x03"sv );
                     pb_test( Test::Scalar::RepPackSint64{ .value = {} }, "" );
-                    CHECK_THROWS( spb::pb::deserialize< Test::Scalar::RepPackSint64 >( "\x0a\x02\x84"sv ) );
-                    CHECK_THROWS( spb::pb::deserialize< Test::Scalar::RepPackSint64 >( "\x0a\x03\x84\x01"sv ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::RepPackSint64 >( "\x0a\x02\x84"sv ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::RepPackSint64 >( "\x0a\x03\x84\x01"sv ) );
                 }
             }
         }
@@ -394,7 +377,7 @@ TEST_CASE( "protobuf" )
                 pb_test( Test::Scalar::ReqFixed32{ .value = 0x42 }, "\x0d\x42\x00\x00\x00"sv );
                 pb_test( Test::Scalar::ReqFixed32{ .value = 0xff }, "\x0d\xff\x00\x00\x00"sv );
                 pb_test( Test::Scalar::ReqFixed32{ .value = uint32_t( -2 ) }, "\x0d\xfe\xff\xff\xff"sv );
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqFixed32 >( "\x0d\x42\x00\x00"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqFixed32 >( "\x0d\x42\x00\x00"sv ) );
             }
             SUBCASE( "optional" )
             {
@@ -413,7 +396,7 @@ TEST_CASE( "protobuf" )
                     pb_test( Test::Scalar::RepPackFixed32{ .value = { 0x42 } }, "\x0a\x04\x42\x00\x00\x00"sv );
                     pb_test( Test::Scalar::RepPackFixed32{ .value = { 0x42, 0x3 } }, "\x0a\x08\x42\x00\x00\x00\x03\x00\x00\x00"sv );
                     pb_test( Test::Scalar::RepPackFixed32{ .value = {} }, ""sv );
-                    CHECK_THROWS( spb::pb::deserialize< Test::Scalar::RepPackFixed32 >( "\x0a\x08\x42\x00\x00\x00\x03\x00\x00"sv ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::RepPackFixed32 >( "\x0a\x08\x42\x00\x00\x00\x03\x00\x00"sv ) );
                 }
             }
         }
@@ -424,7 +407,7 @@ TEST_CASE( "protobuf" )
                 pb_test( Test::Scalar::ReqFixed64{ .value = 0x42 }, "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv );
                 pb_test( Test::Scalar::ReqFixed64{ .value = 0xff }, "\x09\xff\x00\x00\x00\x00\x00\x00\x00"sv );
                 pb_test( Test::Scalar::ReqFixed64{ .value = uint64_t( -2 ) }, "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv );
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqFixed32 >( "\x09\x42\x00\x00\x00\x00\x00\x00"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqFixed32 >( "\x09\x42\x00\x00\x00\x00\x00\x00"sv ) );
             }
             SUBCASE( "optional" )
             {
@@ -452,7 +435,7 @@ TEST_CASE( "protobuf" )
                 pb_test( Test::Scalar::ReqSfixed32{ .value = 0x42 }, "\x0d\x42\x00\x00\x00"sv );
                 pb_test( Test::Scalar::ReqSfixed32{ .value = 0xff }, "\x0d\xff\x00\x00\x00"sv );
                 pb_test( Test::Scalar::ReqSfixed32{ .value = -2 }, "\x0d\xfe\xff\xff\xff"sv );
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqSfixed32 >( "\x0d\x42\x00\x00"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed32 >( "\x0d\x42\x00\x00"sv ) );
             }
             SUBCASE( "optional" )
             {
@@ -481,7 +464,7 @@ TEST_CASE( "protobuf" )
                 pb_test( Test::Scalar::ReqSfixed64{ .value = 0x42 }, "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv );
                 pb_test( Test::Scalar::ReqSfixed64{ .value = 0xff }, "\x09\xff\x00\x00\x00\x00\x00\x00\x00"sv );
                 pb_test( Test::Scalar::ReqSfixed64{ .value = -2 }, "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv );
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqSfixed64 >( "\x09\x42\x00\x00\x00\x00\x00\x00"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed64 >( "\x09\x42\x00\x00\x00\x00\x00\x00"sv ) );
             }
             SUBCASE( "optional" )
             {
@@ -508,7 +491,7 @@ TEST_CASE( "protobuf" )
         SUBCASE( "required" )
         {
             pb_test( Test::Scalar::ReqFloat{ .value = 42.0f }, "\x0d\x00\x00\x28\x42"sv );
-            CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqFloat >( "\x0d\x00\x00\x28"sv ) );
+            CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqFloat >( "\x0d\x00\x00\x28"sv ) );
         }
         SUBCASE( "optional" )
         {
@@ -526,7 +509,7 @@ TEST_CASE( "protobuf" )
         SUBCASE( "required" )
         {
             pb_test( Test::Scalar::ReqDouble{ .value = 42.0 }, "\x09\x00\x00\x00\x00\x00\x00\x45\x40"sv );
-            CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqDouble >( "\x0d\x00\x00\x28"sv ) );
+            CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqDouble >( "\x0d\x00\x00\x28"sv ) );
         }
         SUBCASE( "optional" )
         {
@@ -547,7 +530,7 @@ TEST_CASE( "protobuf" )
             pb_test( Test::Scalar::ReqBytes{ .value = to_bytes( "hello" ) }, "\x0a\x05hello"sv );
             pb_test( Test::Scalar::ReqBytes{ .value = to_bytes( "\x00\x01\x02"sv ) }, "\x0a\x03\x00\x01\x02"sv );
             pb_test( Test::Scalar::ReqBytes{ .value = to_bytes( "\x00\x01\x02\x03\x04"sv ) }, "\x0a\x05\x00\x01\x02\x03\x04"sv );
-            CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqBytes >( "\x0a\x05hell"sv ) );
+            CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqBytes >( "\x0a\x05hell"sv ) );
         }
         SUBCASE( "optional" )
         {
@@ -634,14 +617,14 @@ TEST_CASE( "protobuf" )
             SUBCASE( "required" )
             {
                 CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x0a\x05hello"sv ) == Test::Scalar::Simple{ } );
-                CHECK_NOTHROW( spb::pb::deserialize< Test::Scalar::Empty >( "\x0a\x05hello"sv ) );
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\x0a\x05hell"sv ) );
+                CHECK_NOTHROW( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x0a\x05hello"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x0a\x05hell"sv ) );
             }
             SUBCASE( "repeated" )
             {
                 CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x0a\x05hello\x0a\x05world"sv ) == Test::Scalar::Simple{ } );
-                CHECK_NOTHROW( spb::pb::deserialize< Test::Scalar::Empty >( "\x0a\x05hello\x0a\x05world"sv ) );
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\x0a\x05hello\x0a\x05worl"sv ) );
+                CHECK_NOTHROW( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x0a\x05hello\x0a\x05world"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x0a\x05hello\x0a\x05worl"sv ) );
             }
         }
         SUBCASE( "bool" )
@@ -654,7 +637,7 @@ TEST_CASE( "protobuf" )
             SUBCASE( "repeated" )
             {
                 CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x08\x01\x08\x00"sv ) == Test::Scalar::Simple{ } );
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\x08\x01\x08"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x08\x01\x08"sv ) );
             }
         }
         SUBCASE( "int" )
@@ -666,9 +649,9 @@ TEST_CASE( "protobuf" )
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x08\x42"sv ) == Test::Scalar::Simple{ } );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x08\xff\x01"sv ) == Test::Scalar::Simple{ } );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x08\xfe\xff\xff\xff\x0f"sv ) == Test::Scalar::Simple{ } );
-                    CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\x08" ) );
-                    CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\x08\xff" ) );
-                    CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\x08\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x01" ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x08" ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x08\xff" ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x08\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x01" ) );
                 }
                 SUBCASE( "repeated" )
                 {
@@ -678,7 +661,7 @@ TEST_CASE( "protobuf" )
                     {
                         CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x0a\x01\x42"sv ) == Test::Scalar::Simple{ } );
                         CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x0a\x02\x42\x03"sv ) == Test::Scalar::Simple{ } );
-                        CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\x0a\x02\x42" ) );
+                        CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x0a\x02\x42" ) );
                     }
                 }
             }
@@ -689,9 +672,9 @@ TEST_CASE( "protobuf" )
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x08\x42"sv ) == Test::Scalar::Simple{ } );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x08\xff\x01"sv ) == Test::Scalar::Simple{ } );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x08\xfe\xff\xff\xff\xff\xff\xff\xff\xff\x01"sv ) == Test::Scalar::Simple{ } );
-                    CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\x08" ) );
-                    CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\x08\xff" ) );
-                    CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\x08\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x01" ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x08" ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x08\xff" ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x08\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x01" ) );
                 }
                 SUBCASE( "repeated" )
                 {
@@ -701,7 +684,7 @@ TEST_CASE( "protobuf" )
                     {
                         CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x0a\x01\x42"sv ) == Test::Scalar::Simple{ } );
                         CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x0a\x02\x42\x03"sv ) == Test::Scalar::Simple{ } );
-                        CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\x0a\x02\x42" ) );
+                        CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x0a\x02\x42" ) );
                     }
                 }
             }
@@ -712,9 +695,9 @@ TEST_CASE( "protobuf" )
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x08\x84\x01"sv ) == Test::Scalar::Simple{ } );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x08\xfe\x03"sv ) == Test::Scalar::Simple{ } );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x08\x03"sv ) == Test::Scalar::Simple{ } );
-                    CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\x08" ) );
-                    CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\x08\xff" ) );
-                    CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\x08\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x01" ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x08" ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x08\xff" ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x08\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x01" ) );
                 }
                 SUBCASE( "repeated" )
                 {
@@ -725,7 +708,7 @@ TEST_CASE( "protobuf" )
                     {
                         CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x0a\x02\x84\x01"sv ) == Test::Scalar::Simple{ } );
                         CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x0a\x03\x84\x01\x03"sv ) == Test::Scalar::Simple{ } );
-                        CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\x0a\x02\x42" ) );
+                        CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x0a\x02\x42" ) );
                     }
                 }
             }
@@ -736,9 +719,9 @@ TEST_CASE( "protobuf" )
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x08\x84\x01"sv ) == Test::Scalar::Simple{ } );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x08\xfe\x03"sv ) == Test::Scalar::Simple{ } );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x08\x03"sv ) == Test::Scalar::Simple{ } );
-                    CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\x08" ) );
-                    CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\x08\xff" ) );
-                    CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\x08\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x01" ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x08" ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x08\xff" ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x08\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x01" ) );
                 }
                 SUBCASE( "repeated" )
                 {
@@ -750,8 +733,8 @@ TEST_CASE( "protobuf" )
                         CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x0a\x02\x84\x01"sv ) == Test::Scalar::Simple{ } );
                         CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x0a\x03\x84\x01\x03"sv ) == Test::Scalar::Simple{ } );
 
-                        CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\x0a\x02\x84"sv ) );
-                        CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\x0a\x03\x84\x01"sv ) );
+                        CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x0a\x02\x84"sv ) );
+                        CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x0a\x03\x84\x01"sv ) );
                     }
                 }
             }
@@ -762,7 +745,7 @@ TEST_CASE( "protobuf" )
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x0d\x42\x00\x00\x00"sv ) == Test::Scalar::Simple{ } );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x0d\xff\x00\x00\x00"sv ) == Test::Scalar::Simple{ } );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x0d\xfe\xff\xff\xff"sv ) == Test::Scalar::Simple{ } );
-                    CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\x0d\x42\x00\x00"sv ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x0d\x42\x00\x00"sv ) );
                 }
                 SUBCASE( "repeated" )
                 {
@@ -773,7 +756,7 @@ TEST_CASE( "protobuf" )
                     {
                         CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x0a\x04\x42\x00\x00\x00"sv ) == Test::Scalar::Simple{ } );
                         CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x0a\x08\x42\x00\x00\x00\x03\x00\x00\x00"sv ) == Test::Scalar::Simple{ } );
-                        CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\x0a\x08\x42\x00\x00\x00\x03\x00\x00"sv ) );
+                        CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x0a\x08\x42\x00\x00\x00\x03\x00\x00"sv ) );
                     }
                 }
             }
@@ -784,7 +767,7 @@ TEST_CASE( "protobuf" )
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv ) == Test::Scalar::Simple{ } );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x09\xff\x00\x00\x00\x00\x00\x00\x00"sv ) == Test::Scalar::Simple{ } );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv ) == Test::Scalar::Simple{ } );
-                    CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\x09\x42\x00\x00\x00\x00\x00\x00"sv ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x09\x42\x00\x00\x00\x00\x00\x00"sv ) );
                 }
                 SUBCASE( "repeated" )
                 {
@@ -805,7 +788,7 @@ TEST_CASE( "protobuf" )
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x0d\x42\x00\x00\x00"sv ) == Test::Scalar::Simple{ } );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x0d\xff\x00\x00\x00"sv ) == Test::Scalar::Simple{ } );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x0d\xfe\xff\xff\xff"sv ) == Test::Scalar::Simple{ } );
-                    CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\x0d\x42\x00\x00"sv ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x0d\x42\x00\x00"sv ) );
                 }
                 SUBCASE( "repeated" )
                 {
@@ -826,7 +809,7 @@ TEST_CASE( "protobuf" )
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv ) == Test::Scalar::Simple{ } );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x09\xff\x00\x00\x00\x00\x00\x00\x00"sv ) == Test::Scalar::Simple{ } );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv ) == Test::Scalar::Simple{ } );
-                    CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\x09\x42\x00\x00\x00\x00\x00\x00"sv ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x09\x42\x00\x00\x00\x00\x00\x00"sv ) );
                 }
                 SUBCASE( "repeated" )
                 {
@@ -846,7 +829,7 @@ TEST_CASE( "protobuf" )
             SUBCASE( "required" )
             {
                 CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x0d\x00\x00\x28\x42"sv ) == Test::Scalar::Simple{ } );
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\x0d\x00\x00\x28"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x0d\x00\x00\x28"sv ) );
             }
             SUBCASE( "repeated" )
             {
@@ -859,7 +842,7 @@ TEST_CASE( "protobuf" )
             SUBCASE( "required" )
             {
                 CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x09\x00\x00\x00\x00\x00\x00\x45\x40"sv ) == Test::Scalar::Simple{ } );
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\x0d\x00\x00\x28"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x0d\x00\x00\x28"sv ) );
             }
             SUBCASE( "optional" )
             {
@@ -878,7 +861,7 @@ TEST_CASE( "protobuf" )
                 CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x0a\x05hello"sv ) == Test::Scalar::Simple{ } );
                 CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x0a\x03\x00\x01\x02"sv ) == Test::Scalar::Simple{ } );
                 CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x0a\x05\x00\x01\x02\x03\x04"sv ) == Test::Scalar::Simple{ } );
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\x0a\x05hell"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x0a\x05hell"sv ) );
             }
             SUBCASE( "repeated" )
             {
@@ -891,27 +874,27 @@ TEST_CASE( "protobuf" )
         {
             CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x0a\x08John Doe\x10\x7b\x1a\x11QXUeh@example.com\x22\x0c\x0A\x08"
                                                                  "555-4321\x10\x01"sv ) == Test::Scalar::Simple{ } );
-            CHECK_NOTHROW( spb::pb::deserialize< Test::Scalar::Empty >( "\x0a\x08John Doe\x10\x7b\x1a\x11QXUeh@example.com\x22\x0c\x0A\x08"
-                                                                        "555-4321\x10\x01"sv ) );
+            CHECK_NOTHROW( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x0a\x08John Doe\x10\x7b\x1a\x11QXUeh@example.com\x22\x0c\x0A\x08"
+                                                                                 "555-4321\x10\x01"sv ) );
         }
         SUBCASE( "invalid" )
         {
             SUBCASE( "wire type" )
             {
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::OptInt32 >( "\x0a\x05hello"sv ) );
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::OptInt32 >( "\x0d\x00\x00\x28\x42"sv ) );
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::OptString >( "\x0d\x00\x00\x28\x42"sv ) );
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\x0f\x05hello"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::OptInt32 >( "\x0a\x05hello"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::OptInt32 >( "\x0d\x00\x00\x28\x42"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::OptString >( "\x0d\x00\x00\x28\x42"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x0f\x05hello"sv ) );
             }
             SUBCASE( "stream" )
             {
-                CHECK_THROWS( spb::pb::deserialize< Test::Recursive >( "\x0a\x05\x0a\x05hello"sv ) );
-                CHECK_THROWS( spb::pb::deserialize< Test::Recursive >( "\x0a\x08\x0a\x05hello"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Recursive >( "\x0a\x05\x0a\x05hello"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Recursive >( "\x0a\x08\x0a\x05hello"sv ) );
             }
             SUBCASE( "tag" )
             {
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\xff\xff\xff\xff\xff\xff\xff\xff\x01"sv ) );
-                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\x07\x05hello"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\xff\xff\xff\xff\xff\xff\xff\xff\x01"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x07\x05hello"sv ) );
             }
         }
     }

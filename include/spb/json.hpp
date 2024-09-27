@@ -18,17 +18,6 @@ namespace spb::json
 {
 
 /**
- * @brief return json-string serialized size in bytes
- *
- * @param message to be serialized
- * @return serialized size in bytes
- */
-static inline auto serialize_size( const auto & message ) noexcept -> size_t
-{
-    return detail::serialize( message, spb::io::writer( nullptr ) );
-}
-
-/**
  * @brief serialize message via writer
  *
  * @param message to be serialized
@@ -42,13 +31,24 @@ static inline auto serialize( const auto & message, spb::io::writer on_write ) -
 }
 
 /**
+ * @brief return json-string serialized size in bytes
+ *
+ * @param message to be serialized
+ * @return serialized size in bytes
+ */
+[[nodiscard]] static inline auto serialize_size( const auto & message ) noexcept -> size_t
+{
+    return serialize( message, spb::io::writer( nullptr ) );
+}
+
+/**
  * @brief serialize message into json-string
  *
  * @param message to be serialized
  * @return serialized json
  * @throws std::runtime_error on error
  */
-static inline auto serialize( const auto & message ) -> std::string
+[[nodiscard]] static inline auto serialize( const auto & message ) -> std::string
 {
     auto result = std::string( serialize_size( message ), '\0' );
     auto writer = [ ptr = result.data( ) ]( const void * data, size_t size ) mutable
@@ -57,8 +57,20 @@ static inline auto serialize( const auto & message ) -> std::string
         ptr += size;
     };
 
-    ( void ) detail::serialize( message, writer );
+    serialize( message, writer );
     return result;
+}
+
+/**
+ * @brief deserialize json-string into variable
+ *
+ * @param on_read function for handling reads
+ * @param result deserialized json
+ * @throws std::runtime_error on error
+ */
+static inline void deserialize( auto & result, spb::io::reader on_read )
+{
+    return detail::deserialize( result, on_read );
 }
 
 /**
@@ -79,7 +91,7 @@ static inline void deserialize( auto & message, std::string_view json )
         ptr += size;
         return size;
     };
-    return detail::deserialize( message, reader );
+    return deserialize( message, reader );
 }
 
 /**
@@ -91,23 +103,11 @@ static inline void deserialize( auto & message, std::string_view json )
  * @throws std::runtime_error on error
  */
 template < typename Message >
-static inline auto deserialize( std::string_view json ) -> Message
+[[nodiscard]] static inline auto deserialize( std::string_view json ) -> Message
 {
     auto message = Message{ };
     deserialize( message, json );
     return message;
-}
-
-/**
- * @brief deserialize json-string into variable
- *
- * @param on_read function for handling reads
- * @param result deserialized json
- * @throws std::runtime_error on error
- */
-static inline void deserialize( auto & result, spb::io::reader on_read )
-{
-    return detail::deserialize( result, on_read );
 }
 
 /**
@@ -119,10 +119,10 @@ static inline void deserialize( auto & result, spb::io::reader on_read )
  * @throws std::runtime_error on error
  */
 template < typename Message >
-static inline auto deserialize( spb::io::reader on_read ) -> Message
+[[nodiscard]] static inline auto deserialize( spb::io::reader on_read ) -> Message
 {
     auto message = Message{ };
-    return detail::deserialize( message, on_read );
+    return deserialize( message, on_read );
 }
 
 }// namespace spb::json

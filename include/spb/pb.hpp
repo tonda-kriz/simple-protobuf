@@ -17,18 +17,6 @@
 
 namespace spb::pb
 {
-
-/**
- * @brief return protobuf serialized size in bytes
- *
- * @param[in] message to be serialized
- * @return serialized size in bytes
- */
-static inline auto serialize_size( const auto & message ) noexcept -> size_t
-{
-    return detail::serialize( message, spb::io::writer( nullptr ) );
-}
-
 /**
  * @brief serialize message via writer
  *
@@ -43,13 +31,24 @@ static inline auto serialize( const auto & message, spb::io::writer on_write ) -
 }
 
 /**
+ * @brief return protobuf serialized size in bytes
+ *
+ * @param[in] message to be serialized
+ * @return serialized size in bytes
+ */
+[[nodiscard]] static inline auto serialize_size( const auto & message ) noexcept -> size_t
+{
+    return serialize( message, spb::io::writer( nullptr ) );
+}
+
+/**
  * @brief serialize message into protobuf
  *
  * @param[in] message to be serialized
  * @return serialized protobuf
  * @throws std::runtime_error on error
  */
-static inline auto serialize( const auto & message ) -> std::string
+[[nodiscard]] static inline auto serialize( const auto & message ) -> std::string
 {
     auto result = std::string( serialize_size( message ), '\0' );
     auto writer = [ ptr = result.data( ) ]( const void * data, size_t size ) mutable
@@ -58,8 +57,20 @@ static inline auto serialize( const auto & message ) -> std::string
         ptr += size;
     };
 
-    ( void ) detail::serialize( message, writer );
+    serialize( message, writer );
     return result;
+}
+
+/**
+ * @brief deserialize message from protobuf
+ *
+ * @param[in] reader function for handling reads
+ * @param[out] message deserialized message
+ * @throws std::runtime_error on error
+ */
+static inline void deserialize( auto & message, spb::io::reader reader )
+{
+    return detail::deserialize( message, reader );
 }
 
 /**
@@ -80,7 +91,7 @@ static inline void deserialize( auto & message, std::string_view protobuf )
         ptr += size;
         return size;
     };
-    return detail::deserialize( message, reader );
+    return deserialize( message, reader );
 }
 
 /**
@@ -92,23 +103,11 @@ static inline void deserialize( auto & message, std::string_view protobuf )
  * @throws std::runtime_error on error
  */
 template < typename Message >
-static inline auto deserialize( std::string_view protobuf ) -> Message
+[[nodiscard]] static inline auto deserialize( std::string_view protobuf ) -> Message
 {
     auto message = Message{ };
     deserialize( message, protobuf );
     return message;
-}
-
-/**
- * @brief deserialize message from protobuf
- *
- * @param[in] reader function for handling reads
- * @param[out] message deserialized message
- * @throws std::runtime_error on error
- */
-static inline void deserialize( auto & message, spb::io::reader reader )
-{
-    return detail::deserialize( message, reader );
 }
 
 /**
@@ -120,10 +119,10 @@ static inline void deserialize( auto & message, spb::io::reader reader )
  * @throws std::runtime_error on error
  */
 template < typename Message >
-static inline auto deserialize( spb::io::reader reader ) -> Message
+[[nodiscard]] static inline auto deserialize( spb::io::reader reader ) -> Message
 {
     auto message = Message{ };
-    ( void ) detail::deserialize( message, reader );
+    deserialize( message, reader );
     return message;
 }
 
