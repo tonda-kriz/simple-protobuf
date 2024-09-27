@@ -543,7 +543,7 @@ inline void istream::skip( uint32_t tag )
     case wire_type::varint:
         return ( void ) read_varint< uint64_t >( *this );
     case wire_type::length_delimited:
-        return read_skip( read_varint< uint32_t >( *this ) );
+        return read_skip( size( ) );
     case wire_type::fixed32:
         return read_skip( sizeof( uint32_t ) );
     case wire_type::fixed64:
