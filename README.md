@@ -178,11 +178,9 @@ void deserialize( auto & result, spb::io::reader on_read );
 void deserialize( auto & message, std::string_view data )
 
 //- return deserialized message from reader
-template <>
 auto deserialize< Message >( spb::io::reader on_read ) -> Message
 
 //- return deserialized message from data
-template <>
 auto deserialize< Message >( std::string_view data ) -> Message
 ```
 
