@@ -1,6 +1,6 @@
 /***************************************************************************\
 * Name        : generic reader and writer                                   *
-* Description : generic output stream used for serialization                *
+* Description : user specific input/output used for de/serialization        *
 * Author      : antonin.kriz@gmail.com                                      *
 * ------------------------------------------------------------------------- *
 * This is free software; you can redistribute it and/or modify it under the *
