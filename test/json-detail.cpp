@@ -36,7 +36,7 @@ namespace Test
 {
 auto operator==( const Test::Name & lhs, const Test::Name & rhs ) noexcept -> bool
 {
-    return lhs.name == rhs.name;
+    return lhs.name == rhs.name && lhs.bkfvdzz == rhs.bkfvdzz;
 }
 }// namespace Test
 
@@ -68,6 +68,7 @@ TEST_CASE( "json" )
             SUBCASE( "empty" )
             {
                 CHECK( spb::json::deserialize< Test::Name >( R"({})" ) == Test::Name{ } );
+                CHECK( spb::json::deserialize< Test::Name >( R"({                                                                                                                                                                                                                                                                                                                                                                                                                })" ) == Test::Name{ } );
                 CHECK_THROWS( spb::json::deserialize< Test::Name >( "" ) );
                 CHECK_THROWS( spb::json::deserialize< Test::Name >( R"(})" ) );
                 CHECK_THROWS( spb::json::deserialize< Test::Name >( R"({)" ) );
@@ -75,12 +76,13 @@ TEST_CASE( "json" )
             SUBCASE( "string" )
             {
                 CHECK( spb::json::deserialize< Test::Name >( R"({"string":"string"})" ) == Test::Name{ } );
-                CHECK( spb::json::deserialize< Test::Name >( R"({"bkfvdzz":"string"})" ) == Test::Name{ } );
+                CHECK( spb::json::deserialize< Test::Name >( R"({"bkfvdzz":"string"})" ) == Test::Name{ .bkfvdzz = "string" } );
+                CHECK( spb::json::deserialize< Test::Name >( R"({"string                                                                                                                                                                                                                                                                                                                                                                                                                ":"string                                                                                                                                                                                                                                                                                                                                                                                                                "})" ) == Test::Name{ } );
             }
             SUBCASE( "int" )
             {
                 CHECK( spb::json::deserialize< Test::Name >( R"({"integer":42})" ) == Test::Name{ } );
-                CHECK( spb::json::deserialize< Test::Name >( R"({"bkfvdzz":42})" ) == Test::Name{ } );
+                CHECK( spb::json::deserialize< Test::Name >( R"({"bkfvdzz1":42})" ) == Test::Name{ } );
             }
             SUBCASE( "float" )
             {
@@ -90,7 +92,7 @@ TEST_CASE( "json" )
             {
                 CHECK( spb::json::deserialize< Test::Name >( R"({"array":[42,"hello"]})" ) == Test::Name{ } );
                 CHECK( spb::json::deserialize< Test::Name >( R"({"array":[]})" ) == Test::Name{ } );
-                CHECK( spb::json::deserialize< Test::Name >( R"({"bkfvdzz":[]})" ) == Test::Name{ } );
+                CHECK( spb::json::deserialize< Test::Name >( R"({"name1":[]})" ) == Test::Name{ } );
                 CHECK_THROWS( spb::json::deserialize< Test::Name >( R"({"array":[})" ) );
                 CHECK_THROWS( spb::json::deserialize< Test::Name >( R"({"array":[)" ) );
                 CHECK_THROWS( spb::json::deserialize< Test::Name >( R"({"array":[42)" ) );
