@@ -2,6 +2,15 @@ syntax = "proto2";
 
 package Test.Scalar@PB_PACKAGE@;
 
+message Empty
+{
+}
+
+message Simple
+{
+    optional string value = 100;
+}
+
 message OptInt32
 {
     optional int32 value = 1;
