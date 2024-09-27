@@ -188,7 +188,7 @@ auto deserialize< Message >( std::string_view data ) -> Message
 
 API is prefixed with `spb::json::` for **json** and `spb::pb::` for **protobuf**.
 
-[`spb::io::reader`](include/io/io.hpp) and [`spb::io::writer`](include/io/io.hpp) are user specified *functions* for IO, more info at [`include/io/io.hpp`](include/io/io.hpp)
+[`spb::io::reader`](include/spb/io/io.hpp) and [`spb::io::writer`](include/spb/io/io.hpp) are user specified *functions* for IO, more info at [`include/io/io.hpp`](include/spb/io/io.hpp)
 
 ## type mapping
 
