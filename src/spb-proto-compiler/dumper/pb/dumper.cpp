@@ -269,11 +269,6 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & me
     stream << "\t\tdefault:\n\t\t\treturn stream.skip( tag );\t\n}\n}\n\n";
 }
 
-void dump_cpp_is_empty( std::ostream & stream, const proto_message &, std::string_view full_name )
-{
-    stream << "auto is_empty( const " << full_name << " &  ) noexcept -> bool\n{\n\treturn false;\n}\n\n";
-}
-
 void dump_cpp_messages( std::ostream & stream, const proto_messages & messages, std::string_view parent );
 
 void dump_cpp_message( std::ostream & stream, const proto_message & message, std::string_view parent )
@@ -281,7 +276,6 @@ void dump_cpp_message( std::ostream & stream, const proto_message & message, std
     const auto full_name = std::string( parent ) + "::" + std::string( message.name );
 
     dump_cpp_open_namespace( stream, "detail" );
-    dump_cpp_is_empty( stream, message, full_name );
     dump_cpp_serialize_value( stream, message, full_name );
     dump_cpp_deserialize_value( stream, message, full_name );
     dump_cpp_close_namespace( stream, "detail" );

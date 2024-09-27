@@ -185,11 +185,6 @@ void dump_cpp_open_namespace( std::ostream & stream, std::string_view name )
     stream << "namespace " << name << "\n{\n";
 }
 
-void dump_cpp_is_empty( std::ostream & stream, const proto_enum &, std::string_view full_name )
-{
-    stream << "auto is_empty( const " << full_name << " & ) noexcept -> bool\n{\n\treturn false;\n}\n\n";
-}
-
 void dump_cpp_serialize_value( std::ostream & stream, const proto_oneof & oneof )
 {
     stream << "\t{\n\t\tconst auto index = value." << oneof.name << ".index( );\n";
@@ -430,7 +425,6 @@ void dump_cpp_enum( std::ostream & stream, const proto_enum & my_enum, std::stri
 {
     const auto full_name = std::string( parent ) + "::" + std::string( my_enum.name );
     dump_cpp_open_namespace( stream, "detail" );
-    dump_cpp_is_empty( stream, my_enum, full_name );
     dump_cpp_serialize_value( stream, my_enum, full_name );
     dump_cpp_deserialize_value( stream, my_enum, full_name );
     dump_cpp_close_namespace( stream, "detail" );
@@ -444,11 +438,6 @@ void dump_cpp_enums( std::ostream & stream, const proto_enums & enums, std::stri
     }
 }
 
-void dump_cpp_is_empty( std::ostream & stream, const proto_message &, std::string_view full_name )
-{
-    stream << "auto is_empty( const " << full_name << " &  ) noexcept -> bool\n{\n\treturn false;\n}\n\n";
-}
-
 void dump_cpp_messages( std::ostream & stream, const proto_messages & messages, std::string_view parent );
 
 void dump_cpp_message( std::ostream & stream, const proto_message & message, std::string_view parent )
@@ -458,7 +447,6 @@ void dump_cpp_message( std::ostream & stream, const proto_message & message, std
     dump_cpp_enums( stream, message.enums, full_name );
 
     dump_cpp_open_namespace( stream, "detail" );
-    dump_cpp_is_empty( stream, message, full_name );
     dump_cpp_serialize_value( stream, message, full_name );
     dump_cpp_deserialize_value( stream, message, full_name );
     dump_cpp_close_namespace( stream, "detail" );
