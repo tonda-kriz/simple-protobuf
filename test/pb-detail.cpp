@@ -196,6 +196,16 @@ TEST_CASE( "protobuf" )
             pb_test( Test::Scalar::RepBool{ .value = { true, false } }, "\x08\x01\x08\x00"sv );
             pb_test( Test::Scalar::RepBool{ .value = {} }, "" );
             CHECK_THROWS( spb::pb::deserialize< Test::Scalar::RepBool >( "\x08\x01\x08"sv ) );
+
+            SUBCASE( "packed" )
+            {
+                pb_test( Test::Scalar::RepPackBool{ }, "" );
+                pb_test( Test::Scalar::RepPackBool{ .value = { true } }, "\x0a\x01\x01" );
+                pb_test( Test::Scalar::RepPackBool{ .value = { true, false } }, "\x0a\x02\x01\x00"sv );
+                pb_test( Test::Scalar::RepPackBool{ .value = {} }, "" );
+                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::RepPackBool >( "\x0a\x02\x08"sv ) );
+                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::RepPackBool >( "\x0a\x01\x08"sv ) );
+            }
         }
     }
     SUBCASE( "int" )
@@ -233,6 +243,41 @@ TEST_CASE( "protobuf" )
                     pb_test( Test::Scalar::RepPackInt32{ .value = {} }, "" );
                     CHECK_THROWS( spb::pb::deserialize< Test::Scalar::RepPackInt32 >( "\x0a\x02\x42" ) );
                     CHECK_THROWS( spb::pb::deserialize< Test::Scalar::RepPackInt32 >( "\x0a\x02\x42\xff" ) );
+                }
+            }
+        }
+        SUBCASE( "varuint32" )
+        {
+            SUBCASE( "required" )
+            {
+                pb_test( Test::Scalar::ReqUint32{ .value = 0x42 }, "\x08\x42" );
+                pb_test( Test::Scalar::ReqUint32{ .value = 0xff }, "\x08\xff\x01" );
+                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqUint32 >( "\x08" ) );
+                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqUint32 >( "\x08\xff" ) );
+                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqUint32 >( "\x08\xff\xff\xff\xff\xff\x0f" ) );
+                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::ReqUint32 >( "\x08\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x01" ) );
+            }
+            SUBCASE( "optional" )
+            {
+                pb_test( Test::Scalar::OptUint32{ }, "" );
+                pb_test( Test::Scalar::OptUint32{ .value = 0x42 }, "\x08\x42" );
+                pb_test( Test::Scalar::OptUint32{ .value = 0xff }, "\x08\xff\x01" );
+            }
+            SUBCASE( "repeated" )
+            {
+                pb_test( Test::Scalar::RepUint32{ }, "" );
+                pb_test( Test::Scalar::RepUint32{ .value = { 0x42 } }, "\x08\x42" );
+                pb_test( Test::Scalar::RepUint32{ .value = { 0x42, 0x3 } }, "\x08\x42\x08\x03" );
+                pb_test( Test::Scalar::RepUint32{ .value = {} }, "" );
+
+                SUBCASE( "packed" )
+                {
+                    pb_test( Test::Scalar::RepPackUint32{ }, "" );
+                    pb_test( Test::Scalar::RepPackUint32{ .value = { 0x42 } }, "\x0a\x01\x42" );
+                    pb_test( Test::Scalar::RepPackUint32{ .value = { 0x42, 0x3 } }, "\x0a\x02\x42\x03" );
+                    pb_test( Test::Scalar::RepPackUint32{ .value = {} }, "" );
+                    CHECK_THROWS( spb::pb::deserialize< Test::Scalar::RepPackUint32 >( "\x0a\x02\x42" ) );
+                    CHECK_THROWS( spb::pb::deserialize< Test::Scalar::RepPackUint32 >( "\x0a\x02\x42\xff" ) );
                 }
             }
         }
@@ -848,6 +893,26 @@ TEST_CASE( "protobuf" )
                                                                  "555-4321\x10\x01"sv ) == Test::Scalar::Simple{ } );
             CHECK_NOTHROW( spb::pb::deserialize< Test::Scalar::Empty >( "\x0a\x08John Doe\x10\x7b\x1a\x11QXUeh@example.com\x22\x0c\x0A\x08"
                                                                         "555-4321\x10\x01"sv ) );
+        }
+        SUBCASE( "invalid" )
+        {
+            SUBCASE( "wire type" )
+            {
+                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::OptInt32 >( "\x0a\x05hello"sv ) );
+                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::OptInt32 >( "\x0d\x00\x00\x28\x42"sv ) );
+                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::OptString >( "\x0d\x00\x00\x28\x42"sv ) );
+                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\x0f\x05hello"sv ) );
+            }
+            SUBCASE( "stream" )
+            {
+                CHECK_THROWS( spb::pb::deserialize< Test::Recursive >( "\x0a\x05\x0a\x05hello"sv ) );
+                CHECK_THROWS( spb::pb::deserialize< Test::Recursive >( "\x0a\x08\x0a\x05hello"sv ) );
+            }
+            SUBCASE( "tag" )
+            {
+                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\xff\xff\xff\xff\xff\xff\xff\xff\x01"sv ) );
+                CHECK_THROWS( spb::pb::deserialize< Test::Scalar::Empty >( "\x07\x05hello"sv ) );
+            }
         }
     }
 }

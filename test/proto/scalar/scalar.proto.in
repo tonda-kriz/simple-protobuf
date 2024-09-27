@@ -194,6 +194,11 @@ message RepBool
     repeated bool value = 1;
 }
 
+message RepPackBool
+{
+    repeated bool value = 1 [ packed = true ];
+}
+
 message OptFloat
 {
     optional float value = 1;

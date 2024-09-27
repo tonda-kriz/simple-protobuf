@@ -8,6 +8,11 @@ message Name {
     string bkfvdzz = 2;
 }
 
+message Recursive
+{
+    optional Name value = 1;
+}
+
 message Variant {
     oneof oneof_field {
         uint32 var_int = 1;

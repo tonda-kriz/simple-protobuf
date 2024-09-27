@@ -203,6 +203,12 @@ TEST_CASE( "bool" )
     {
         gpb_compatibility< Test::Scalar::gpb::RepBool >( Test::Scalar::RepBool{ .value = { true } } );
         gpb_compatibility< Test::Scalar::gpb::RepBool >( Test::Scalar::RepBool{ .value = { true, false } } );
+
+        SUBCASE( "packed" )
+        {
+            gpb_compatibility< Test::Scalar::gpb::RepPackBool >( Test::Scalar::RepPackBool{ .value = { true } } );
+            gpb_compatibility< Test::Scalar::gpb::RepPackBool >( Test::Scalar::RepPackBool{ .value = { true, false } } );
+        }
     }
 }
 TEST_CASE( "int" )
