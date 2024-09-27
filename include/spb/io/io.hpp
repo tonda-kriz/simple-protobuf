@@ -14,7 +14,14 @@
 
 namespace spb::io
 {
-//- generic writer used to write exactly `size` number of bytes from `p_data`
+/**
+ * @brief generic writer used to write exactly `size` number of bytes from `p_data`
+ *
+ * @param[in] p_data input buffer
+ * @param[in] size input buffer size
+ * @throws any exception thrown will stop the `serialize` process and will be propagated to the
+ *         caller of `spb::pb::serialize` or `spb::json::serialize`
+ */
 using writer = spb::detail::function_ref< void( const void * p_data, size_t size ) >;
 
 //-
