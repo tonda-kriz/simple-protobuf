@@ -18,9 +18,9 @@
 #include <array>
 #include <cstddef>
 #include <iostream>
+#include <parser/char_stream.h>
 #include <ranges>
 #include <set>
-#include <spb/char_stream.h>
 #include <stdexcept>
 #include <string_view>
 #include <vector>

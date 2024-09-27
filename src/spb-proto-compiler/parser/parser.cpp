@@ -9,10 +9,9 @@
 \***************************************************************************/
 
 #include "parser.h"
-#include "../ast/ast.h"
-#include "../io/file.h"
 #include "ast/proto-file.h"
 #include <array>
+#include <ast/ast.h>
 #include <cctype>
 #include <cerrno>
 #include <charconv>
@@ -21,7 +20,8 @@
 #include <cstring>
 #include <exception>
 #include <filesystem>
-#include <spb/char_stream.h>
+#include <io/file.h>
+#include <parser/char_stream.h>
 #include <spb/from_chars.h>
 #include <stdexcept>
 #include <string_view>
