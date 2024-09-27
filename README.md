@@ -157,25 +157,38 @@ auto person2 = spb::pb::deserialize< PhoneBook::Person >( pb );
 
 ## API
 
-all API is generated (for both **json** and **protobuf**) in `person.pb.h` for every message and enum type.
+All generated messages (and enums) are using the following API [`include/spb/json.hpp`](include/spb/json.hpp) and [`include/spb/pb.hpp`](include/spb/pb.hpp)
 
 ```CPP
-//- return size in bytes of serialized value
-auto serialize_size( const PhoneBook::Person & value ) noexcept -> size_t;
-//- serialize value into std::string
-auto serialize( const PhoneBook::Person & value ) -> std::string;
-//- serialize value into buffer, return serialized size. 
-//- Warning: user is responsible for the buffer to be big enough.
-auto serialize( const PhoneBook::Person & value, void * buffer ) -> size_t;
+//- return size in bytes of serialized message
+auto serialize_size( const auto & message ) noexcept -> size_t;
 
-//- deserialize variable from data
-void deserialize( PhoneBook::Person & result, std::string_view data );
-//- return deserialized variable
-template<>
-auto deserialize< PhoneBook::Person >( std::string_view data ) -> PhoneBook::Person;
+//- serialize message via writer
+auto serialize( const auto & message, spb::io::writer on_write ) -> size_t;
+
+//- serialize message into string
+auto serialize( const auto & message ) -> std::string
+```
+
+```CPP
+//- deserialize message from reader
+void deserialize( auto & result, spb::io::reader on_read );
+
+//- deserialize message from data
+void deserialize( auto & message, std::string_view data )
+
+//- return deserialized message from reader
+template <>
+auto deserialize< Message >( spb::io::reader on_read ) -> Message
+
+//- return deserialized message from data
+template <>
+auto deserialize< Message >( std::string_view data ) -> Message
 ```
 
 API is prefixed with `spb::json::` for **json** and `spb::pb::` for **protobuf**.
+
+[`spb::io::reader`](include/io/io.hpp) and [`spb::io::writer`](include/io/io.hpp) are user specified *functions* for IO, more info at [`include/io/io.hpp`](include/io/io.hpp)
 
 ## type mapping
 
@@ -196,9 +209,7 @@ API is prefixed with `spb::json::` for **json** and `spb::pb::` for **protobuf**
 | `fixed64`  | `uint64_t`  | always encoded as 8 bytes in pb |
 | `sfixed64` | `int64_t`   | always encoded as 8 bytes in pb |
 | `string`   | `std::string` |             |
-| `string`   | `std::string_view` | with `[ ctype = STRING_PIECE ]` |
 | `bytes`    | `std::vector< std::byte >` | base64 encoded in json            |
-| `bytes`    | `std::span< const std::byte >` | with `[ ctype = STRING_PIECE ]` |
 
 | proto type modifier | CPP type modifier   | Notes       |
 |---------------------|-------------|-------------|
