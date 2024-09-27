@@ -335,11 +335,6 @@ static inline void serialize( ostream & stream, std::string_view key, const std:
     }
 }
 
-static inline auto is_top_level_object( std::string_view key ) -> bool
-{
-    return key == no_name;
-}
-
 static inline void serialize( ostream & stream, std::string_view key, const is_struct auto & value )
 {
 

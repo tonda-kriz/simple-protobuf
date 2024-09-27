@@ -143,6 +143,8 @@ TEST_CASE( "json" )
                 CHECK( spb::json::deserialize< bool >( "true" ) == true );
                 CHECK( spb::json::deserialize< bool >( "false" ) == false );
                 CHECK_THROWS( spb::json::deserialize< bool >( "hello" ) );
+                CHECK_THROWS( spb::json::deserialize< bool >( "true1" ) );
+                CHECK_THROWS( spb::json::deserialize< bool >( "true_" ) );
                 auto value = false;
                 CHECK_NOTHROW( spb::json::deserialize( value, "true" ) );
                 CHECK( value );

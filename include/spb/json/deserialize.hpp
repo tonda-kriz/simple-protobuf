@@ -179,7 +179,7 @@ public:
         auto token_view = reader.view( token.size( ) + 1 ).substr( 0, token.size( ) + 1 );
         if( token_view.size( ) == token.size( ) ||
             isspace( token_view.back( ) ) ||
-            !isalnum( token_view.back( ) ) )
+            ( !isalnum( token_view.back( ) ) && token_view.back( ) != '_' ) )
         {
             reader.skip( token.size( ) );
             update_current( true );

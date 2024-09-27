@@ -80,7 +80,7 @@ add_executable(spb-protoc-test parser.cpp
     )
 target_include_directories(spb-protoc-test PUBLIC ${CMAKE_SOURCE_DIR}/src/spb-proto-compiler)
 target_link_libraries(spb-protoc-test PUBLIC spb-proto)
-add_dependencies(spb-protoc-test pb-detail-test)
+add_dependencies(unit_tests spb-protoc-test)
 doctest_discover_tests(spb-protoc-test)
 
 
