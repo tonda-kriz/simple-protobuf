@@ -65,12 +65,21 @@ static inline auto serialize( const auto & message ) -> std::string
  * @brief deserialize json-string into variable
  *
  * @param json string with json
- * @param result deserialized json
+ * @param message deserialized json
  * @throws std::runtime_error on error
  */
-static inline void deserialize( auto & result, std::string_view json )
+static inline void deserialize( auto & message, std::string_view json )
 {
-    return detail::deserialize( result, json );
+    auto reader = [ ptr = json.data( ), end = json.data( ) + json.size( ) ]( void * data, size_t size ) mutable -> size_t
+    {
+        size_t bytes_left = end - ptr;
+
+        size = std::min( size, bytes_left );
+        memcpy( data, ptr, size );
+        ptr += size;
+        return size;
+    };
+    return detail::deserialize( message, reader );
 }
 
 /**
@@ -84,7 +93,9 @@ static inline void deserialize( auto & result, std::string_view json )
 template < typename Message >
 static inline auto deserialize( std::string_view json ) -> Message
 {
-    return detail::deserialize< Message >( json );
+    auto message = Message{ };
+    deserialize( message, json );
+    return message;
 }
 
 /**
@@ -110,7 +121,8 @@ static inline void deserialize( auto & result, spb::io::reader on_read )
 template < typename Message >
 static inline auto deserialize( spb::io::reader on_read ) -> Message
 {
-    return detail::deserialize< Message >( on_read );
+    auto message = Message{ };
+    return detail::deserialize( message, on_read );
 }
 
 }// namespace spb::json
