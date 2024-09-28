@@ -22,6 +22,7 @@
 #include <memory>
 #include <optional>
 #include <span>
+#include <spb/io/io.hpp>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -34,8 +35,8 @@ namespace spb::json::detail
 struct ostream
 {
 private:
-    char * begin;
-    char * end;
+    size_t bytes_written = 0;
+    spb::io::writer on_write;
 
 public:
     //- flag if put ',' before value
@@ -44,32 +45,31 @@ public:
     /**
      * @brief Construct a new ostream object
      *
-     * @param p_start if null, stream will skip all writes but will still count number of written chars
+     * @param writer if null, stream will skip all writes but will still count number of written chars
      */
-    ostream( char * p_start = nullptr ) noexcept
-        : begin( p_start )
-        , end( begin )
+    explicit ostream( spb::io::writer writer ) noexcept
+        : on_write( writer )
     {
     }
 
     void write( char c ) noexcept
     {
-        if( begin != nullptr )
+        if( on_write )
         {
-            *end = c;
+            on_write( &c, 1 );
         }
 
-        end += 1;
+        bytes_written += 1;
     }
 
     void write( std::string_view str ) noexcept
     {
-        if( begin != nullptr )
+        if( on_write )
         {
-            memcpy( end, str.data( ), str.size( ) );
+            on_write( str.data( ), str.size( ) );
         }
 
-        end += str.size( );
+        bytes_written += str.size( );
     }
 
     void write_escaped( std::string_view str ) noexcept
@@ -122,7 +122,7 @@ public:
 
     [[nodiscard]] auto size( ) const noexcept -> size_t
     {
-        return static_cast< size_t >( end - begin );
+        return bytes_written;
     }
 
 private:
@@ -136,32 +136,6 @@ private:
         return std::any_of( str.begin( ), str.end( ), is_escape );
     }
 };
-
-/**
- * @brief return json-string serialized size in bytes
- *
- * @param value to be serialized
- * @return serialized size in bytes
- */
-static inline auto serialize_size( const auto & value ) noexcept -> size_t;
-
-/**
- * @brief serialize value into json-string
- *
- * @param value to be serialized
- * @return serialized json
- */
-static inline auto serialize( const auto & value ) -> std::string;
-
-/**
- * @brief serialize value into buffer.
- *        Warning: user is responsible for the buffer to be big enough.
- *        Use `auto buffer_size = serialize_size( value );` to obtain the buffer size
- *
- * @param value to be serialized
- * @param buffer buffer with atleast serialize_size(value) bytes
- */
-static inline auto serialize( const auto & value, void * buffer ) -> size_t;
 
 using namespace std::literals;
 
@@ -361,20 +335,8 @@ static inline void serialize( ostream & stream, std::string_view key, const std:
     }
 }
 
-static inline auto is_top_level_object( std::string_view key ) -> bool
-{
-    return key == no_name;
-}
-
 static inline void serialize( ostream & stream, std::string_view key, const is_struct auto & value )
 {
-    //
-    //-  We wan't to serialize atleast "{}" even for empty top level object
-    //
-    if( !is_top_level_object( key ) && is_empty( value ) )
-    {
-        return;
-    }
 
     serialize_key( stream, key );
     stream.write( '{' );
@@ -404,27 +366,9 @@ static inline void serialize( ostream & stream, std::string_view key, const auto
     serialize( stream, value );
 }
 
-static inline auto serialize_size( const auto & value ) noexcept -> size_t
+static inline auto serialize( const auto & value, spb::io::writer on_write ) -> size_t
 {
-    auto stream = ostream( nullptr );
-
-    serialize( stream, no_name, value );
-    return stream.size( );
-}
-
-static inline auto serialize( const auto & value ) -> std::string
-{
-    auto result = std::string( serialize_size( value ), '\0' );
-    auto stream = ostream( result.data( ) );
-
-    serialize( stream, no_name, value );
-    return result;
-}
-
-static inline auto serialize( const auto & value, void * buffer ) -> size_t
-{
-    auto stream = ostream( static_cast< char * >( buffer ) );
-
+    auto stream = ostream( on_write );
     serialize( stream, no_name, value );
     return stream.size( );
 }

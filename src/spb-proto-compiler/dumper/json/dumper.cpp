@@ -14,7 +14,6 @@
 #include "ast/proto-file.h"
 #include "io/file.h"
 #include "parser/parser.h"
-#include "template-cpp.h"
 #include "template-h.h"
 #include <algorithm>
 #include <array>
@@ -171,15 +170,9 @@ void dump_prototypes( std::ostream & stream, const proto_file & file )
 void dump_cpp_includes( std::ostream & stream, std::string_view header_file_path )
 {
     stream << "#include \"" << header_file_path << "\"\n"
-           << "#include <spb/json/deserialize.hpp>\n"
-              "#include <spb/json/serialize.hpp>\n"
+           << "#include <spb/json.hpp>\n"
               "#include <system_error>\n"
               "#include <type_traits>\n\n";
-}
-
-void dump_cpp_prototypes( std::ostream & stream, std::string_view type )
-{
-    stream << replace( file_json_cpp_template, "$", type );
 }
 
 void dump_cpp_close_namespace( std::ostream & stream, std::string_view name )
@@ -190,11 +183,6 @@ void dump_cpp_close_namespace( std::ostream & stream, std::string_view name )
 void dump_cpp_open_namespace( std::ostream & stream, std::string_view name )
 {
     stream << "namespace " << name << "\n{\n";
-}
-
-void dump_cpp_is_empty( std::ostream & stream, const proto_enum &, std::string_view full_name )
-{
-    stream << "auto is_empty( const " << full_name << " & ) noexcept -> bool\n{\n\treturn false;\n}\n\n";
 }
 
 void dump_cpp_serialize_value( std::ostream & stream, const proto_oneof & oneof )
@@ -236,14 +224,19 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_enum & my_en
         return;
     }
 
+    size_t key_size_min = UINT32_MAX;
+    size_t key_size_max = 0;
+
     auto name_map = std::multimap< uint32_t, std::string_view >( );
     for( const auto & field : my_enum.fields )
     {
         name_map.emplace( spb::json::detail::djb2_hash( field.name ), field.name );
+        key_size_min = std::min( key_size_min, field.name.size( ) );
+        key_size_max = std::max( key_size_max, field.name.size( ) );
     }
 
     stream << "auto deserialize_value( detail::istream & stream, " << full_name << " & value ) -> bool\n{\n";
-    stream << "\tauto enum_value = stream.deserialize_string_or_int( );\n";
+    stream << "\tauto enum_value = stream.deserialize_string_or_int( " << key_size_min << ", " << key_size_max << " );\n";
     stream << "\tstd::visit( detail::overloaded{\n\t\t[&]( std::string_view enum_str )\n\t\t{\n";
     stream << "\t\t\tconst auto enum_hash = djb2_hash( enum_str );\n";
     stream << "\t\t\tswitch( enum_hash )\n\t\t\t{\n";
@@ -308,9 +301,6 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & me
         return;
     }
 
-    stream << "auto deserialize_value( detail::istream & stream, " << full_name << " & value ) -> bool\n{\n";
-    stream << "\tswitch( djb2_hash( stream.current_key() ) )\n\t{\n";
-
     //- json deserializer needs to accept both camelCase (parsed_name) and the original field name
     struct one_field
     {
@@ -319,9 +309,15 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & me
         size_t oneof_index = SIZE_MAX;
     };
 
+    size_t key_size_min = UINT32_MAX;
+    size_t key_size_max = 0;
+
     auto name_map = std::multimap< uint32_t, one_field >( );
     for( const auto & field : message.fields )
     {
+        key_size_min = std::min( key_size_min, field.name.size( ) );
+        key_size_max = std::max( key_size_max, field.name.size( ) );
+
         const auto field_name = json_field_name_or_camelCase( field );
         name_map.emplace( spb::json::detail::djb2_hash( field_name ),
                           one_field{
@@ -330,6 +326,9 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & me
                           } );
         if( field_name != field.name )
         {
+            key_size_min = std::min( key_size_min, field_name.size( ) );
+            key_size_max = std::max( key_size_max, field_name.size( ) );
+
             name_map.emplace( spb::json::detail::djb2_hash( field.name ),
                               one_field{
                                   .parsed_name = std::string( field.name ),
@@ -339,6 +338,9 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & me
     }
     for( const auto & field : message.maps )
     {
+        key_size_min = std::min( key_size_min, field.name.size( ) );
+        key_size_max = std::max( key_size_max, field.name.size( ) );
+
         const auto field_name = json_field_name_or_camelCase( field );
         name_map.emplace( spb::json::detail::djb2_hash( field_name ),
                           one_field{
@@ -347,6 +349,9 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & me
                           } );
         if( field_name != field.name )
         {
+            key_size_min = std::min( key_size_min, field_name.size( ) );
+            key_size_max = std::max( key_size_max, field_name.size( ) );
+
             name_map.emplace( spb::json::detail::djb2_hash( field.name ),
                               one_field{ .parsed_name = std::string( field.name ),
                                          .name        = field.name } );
@@ -356,6 +361,9 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & me
     {
         for( size_t i = 0; i < oneof.fields.size( ); ++i )
         {
+            key_size_min = std::min( key_size_min, oneof.fields[ i ].name.size( ) );
+            key_size_max = std::max( key_size_max, oneof.fields[ i ].name.size( ) );
+
             const auto field_name = json_field_name_or_camelCase( oneof.fields[ i ] );
             name_map.emplace( spb::json::detail::djb2_hash( field_name ),
                               one_field{
@@ -365,6 +373,9 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & me
                               } );
             if( field_name != oneof.fields[ i ].name )
             {
+                key_size_min = std::min( key_size_min, field_name.size( ) );
+                key_size_max = std::max( key_size_max, field_name.size( ) );
+
                 name_map.emplace( spb::json::detail::djb2_hash( oneof.fields[ i ].name ),
                                   one_field{
                                       .parsed_name = std::string( oneof.fields[ i ].name ),
@@ -374,6 +385,9 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & me
             }
         }
     }
+
+    stream << "auto deserialize_value( detail::istream & stream, " << full_name << " & value ) -> bool\n{\n";
+    stream << "\tswitch( djb2_hash( stream.deserialize_key( " << key_size_min << ", " << key_size_max << " ) ) )\n\t{\n";
 
     auto last_hash = name_map.begin( )->first + 1;
     auto put_or    = false;
@@ -410,9 +424,7 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & me
 void dump_cpp_enum( std::ostream & stream, const proto_enum & my_enum, std::string_view parent )
 {
     const auto full_name = std::string( parent ) + "::" + std::string( my_enum.name );
-    dump_cpp_prototypes( stream, full_name );
     dump_cpp_open_namespace( stream, "detail" );
-    dump_cpp_is_empty( stream, my_enum, full_name );
     dump_cpp_serialize_value( stream, my_enum, full_name );
     dump_cpp_deserialize_value( stream, my_enum, full_name );
     dump_cpp_close_namespace( stream, "detail" );
@@ -426,11 +438,6 @@ void dump_cpp_enums( std::ostream & stream, const proto_enums & enums, std::stri
     }
 }
 
-void dump_cpp_is_empty( std::ostream & stream, const proto_message &, std::string_view full_name )
-{
-    stream << "auto is_empty( const " << full_name << " &  ) noexcept -> bool\n{\n\treturn false;\n}\n\n";
-}
-
 void dump_cpp_messages( std::ostream & stream, const proto_messages & messages, std::string_view parent );
 
 void dump_cpp_message( std::ostream & stream, const proto_message & message, std::string_view parent )
@@ -439,9 +446,7 @@ void dump_cpp_message( std::ostream & stream, const proto_message & message, std
 
     dump_cpp_enums( stream, message.enums, full_name );
 
-    dump_cpp_prototypes( stream, full_name );
     dump_cpp_open_namespace( stream, "detail" );
-    dump_cpp_is_empty( stream, message, full_name );
     dump_cpp_serialize_value( stream, message, full_name );
     dump_cpp_deserialize_value( stream, message, full_name );
     dump_cpp_close_namespace( stream, "detail" );
@@ -468,7 +473,10 @@ void dump_cpp( std::ostream & stream, const proto_file & file )
 
 void dump_json_header( const proto_file & file, std::ostream & stream )
 {
+    dump_cpp_open_namespace( stream, "spb::json::detail" );
+    stream << "struct ostream;\nstruct istream;\n";
     dump_prototypes( stream, file );
+    dump_cpp_close_namespace( stream, "spb::json::detail" );
 }
 
 void dump_json_cpp( const proto_file & file, const std::filesystem::path & header_file, std::ostream & stream )

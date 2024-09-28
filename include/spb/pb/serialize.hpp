@@ -22,6 +22,7 @@
 #include <memory>
 #include <optional>
 #include <span>
+#include <spb/io/io.hpp>
 #include <stdexcept>
 #include <string_view>
 #include <sys/types.h>
@@ -33,34 +34,33 @@ namespace spb::pb::detail
 struct ostream
 {
 private:
-    std::byte * begin;
-    std::byte * end;
+    size_t bytes_written = 0;
+    spb::io::writer on_write;
 
 public:
     /**
      * @brief Construct a new ostream object
      *
-     * @param p_start if null, stream will skip all writes but will still count number of written bytes
+     * @param writer if null, stream will skip all writes but will still count number of written bytes
      */
-    ostream( void * p_start = nullptr ) noexcept
-        : begin( ( std::byte * ) p_start )
-        , end( begin )
+    explicit ostream( spb::io::writer writer = nullptr ) noexcept
+        : on_write( writer )
     {
     }
 
     void write( const void * p_data, size_t size ) noexcept
     {
-        if( begin != nullptr )
+        if( on_write )
         {
-            memcpy( end, p_data, size );
+            on_write( p_data, size );
         }
 
-        end += size;
+        bytes_written += size;
     }
 
     [[nodiscard]] auto size( ) const noexcept -> size_t
     {
-        return static_cast< size_t >( end - begin );
+        return bytes_written;
     }
 
     void serialize( uint32_t field_number, const auto & value );
@@ -70,8 +70,6 @@ public:
 };
 
 static inline auto serialize_size( const auto & value ) noexcept -> size_t;
-static inline auto serialize( const auto & value ) -> std::string;
-static inline auto serialize( const auto & value, void * buffer ) -> size_t;
 
 using namespace std::literals;
 
@@ -343,26 +341,16 @@ static inline void serialize( ostream & stream, uint32_t field_number, const is_
     serialize_varint( stream, int32_t( value ) );
 }
 
-static inline auto serialize_size( const auto & value ) noexcept -> size_t
+static inline auto serialize( const auto & value, spb::io::writer on_write ) -> size_t
 {
-    auto stream = ostream( nullptr );
-
+    auto stream = ostream( on_write );
     serialize( stream, value );
     return stream.size( );
 }
 
-static inline auto serialize( const auto & value ) -> std::string
+static inline auto serialize_size( const auto & value ) noexcept -> size_t
 {
-    auto result = std::string( serialize_size( value ), '\0' );
-    auto stream = ostream( result.data( ) );
-
-    serialize( stream, value );
-    return result;
-}
-
-static inline auto serialize( const auto & value, void * buffer ) -> size_t
-{
-    auto stream = ostream( buffer );
+    auto stream = ostream( nullptr );
 
     serialize( stream, value );
     return stream.size( );

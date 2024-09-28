@@ -14,7 +14,6 @@
 #include "ast/proto-file.h"
 #include "io/file.h"
 #include "parser/parser.h"
-#include "template-cpp.h"
 #include "template-h.h"
 #include <algorithm>
 #include <array>
@@ -83,14 +82,8 @@ void dump_prototypes( std::ostream & stream, const proto_file & file )
 void dump_cpp_includes( std::ostream & stream, std::string_view header_file_path )
 {
     stream << "#include \"" << header_file_path << "\"\n"
-           << "#include <spb/pb/deserialize.hpp>\n"
-              "#include <spb/pb/serialize.hpp>\n"
+           << "#include <spb/pb.hpp>\n"
               "#include <type_traits>\n\n";
-}
-
-void dump_cpp_prototypes( std::ostream & stream, std::string_view type )
-{
-    stream << replace( file_pb_cpp_template, "$", type );
 }
 
 void dump_cpp_close_namespace( std::ostream & stream, std::string_view name )
@@ -198,11 +191,6 @@ auto encoder_type( const proto_field & field ) -> std::string
     return "";
 }
 
-/*void dump_cpp_is_empty( std::ostream & stream, const proto_enum &, std::string_view full_name )
-{
-    stream << "auto is_empty( const " << full_name << " & ) noexcept -> bool\n{\n\treturn false;\n}\n\n";
-}*/
-
 void dump_cpp_serialize_value( std::ostream & stream, const proto_oneof & oneof )
 {
     stream << "\t{\n\t\tconst auto index = value." << oneof.name << ".index( );\n";
@@ -281,20 +269,13 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & me
     stream << "\t\tdefault:\n\t\t\treturn stream.skip( tag );\t\n}\n}\n\n";
 }
 
-void dump_cpp_is_empty( std::ostream & stream, const proto_message &, std::string_view full_name )
-{
-    stream << "auto is_empty( const " << full_name << " &  ) noexcept -> bool\n{\n\treturn false;\n}\n\n";
-}
-
 void dump_cpp_messages( std::ostream & stream, const proto_messages & messages, std::string_view parent );
 
 void dump_cpp_message( std::ostream & stream, const proto_message & message, std::string_view parent )
 {
     const auto full_name = std::string( parent ) + "::" + std::string( message.name );
 
-    dump_cpp_prototypes( stream, full_name );
     dump_cpp_open_namespace( stream, "detail" );
-    dump_cpp_is_empty( stream, message, full_name );
     dump_cpp_serialize_value( stream, message, full_name );
     dump_cpp_deserialize_value( stream, message, full_name );
     dump_cpp_close_namespace( stream, "detail" );
@@ -320,7 +301,10 @@ void dump_cpp( std::ostream & stream, const proto_file & file )
 
 void dump_pb_header( const proto_file & file, std::ostream & stream )
 {
+    dump_cpp_open_namespace( stream, "spb::pb::detail" );
+    stream << "struct ostream;\nstruct istream;\n";
     dump_prototypes( stream, file );
+    dump_cpp_close_namespace( stream, "spb::pb::detail" );
 }
 
 void dump_pb_cpp( const proto_file & file, const std::filesystem::path & header_file, std::ostream & stream )

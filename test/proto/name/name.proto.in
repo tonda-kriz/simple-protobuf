@@ -2,7 +2,15 @@ syntax = "proto3";
 
 package Test@PB_PACKAGE@;
 
-message Name { string name = 1; }
+//- message with collision values for djb2("name") == djb2("bkfvdzz")
+message Name { 
+    string name    = 1;
+    string bkfvdzz = 2;
+}
+
+message Recursive {
+    Name value = 1;
+}
 
 message Variant {
     oneof oneof_field {

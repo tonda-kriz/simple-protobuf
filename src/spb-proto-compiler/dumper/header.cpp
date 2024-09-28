@@ -132,12 +132,12 @@ auto contains_oneof( const proto_messages & messages ) -> bool
 
 void dump_std_includes( std::ostream & stream, const proto_file & file )
 {
-    stream << "#include <cstdint>\n#include <string>\n#include <string_view>\n";
+    stream << "#include <spb/json.hpp>\n#include <spb/pb.hpp>\n#include <cstdint>\n#include <string>\n";
 
     if( contains_label( file.package.messages, proto_field::Label::LABEL_REPEATED ) ||
         contains_type( file.package.messages, "bytes" ) )
     {
-        stream << "#include <vector>\n#include <cstddef>\n#include <span>\n";
+        stream << "#include <vector>\n#include <cstddef>\n";
     }
     if( contains_label( file.package.messages, proto_field::Label::LABEL_OPTIONAL ) )
     {
@@ -240,16 +240,6 @@ auto convert_to_ctype( std::string_view type, const proto_options & options = { 
     if( auto p_option_ctype = options.find( "ctype" ); p_option_ctype != options.end( ) )
     {
         ctype = p_option_ctype->second;
-    }
-
-    if( type == "string" )
-    {
-        return ( ctype == "STRING_PIECE" ) ? "std::string_view" : "std::string";
-    }
-
-    if( type == "bytes" )
-    {
-        return ( ctype == "STRING_PIECE" ) ? "std::span< const std::byte >" : "std::vector< std::byte >";
     }
 
     for( auto [ proto_type, c_type ] : type_map )
