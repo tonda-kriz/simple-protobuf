@@ -26,9 +26,9 @@ class buffered_reader
 private:
     io::reader on_read;
     std::array< char, SPB_READ_BUFFER_SIZE > buffer;
-    uint32_t begin_index = 0;
-    uint32_t end_index   = 0;
-    bool eof_reached     = false;
+    size_t begin_index = 0;
+    size_t end_index   = 0;
+    bool eof_reached   = false;
 
     auto bytes_in_buffer( ) const noexcept -> size_t
     {
