@@ -383,12 +383,12 @@ static inline void deserialize_number( istream & stream, auto & value )
         return;
     }
     auto view   = stream.view( UINT32_MAX );
-    auto result = spb_std_emu::from_chars( view.begin( ), view.end( ), value );
+    auto result = spb_std_emu::from_chars( view.data( ), view.data( ) + view.size( ), value );
     if( result.ec != std::errc{ } )
     {
         throw std::runtime_error( "invalid number" );
     }
-    stream.skip( result.ptr - view.begin( ) );
+    stream.skip( result.ptr - view.data( ) );
 }
 
 static inline void deserialize( istream & stream, bool & value )

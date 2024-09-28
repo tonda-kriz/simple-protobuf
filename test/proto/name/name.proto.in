@@ -4,12 +4,11 @@ package Test@PB_PACKAGE@;
 
 //- message with collision values for djb2("name") == djb2("bkfvdzz")
 message Name { 
-    string name    = 1;
-    string bkfvdzz = 2;
+    optional string name    = 1;
+    optional string bkfvdzz = 2;
 }
 
-message Recursive
-{
+message Recursive {
     optional Name value = 1;
 }
 
