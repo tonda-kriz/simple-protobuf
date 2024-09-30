@@ -13,6 +13,7 @@
 #include "ast/proto-common.h"
 #include "ast/proto-field.h"
 #include "ast/proto-file.h"
+#include "ast/proto-message.h"
 #include "io/file.h"
 #include "parser/parser.h"
 #include <algorithm>
@@ -33,6 +34,12 @@ void dump_comment( std::ostream & stream, const proto_comment & comment )
 {
     for( const auto & comm : comment.comments )
     {
+        if( comm.starts_with( "//[[" ) )
+        {
+            //- ignore options in comments
+            continue;
+        }
+
         stream << comm;
         if( comm.back( ) != '\n' )
         {
@@ -158,6 +165,34 @@ void dump_std_includes( std::ostream & stream, const proto_file & file )
     stream << "\n";
 }
 
+void dump_options_includes( std::ostream & stream, const proto_options & options )
+{
+    auto include = options.find( "include" );
+    if( include == options.end( ) )
+    {
+        return;
+    }
+    stream << "#include " << include->second << "\n";
+}
+
+void dump_message_includes( std::ostream & stream, const proto_message & message )
+{
+    for( const auto & field : message.fields )
+    {
+        dump_options_includes( stream, field.options );
+    }
+
+    for( const auto & m : message.messages )
+    {
+        dump_message_includes( stream, m );
+    }
+}
+
+void dump_user_includes( std::ostream & stream, const proto_file & file )
+{
+    dump_message_includes( stream, file.package );
+}
+
 void dump_imports( std::ostream & stream, const proto_file & file )
 {
     for( const auto & import : file.file_imports )
@@ -236,10 +271,9 @@ auto convert_to_ctype( std::string_view type, const proto_options & options = { 
         { "bytes", "std::vector< std::byte >" },
     } };
 
-    auto ctype = std::string_view( );
-    if( auto p_option_ctype = options.find( "ctype" ); p_option_ctype != options.end( ) )
+    if( auto p_option_type = options.find( "type" ); p_option_type != options.end( ) )
     {
-        ctype = p_option_ctype->second;
+        return std::string( p_option_type->second );
     }
 
     for( auto [ proto_type, c_type ] : type_map )
@@ -253,14 +287,20 @@ auto convert_to_ctype( std::string_view type, const proto_options & options = { 
     return replace( type, ".", "::" );
 }
 
-/*auto is_bytes( const proto_field & field ) -> bool
+auto has_type_override( const proto_options & options ) -> bool
 {
-    return field.type == "bytes";
-}*/
+    return options.find( "type" ) != options.end( );
+}
 
 void dump_field_type( std::ostream & stream, proto_field::Label label, const proto_field & field )
 {
     const auto ctype = convert_to_ctype( field.type, field.options );
+
+    if( has_type_override( field.options ) )
+    {
+        stream << ctype << " ";
+        return;
+    }
 
     switch( label )
     {
@@ -437,6 +477,7 @@ void dump_cpp_header( const proto_file & file, std::ostream & stream )
     dump_pragma( stream, file );
     dump_imports( stream, file );
     dump_std_includes( stream, file );
+    dump_user_includes( stream, file );
     dump_syntax( stream, file );
     dump_package_begin( stream, file );
     dump_enums( stream, file );

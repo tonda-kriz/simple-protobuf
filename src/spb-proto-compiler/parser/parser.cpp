@@ -432,22 +432,7 @@ void parse_top_level_package( spb::char_stream & stream, proto_base & package, p
     }
     return parse_full_ident( stream );
 }
-/*
-auto parse_option_message( spb::char_stream & stream )
-{
-    //- Message = { Field } ;
 
-}
-
-auto parse_option_message_value( spb::char_stream & stream, proto_options & options ) -> bool
-{
-    //- MessageValue = "{", Message, "}" | "<", Message, ">" ;
-    if( !stream.consume( '{' ) )
-    {
-        return false;
-    }
-}
-*/
 void parse_option_body( spb::char_stream & stream, proto_options & options )
 {
     const auto option_name = parse_option_name( stream );
@@ -455,7 +440,43 @@ void parse_option_body( spb::char_stream & stream, proto_options & options )
     options[ option_name ] = parse_constant( stream );
 }
 
-[[nodiscard]] auto parse_option( spb::char_stream & stream, proto_options & options, proto_comment && ) -> bool
+void parse_option_from_comment( proto_options & options, std::string_view comment )
+{
+    for( ;; )
+    {
+        auto start = comment.find( "[[" );
+        if( start == std::string_view::npos )
+        {
+            return;
+        }
+        auto end = comment.find( "]]", start + 2 );
+        if( end == std::string_view::npos )
+        {
+            return;
+        }
+        try
+        {
+            auto option = comment.substr( start + 2, end - start - 2 );
+            comment.remove_prefix( end + 2 );
+            auto stream = spb::char_stream( option );
+            parse_option_body( stream, options );
+        }
+        catch( const std::exception & e )
+        {
+            fprintf( stderr, "warning: %s\n", e.what( ) );
+        }
+    }
+}
+
+void parse_options_from_comments( proto_options & options, const proto_comment & comment )
+{
+    for( auto & comment : comment.comments )
+    {
+        parse_option_from_comment( options, comment );
+    }
+}
+
+[[nodiscard]] auto parse_option( spb::char_stream & stream, proto_options & options, proto_comment && comment ) -> bool
 {
     //- "option" optionName  "=" constant ";"
     if( !stream.consume( "option" ) )
@@ -463,8 +484,8 @@ void parse_option_body( spb::char_stream & stream, proto_options & options )
         return false;
     }
     parse_option_body( stream, options );
-    auto comment = proto_comment{ };
     consume_statement_end( stream, comment );
+    parse_options_from_comments( options, comment );
     return true;
 }
 
@@ -643,6 +664,7 @@ void parse_field( spb::char_stream & stream, proto_fields & fields, proto_commen
     new_field.options = parse_field_options( stream );
     new_field.comment = std::move( comment );
     consume_statement_end( stream, new_field.comment );
+    parse_options_from_comments( new_field.options, new_field.comment );
     fields.push_back( new_field );
 }
 
@@ -859,6 +881,7 @@ void parse_proto_file_content( proto_file & file )
     while( !stream.empty( ) )
     {
         auto comment = parse_comment( stream );
+        parse_options_from_comments( file.options, comment );
         parse_top_level( stream, file, std::move( comment ) );
     }
 }
