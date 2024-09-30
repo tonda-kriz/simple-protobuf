@@ -470,9 +470,9 @@ void parse_option_from_comment( proto_options & options, std::string_view commen
 
 void parse_options_from_comments( proto_options & options, const proto_comment & comment )
 {
-    for( auto & comment : comment.comments )
+    for( auto & c : comment.comments )
     {
-        parse_option_from_comment( options, comment );
+        parse_option_from_comment( options, c );
     }
 }
 
