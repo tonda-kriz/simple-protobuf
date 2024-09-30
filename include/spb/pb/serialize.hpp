@@ -20,12 +20,10 @@
 #include <cstring>
 #include <map>
 #include <memory>
-#include <optional>
 #include <spb/io/io.hpp>
 #include <stdexcept>
 #include <sys/types.h>
 #include <type_traits>
-#include <vector>
 
 namespace spb::pb::detail
 {
@@ -267,7 +265,7 @@ static inline void serialize( ostream & stream, uint32_t field_number, const spb
 {
     for( const auto & v : value )
     {
-        if constexpr( std::is_same_v< typename std::decay< decltype( value ) >::type::value_type, bool > )
+        if constexpr( std::is_same_v< typename std::decay_t< decltype( value ) >::value_type, bool > )
         {
             serialize_as< scalar_encoder::varint >( stream, field_number, bool( v ) );
         }
@@ -278,19 +276,18 @@ static inline void serialize( ostream & stream, uint32_t field_number, const spb
     }
 }
 
-template < typename T >
-static inline void serialize( ostream & stream, uint32_t field_number, const std::optional< T > & p_value )
+static inline void serialize( ostream & stream, uint32_t field_number, const spb::detail::optional_container auto & p_value )
 {
-    if( p_value )
+    if( p_value.has_value( ) )
     {
         return serialize( stream, field_number, *p_value );
     }
 }
 
-template < scalar_encoder encoder, typename T >
-static inline void serialize_as( ostream & stream, uint32_t field_number, const std::optional< T > & p_value )
+template < scalar_encoder encoder, spb::detail::optional_container C >
+static inline void serialize_as( ostream & stream, uint32_t field_number, const C & p_value )
 {
-    if( p_value )
+    if( p_value.has_value( ) )
     {
         return serialize_as< encoder >( stream, field_number, *p_value );
     }

@@ -19,11 +19,9 @@
 #include <limits>
 #include <map>
 #include <memory>
-#include <optional>
 #include <spb/io/io.hpp>
 #include <stdexcept>
 #include <type_traits>
-#include <vector>
 
 namespace spb::pb::detail
 {
@@ -243,11 +241,10 @@ static inline void deserialize_as( istream & stream, C & value, wire_type type )
 template < scalar_encoder encoder, typename keyT, typename valueT >
 static inline void deserialize_as( istream & stream, std::map< keyT, valueT > & value, wire_type type );
 
-template < typename T >
-static inline void deserialize( istream & stream, std::optional< T > & p_value, wire_type type );
+static inline void deserialize( istream & stream, spb::detail::optional_container auto & p_value, wire_type type );
 
-template < scalar_encoder encoder, typename T >
-static inline void deserialize_as( istream & stream, std::optional< T > & p_value, wire_type type );
+template < scalar_encoder encoder, spb::detail::optional_container C >
+static inline void deserialize_as( istream & stream, C & p_value, wire_type type );
 
 template < typename T >
 static inline void deserialize( istream & stream, std::unique_ptr< T > & value, wire_type type );
@@ -303,17 +300,16 @@ static inline void deserialize( istream & stream, spb::detail::is_enum auto & va
     value = T( read_varint< int_type >( stream ) );
 }
 
-template < typename T >
-static inline void deserialize( istream & stream, std::optional< T > & p_value, wire_type type )
+static inline void deserialize( istream & stream, spb::detail::optional_container auto & p_value, wire_type type )
 {
-    auto & value = p_value.emplace( T( ) );
+    auto & value = p_value.emplace( typename std::decay_t< decltype( p_value ) >::value_type( ) );
     deserialize( stream, value, type );
 }
 
-template < scalar_encoder encoder, typename T >
-static inline void deserialize_as( istream & stream, std::optional< T > & p_value, wire_type type )
+template < scalar_encoder encoder, spb::detail::optional_container C >
+static inline void deserialize_as( istream & stream, C & p_value, wire_type type )
 {
-    auto & value = p_value.emplace( T( ) );
+    auto & value = p_value.emplace( typename C::value_type( ) );
     deserialize_as< encoder >( stream, value, type );
 }
 

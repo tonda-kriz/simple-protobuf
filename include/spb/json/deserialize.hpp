@@ -22,7 +22,6 @@
 #include <cstring>
 #include <map>
 #include <memory>
-#include <optional>
 #include <spb/io/buffer-io.hpp>
 #include <spb/io/io.hpp>
 #include <stdexcept>
@@ -411,8 +410,7 @@ static inline void deserialize( istream & stream, auto & value );
 template < typename keyT, typename valueT >
 static inline void deserialize( istream & stream, std::map< keyT, valueT > & value );
 
-template < typename T >
-static inline void deserialize( istream & stream, std::optional< T > & value );
+static inline void deserialize( istream & stream, spb::detail::optional_container auto & value );
 
 template < spb::detail::repeated_container C >
 static inline void deserialize( istream & stream, C & value )
@@ -526,22 +524,21 @@ static inline void deserialize( istream & stream, std::map< keyT, valueT > & val
     }
 }
 
-template < typename T >
-static inline void deserialize( istream & stream, std::optional< T > & value )
+static inline void deserialize( istream & stream, spb::detail::optional_container auto & p_value )
 {
     if( stream.consume( "null"sv ) )
     {
-        value.reset( );
+        p_value.reset( );
         return;
     }
 
-    if( value.has_value( ) )
+    if( p_value.has_value( ) )
     {
-        deserialize( stream, *value );
+        deserialize( stream, *p_value );
     }
     else
     {
-        deserialize( stream, value.emplace( T{ } ) );
+        deserialize( stream, p_value.emplace( typename std::decay_t< decltype( p_value ) >::value_type( ) ) );
     }
 }
 

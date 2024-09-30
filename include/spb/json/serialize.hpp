@@ -21,7 +21,6 @@
 #include <cstring>
 #include <map>
 #include <memory>
-#include <optional>
 #include <span>
 #include <spb/io/io.hpp>
 #include <stdexcept>
@@ -238,7 +237,7 @@ static inline void serialize( ostream & stream, std::string_view key, const spb:
     stream.put_comma = false;
     for( const auto & v : value )
     {
-        if constexpr( std::is_same_v< typename std::decay< decltype( value ) >::type::value_type, bool > )
+        if constexpr( std::is_same_v< typename std::decay_t< decltype( value ) >::value_type, bool > )
         {
             serialize( stream, { }, bool( v ) );
         }
@@ -288,10 +287,9 @@ static inline void serialize( ostream & stream, std::string_view key, const std:
     stream.put_comma = true;
 }
 
-template < typename T >
-static inline void serialize( ostream & stream, std::string_view key, const std::optional< T > & p_value )
+static inline void serialize( ostream & stream, std::string_view key, const spb::detail::optional_container auto & p_value )
 {
-    if( p_value )
+    if( p_value.has_value( ) )
     {
         return serialize( stream, key, *p_value );
     }
