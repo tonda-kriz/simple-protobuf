@@ -10,6 +10,7 @@
 
 #include "parser.h"
 #include "ast/proto-file.h"
+#include "options.h"
 #include <array>
 #include <ast/ast.h>
 #include <cctype>
@@ -849,6 +850,24 @@ void parse_top_level( spb::char_stream & stream, proto_file & file, proto_commen
     }
 }
 
+void set_default_options( proto_file & file )
+{
+    file.options[ option_optional_type ]    = "std::optional<$>";
+    file.options[ option_optional_include ] = "<optional>";
+
+    file.options[ option_repeated_type ]    = "std::vector<$>";
+    file.options[ option_repeated_include ] = "<vector>";
+
+    file.options[ option_string_type ]    = "std::string";
+    file.options[ option_string_include ] = "<string>";
+
+    file.options[ option_bytes_type ]    = "std::vector<$>";
+    file.options[ option_bytes_include ] = "<vector>";
+
+    file.options[ option_pointer_type ]    = "std::unique_ptr<$>";
+    file.options[ option_pointer_include ] = "<memory>";
+}
+
 [[nodiscard]] auto parse_proto_file( const std::filesystem::path & file, parsed_files & already_parsed, std::span< const std::filesystem::path > import_paths ) -> proto_file
 {
     try
@@ -860,6 +879,7 @@ void parse_top_level( spb::char_stream & stream, proto_file & file, proto_commen
             .content = load_file( file_path ),
         };
 
+        set_default_options( result );
         parse_proto_file_content( result );
         already_parsed.insert( file.string( ) );
         result.file_imports = parse_all_imports( result.imports, already_parsed, import_paths );

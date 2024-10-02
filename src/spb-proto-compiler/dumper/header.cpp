@@ -13,8 +13,10 @@
 #include "ast/proto-common.h"
 #include "ast/proto-field.h"
 #include "ast/proto-file.h"
+#include "ast/proto-import.h"
 #include "ast/proto-message.h"
 #include "io/file.h"
+#include "parser/options.h"
 #include "parser/parser.h"
 #include <algorithm>
 #include <array>
@@ -29,6 +31,8 @@ using namespace std::literals;
 
 namespace
 {
+
+using cpp_includes = std::set< std::string >;
 
 void dump_comment( std::ostream & stream, const proto_comment & comment )
 {
@@ -48,23 +52,60 @@ void dump_comment( std::ostream & stream, const proto_comment & comment )
     }
 }
 
-auto contains_label( const proto_messages & messages, proto_field::Label label ) -> bool
+auto trim_include( std::string_view str ) -> std::string
 {
-    for( const auto & message : messages )
+    auto p_begin = str.data( );
+    auto p_end   = str.data( ) + str.size( );
+    while( p_begin < p_end &&
+           isspace( *p_begin ) )
     {
-        for( const auto & field : message.fields )
+        p_begin++;
+    }
+
+    while( p_begin < p_end &&
+           isspace( p_end[ -1 ] ) )
+    {
+        p_end--;
+    }
+
+    if( p_begin == p_end )
+    {
+        return { };
+    }
+
+    auto add_prefix  = *p_begin != '"' && *p_begin != '<';
+    auto add_postfix = p_end[ -1 ] != '"' && p_end[ -1 ] != '>';
+
+    if( add_prefix || add_postfix )
+    {
+        return '"' + std::string( str ) + '"';
+    }
+    return std::string( str );
+}
+
+void dump_includes( std::ostream & stream, const cpp_includes & includes )
+{
+    for( auto & include : includes )
+    {
+        auto file = trim_include( include );
+        if( !file.empty( ) )
         {
-            if( field.label == label )
-            {
-                return true;
-            }
-        }
-        if( contains_label( message.messages, label ) )
-        {
-            return true;
+            stream << "#include " << file << "\n";
         }
     }
-    return false;
+    stream << "\n";
+}
+
+auto contains_std_type_by_label( const proto_field & field, proto_field::Label label ) -> bool
+{
+    return field.label == label &&
+        field.options.find( option_field_type ) == field.options.end( );
+}
+
+auto contains_std_type( const proto_field & field, std::string_view type ) -> bool
+{
+    return field.type == type &&
+        field.options.find( option_field_type ) == field.options.end( );
 }
 
 auto contains_type( const proto_messages & messages, std::string_view type ) -> bool
@@ -137,67 +178,77 @@ auto contains_oneof( const proto_messages & messages ) -> bool
     return false;
 }
 
-void dump_std_includes( std::ostream & stream, const proto_file & file )
+void get_std_includes( cpp_includes & includes, const proto_file & file )
 {
-    stream << "#include <spb/json.hpp>\n#include <spb/pb.hpp>\n#include <cstdint>\n#include <string>\n";
+    includes.insert( "<spb/json.hpp>" );
+    includes.insert( "<spb/pb.hpp>" );
+    includes.insert( "<cstdint>" );
+    includes.insert( "<cstddef>" );
 
-    if( contains_label( file.package.messages, proto_field::Label::LABEL_REPEATED ) ||
-        contains_type( file.package.messages, "bytes" ) )
-    {
-        stream << "#include <vector>\n#include <cstddef>\n";
-    }
-    if( contains_label( file.package.messages, proto_field::Label::LABEL_OPTIONAL ) )
-    {
-        stream << "#include <optional>\n";
-    }
-    if( contains_label( file.package.messages, proto_field::Label::LABEL_PTR ) )
-    {
-        stream << "#include <memory>\n";
-    }
     if( contains_map( file.package.messages ) )
     {
-        stream << "#include <map>\n";
+        includes.insert( "<map>" );
     }
     if( contains_oneof( file.package.messages ) )
     {
-        stream << "#include <variant>\n";
+        includes.insert( "<variant>" );
     }
-    stream << "\n";
 }
 
-void dump_options_includes( std::ostream & stream, const proto_options & options )
+void get_include_from_options( cpp_includes & includes, const proto_options & options, std::string_view option_include )
 {
-    auto include = options.find( "include" );
+    auto include = options.find( option_include );
     if( include == options.end( ) )
     {
         return;
     }
-    stream << "#include " << include->second << "\n";
+
+    includes.insert( std::string( include->second ) );
 }
 
-void dump_message_includes( std::ostream & stream, const proto_message & message )
+void get_message_includes( cpp_includes & includes, const proto_message & message, const proto_file & file )
 {
     for( const auto & field : message.fields )
     {
-        dump_options_includes( stream, field.options );
+        get_include_from_options( includes, field.options, option_field_include );
+        if( contains_std_type_by_label( field, proto_field::Label::LABEL_OPTIONAL ) )
+        {
+            get_include_from_options( includes, file.options, option_optional_include );
+        }
+        if( contains_std_type_by_label( field, proto_field::Label::LABEL_REPEATED ) )
+        {
+            get_include_from_options( includes, file.options, option_repeated_include );
+        }
+        if( contains_std_type_by_label( field, proto_field::Label::LABEL_PTR ) )
+        {
+            get_include_from_options( includes, file.options, option_pointer_include );
+        }
+        if( contains_std_type( field, "string" ) )
+        {
+            get_include_from_options( includes, file.options, option_string_include );
+        }
+        if( contains_std_type( field, "bytes" ) )
+        {
+            get_include_from_options( includes, file.options, option_bytes_include );
+        }
     }
 
     for( const auto & m : message.messages )
     {
-        dump_message_includes( stream, m );
+        get_message_includes( includes, m, file );
     }
 }
 
-void dump_user_includes( std::ostream & stream, const proto_file & file )
+void get_user_includes( cpp_includes & includes, const proto_file & file )
 {
-    dump_message_includes( stream, file.package );
+    get_message_includes( includes, file.package, file );
 }
 
-void dump_imports( std::ostream & stream, const proto_file & file )
+void get_imports( cpp_includes & includes, const proto_file & file )
 {
     for( const auto & import : file.file_imports )
     {
-        stream << "#include \"" << cpp_file_name_from_proto( import.path, ".pb.h" ).string( ) << "\"\n";
+        includes.insert( "\"" + cpp_file_name_from_proto( import.path, ".pb.h" ).string( ) + "\"" );
     }
 }
 
@@ -218,11 +269,20 @@ void dump_enum_field( std::ostream & stream, const proto_base & field )
     stream << field.name << " = " << field.number << ",\n";
 }
 
-void dump_enum( std::ostream & stream, const proto_enum & my_enum )
+auto type_from_options( const proto_options & options, std::string_view option_type, std::string_view default_type )
+{
+    if( auto p_option_type = options.find( option_type ); p_option_type != options.end( ) )
+    {
+        return std::string( p_option_type->second );
+    }
+    return std::string( default_type );
+}
+
+void dump_enum( std::ostream & stream, const proto_enum & my_enum, const proto_file & file )
 {
     dump_comment( stream, my_enum.comment );
 
-    stream << "enum class " << my_enum.name << " : int32_t\n{\n";
+    stream << "enum class " << my_enum.name << " : " << type_from_options( file.options, option_enum_type, "int32_t" ) << "\n{\n";
     for( const auto & field : my_enum.fields )
     {
         dump_enum_field( stream, field );
@@ -254,7 +314,16 @@ auto type_literal_suffix( std::string_view type ) -> std::string_view
     return { };
 }
 
-auto convert_to_ctype( std::string_view type, const proto_options & options = { } ) -> std::string
+auto get_container_type( const proto_options & options, std::string_view option, std::string_view ctype, std::string_view default_type = { } ) -> std::string
+{
+    if( auto p_name = options.find( option ); p_name != options.end( ) )
+    {
+        return replace( p_name->second, "$", ctype );
+    }
+    return replace( default_type, "$", ctype );
+}
+
+auto convert_to_ctype( std::string_view type, const proto_options & options = { }, const proto_options & file_options = { } ) -> std::string
 {
     static constexpr auto type_map = std::array< std::pair< std::string_view, std::string_view >, 12 >{ {
         { "int32", "int32_t" },
@@ -267,13 +336,21 @@ auto convert_to_ctype( std::string_view type, const proto_options & options = { 
         { "fixed64", "uint64_t" },
         { "sfixed32", "int32_t" },
         { "sfixed64", "int64_t" },
-        { "string", "std::string" },
-        { "bytes", "std::vector< std::byte >" },
     } };
 
-    if( auto p_option_type = options.find( "type" ); p_option_type != options.end( ) )
+    if( auto p_option_type = options.find( option_field_type ); p_option_type != options.end( ) )
     {
         return std::string( p_option_type->second );
+    }
+
+    if( type == "string" )
+    {
+        return get_container_type( file_options, option_string_type, "char", "std::string" );
+    }
+
+    if( type == "bytes" )
+    {
+        return get_container_type( file_options, option_bytes_type, "std::byte", "std::vector<$>" );
     }
 
     for( auto [ proto_type, c_type ] : type_map )
@@ -287,36 +364,50 @@ auto convert_to_ctype( std::string_view type, const proto_options & options = { 
     return replace( type, ".", "::" );
 }
 
-auto has_type_override( const proto_options & options ) -> bool
+auto has_option_field_type( const proto_options & options ) -> bool
 {
-    return options.find( "type" ) != options.end( );
+    return options.find( option_field_type ) != options.end( );
 }
 
-void dump_field_type( std::ostream & stream, proto_field::Label label, const proto_field & field )
+auto is_bitfield( std::string_view type ) -> bool
 {
-    const auto ctype = convert_to_ctype( field.type, field.options );
+    return std::count( type.begin( ), type.end( ), ':' ) == 1;
+}
 
-    if( has_type_override( field.options ) )
+void dump_field_type_and_name( std::ostream & stream, const proto_field & field, const proto_file & file )
+{
+    const auto ctype = convert_to_ctype( field.type, field.options, file.options );
+
+    if( has_option_field_type( field.options ) )
     {
-        stream << ctype << " ";
+        if( is_bitfield( ctype ) )
+        {
+            stream << ctype.substr( 0, ctype.find( ':' ) ) << ' ' << field.name << ctype.substr( ctype.find( ':' ) );
+        }
+        else
+        {
+            stream << ctype << ' ' << field.name;
+        }
+
         return;
     }
 
-    switch( label )
+    switch( field.label )
     {
     case proto_field::Label::LABEL_NONE:
-        stream << ctype << " ";
+        stream << ctype;
         break;
     case proto_field::Label::LABEL_OPTIONAL:
-        stream << "std::optional< " << ctype << " > ";
+        stream << get_container_type( file.options, option_optional_type, ctype, "std::optional<$>" );
         break;
     case proto_field::Label::LABEL_REPEATED:
-        stream << "std::vector< " << ctype << " > ";
+        stream << get_container_type( file.options, option_repeated_type, ctype, "std::vector<$>" );
         break;
     case proto_field::Label::LABEL_PTR:
-        stream << "std::unique_ptr< " << ctype << " > ";
+        stream << get_container_type( file.options, option_pointer_type, ctype, "std::unique_ptr<$>" );
         break;
     }
+    stream << ' ' << field.name;
 }
 
 void dump_message_oneof( std::ostream & stream, const proto_oneof & oneof )
@@ -377,12 +468,11 @@ void dump_deprecated_attribute( std::ostream & stream, const proto_field & field
     }
 }
 
-void dump_message_field( std::ostream & stream, const proto_field & field )
+void dump_message_field( std::ostream & stream, const proto_field & field, const proto_message &, const proto_file & file )
 {
     dump_comment( stream, field.comment );
     dump_deprecated_attribute( stream, field );
-    dump_field_type( stream, field.label, field );
-    stream << field.name;
+    dump_field_type_and_name( stream, field, file );
     dump_default_value( stream, field );
     stream << ";\n";
 }
@@ -399,7 +489,7 @@ void dump_forwards( std::ostream & stream, const forwarded_declarations & forwar
     }
 }
 
-void dump_message( std::ostream & stream, const proto_message & message )
+void dump_message( std::ostream & stream, const proto_message & message, const proto_file & file )
 {
     dump_comment( stream, message.comment );
 
@@ -408,17 +498,17 @@ void dump_message( std::ostream & stream, const proto_message & message )
     dump_forwards( stream, message.forwards );
     for( const auto & sub_enum : message.enums )
     {
-        dump_enum( stream, sub_enum );
+        dump_enum( stream, sub_enum, file );
     }
 
     for( const auto & sub_message : message.messages )
     {
-        dump_message( stream, sub_message );
+        dump_message( stream, sub_message, file );
     }
 
     for( const auto & field : message.fields )
     {
-        dump_message_field( stream, field );
+        dump_message_field( stream, field, message, file );
     }
 
     for( const auto & map : message.maps )
@@ -442,7 +532,7 @@ void dump_messages( std::ostream & stream, const proto_file & file )
     dump_forwards( stream, file.package.forwards );
     for( const auto & message : file.package.messages )
     {
-        dump_message( stream, message );
+        dump_message( stream, message, file );
     }
 }
 
@@ -450,7 +540,7 @@ void dump_enums( std::ostream & stream, const proto_file & file )
 {
     for( const auto & my_enum : file.package.enums )
     {
-        dump_enum( stream, my_enum );
+        dump_enum( stream, my_enum, file );
     }
 }
 
@@ -474,10 +564,12 @@ void dump_package_end( std::ostream & stream, const proto_file & file )
 
 void dump_cpp_header( const proto_file & file, std::ostream & stream )
 {
+    auto includes = cpp_includes( );
     dump_pragma( stream, file );
-    dump_imports( stream, file );
-    dump_std_includes( stream, file );
-    dump_user_includes( stream, file );
+    get_imports( includes, file );
+    get_std_includes( includes, file );
+    get_user_includes( includes, file );
+    dump_includes( stream, includes );
     dump_syntax( stream, file );
     dump_package_begin( stream, file );
     dump_enums( stream, file );
