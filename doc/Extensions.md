@@ -2,13 +2,13 @@
 
 All extensions to the .proto files are compatible with gpb.
 
-## containers overrides
+## Container types
 
 The library lets you specify your own types for containers (`repeated`, `string`, `bytes`, `optionals`).
 
-### how to use
+### How to use
 
-Containers overrides are specified in the comments, so they are ignored by the gpb protoc.
+Containers types are specified in the comments, so they are ignored by the gpb protoc.
 Each container has 2 attributes `.type` (user type) and `.include` (include header for the type).
 If you need to develop your own container it needs to satisfy a [concept](../include/spb/concepts.h).
 
@@ -42,7 +42,7 @@ You can use those attributes ...
 
 you can combine them as you want, the more specific ones will be preferred.
 
-### example with [etl library](https://github.com/ETLCPP/etl)
+### Integration with [etl library](https://github.com/ETLCPP/etl)
 
 1. define a schema for you data in a `person.proto` file
 
@@ -83,7 +83,7 @@ message Person {
 spb_protobuf_generate(PROTO_SRCS PROTO_HDRS ${CMAKE_SOURCE_DIR}/proto/person.proto)
 ```
 
-You can combine different types for each container, there is no limit. In the following example the `string` is represented by `etl::string< 16 >`, `std::string` and `etl::string< 64 >`.
+You can combine different types for each container in a single .proto file. In the following example the `string` is represented by `etl::string< 16 >`, `std::string` and `etl::string< 64 >`.
 
 ```C++
 namespace PhoneBook::Etl
@@ -114,15 +114,15 @@ struct Person
 ```CPP
 #include <person.pb.h>
 
-auto john = PhoneBook::Person{
+auto john = PhoneBook::Etl::Person{
         .name  = "John Doe",
         .id    = 1234,
         .email = "jdoe@example.com",
     };
 
 auto json    = spb::json::serialize( john );
-auto person  = spb::json::deserialize< PhoneBook::Person >( json );
+auto person  = spb::json::deserialize< PhoneBook::Etl::Person >( json );
 auto pb      = spb::pb::serialize( john );
-auto person2 = spb::pb::deserialize< PhoneBook::Person >( pb );
+auto person2 = spb::pb::deserialize< PhoneBook::Etl::Person >( pb );
 //- john == person == person2
 ```
