@@ -10,11 +10,11 @@
 
 #pragma once
 
+#include "../concepts.h"
 #include <cstddef>
 #include <cstdint>
 #include <span>
 #include <string_view>
-#include <vector>
 
 namespace spb::json::detail
 {
@@ -61,7 +61,7 @@ static inline void base64_encode( ostream & output, std::span< const std::byte >
     }
 }
 
-[[nodiscard]] static inline auto base64_decode( std::vector< std::byte > & output, std::string_view input ) -> bool
+[[nodiscard]] static inline auto base64_decode( spb::detail::bytes_container auto & output, std::string_view input ) -> bool
 {
     static constexpr uint8_t decode_table[ 256 ] = {
         128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,

@@ -599,9 +599,15 @@ void parse_enum_field( spb::char_stream & stream, proto_enum & new_enum, proto_c
 {
     //- enumBody = "{" { option | enumField | emptyStatement | reserved } "}"
 
-    auto new_enum = proto_enum{ proto_base{ .name = parse_ident( stream ), .comment = std::move( enum_comment ) } };
-
+    auto new_enum = proto_enum{
+        proto_base{
+            .name    = parse_ident( stream ),
+            .comment = std::move( enum_comment ),
+        },
+    };
     consume_or_fail( stream, '{' );
+
+    parse_options_from_comments( new_enum.options, new_enum.comment );
 
     while( !stream.consume( '}' ) )
     {
