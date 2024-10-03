@@ -161,7 +161,7 @@ auto person2 = spb::pb::deserialize< PhoneBook::Person >( pb );
 All generated messages (and enums) are using the following API [`include/spb/json.hpp`](include/spb/json.hpp) and [`include/spb/pb.hpp`](include/spb/pb.hpp)
 
 ```CPP
-//- serialize message via writer (all other `serialize` are just wrappers around thi one)
+//- serialize message via writer (all other `serialize` are just wrappers around this one)
 auto serialize( const auto & message, spb::io::writer on_write ) -> size_t;
 
 //- return size in bytes of serialized message
@@ -216,7 +216,7 @@ API is prefixed with `spb::json::` for **json** and `spb::pb::` for **protobuf**
 | `optional`          | `std::unique_ptr` | if there is cyclic dependency between messages ( A -> B, B -> A )|
 | `repeated`          | `std::vector`  |             |
 
-See also [extensions](doc/Extensions.md) for advanced usage.
+See also [extensions](doc/Extensions.md) for user specific types and advanced usage.
 
 ## example
 
