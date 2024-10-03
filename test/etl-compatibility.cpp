@@ -1,6 +1,8 @@
 #include <cstdint>
+#include <etl-person.pb.h>
 #include <etl-scalar.pb.h>
 #include <google/protobuf/util/json_util.h>
+#include <gpb-etl-person.pb.h>
 #include <gpb-etl-scalar.pb.h>
 #include <optional>
 #include <span>
@@ -12,11 +14,13 @@
 
 namespace std
 {
-auto operator==( const string & lhs, const ::etl::vector< byte, 8 > & rhs ) noexcept -> bool
+template < size_t S >
+auto operator==( const string & lhs, const ::etl::vector< byte, S > & rhs ) noexcept -> bool
 {
     return lhs.size( ) == rhs.size( ) && ( memcmp( lhs.data( ), rhs.data( ), lhs.size( ) ) == 0 );
 }
-auto operator==( const ::etl::string< 16 > & lhs, const string & rhs ) noexcept -> bool
+template < size_t S >
+auto operator==( const ::etl::string< S > & lhs, const string & rhs ) noexcept -> bool
 {
     return lhs.size( ) == rhs.size( ) && ( memcmp( lhs.data( ), rhs.data( ), lhs.size( ) ) == 0 );
 }
@@ -43,6 +47,19 @@ auto operator==( const T & lhs, const T & rhs ) noexcept -> bool
 }
 }// namespace Etl::Scalar
 }// namespace Test
+
+namespace PhoneBook::Etl
+{
+auto operator==( const Person::PhoneNumber & lhs, const Person::PhoneNumber & rhs ) noexcept -> bool
+{
+    return lhs.number == rhs.number && lhs.type == rhs.type;
+}
+
+auto operator==( const Person & lhs, const Person & rhs ) noexcept -> bool
+{
+    return lhs.name == rhs.name && lhs.id == rhs.id && lhs.email == rhs.email && lhs.phones == rhs.phones;
+}
+}// namespace PhoneBook::Etl
 
 namespace
 {
@@ -451,5 +468,72 @@ TEST_CASE( "bytes" )
         gpb_compatibility< Test::Etl::Scalar::gpb::RepBytes >( Test::Etl::Scalar::RepBytes{ .value = { to_bytes( "hello" ) } } );
         gpb_compatibility< Test::Etl::Scalar::gpb::RepBytes >( Test::Etl::Scalar::RepBytes{ .value = { to_bytes( "\x00\x01\x02"sv ) } } );
         gpb_compatibility< Test::Etl::Scalar::gpb::RepBytes >( Test::Etl::Scalar::RepBytes{ .value = { to_bytes( "\x00\x01\x02\x03\x04"sv ) } } );
+    }
+}
+TEST_CASE( "person" )
+{
+    auto gpb = PhoneBook::Etl::gpb::Person( );
+    auto spb = PhoneBook::Etl::Person{
+        .name   = "John Doe",
+        .id     = 123,
+        .email  = "QXUeh@example.com",
+        .phones = {
+            PhoneBook::Etl::Person::PhoneNumber{
+                .number = "555-4321",
+                .type   = PhoneBook::Etl::Person::PhoneType::HOME,
+            },
+            PhoneBook::Etl::Person::PhoneNumber{
+                .number = "999-1234",
+                .type   = PhoneBook::Etl::Person::PhoneType::MOBILE,
+            },
+        }
+    };
+    SUBCASE( "gpb serialize/deserialize" )
+    {
+        auto spb_serialized = spb::pb::serialize( spb );
+
+        REQUIRE( gpb.ParseFromString( spb_serialized ) );
+        REQUIRE( gpb.name( ) == spb.name );
+        REQUIRE( gpb.id( ) == spb.id );
+        REQUIRE( gpb.email( ) == spb.email );
+        REQUIRE( gpb.phones_size( ) == 2 );
+        for( auto i = 0; i < gpb.phones_size( ); i++ )
+        {
+            REQUIRE( gpb.phones( i ).number( ) == spb.phones[ i ].number );
+            REQUIRE( int( gpb.phones( i ).type( ) ) == int( spb.phones[ i ].type.value( ) ) );
+        }
+
+        auto gpb_serialized = std::string( );
+        REQUIRE( gpb.SerializeToString( &gpb_serialized ) );
+        REQUIRE( spb::pb::deserialize< PhoneBook::Etl::Person >( gpb_serialized ) == spb );
+    }
+    SUBCASE( "json serialize/deserialize" )
+    {
+        auto spb_json = spb::json::serialize( spb );
+
+        auto parse_options = google::protobuf::util::JsonParseOptions{ };
+        ( void ) JsonStringToMessage( spb_json, &gpb, parse_options );
+
+        REQUIRE( gpb.name( ) == spb.name );
+        REQUIRE( gpb.id( ) == spb.id );
+        REQUIRE( gpb.email( ) == spb.email );
+        REQUIRE( gpb.phones_size( ) == 2 );
+        for( auto i = 0; i < gpb.phones_size( ); i++ )
+        {
+            REQUIRE( gpb.phones( i ).number( ) == spb.phones[ i ].number );
+            REQUIRE( int( gpb.phones( i ).type( ) ) == int( spb.phones[ i ].type.value( ) ) );
+        }
+
+        auto json_string                         = std::string( );
+        auto print_options                       = google::protobuf::util::JsonPrintOptions( );
+        print_options.preserve_proto_field_names = true;
+
+        ( void ) MessageToJsonString( gpb, &json_string, print_options );
+        REQUIRE( spb::json::deserialize< PhoneBook::Etl::Person >( json_string ) == spb );
+
+        print_options.preserve_proto_field_names = false;
+        json_string.clear( );
+        ( void ) MessageToJsonString( gpb, &json_string, print_options );
+        REQUIRE( spb::json::deserialize< PhoneBook::Etl::Person >( json_string ) == spb );
     }
 }

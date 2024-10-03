@@ -8,6 +8,7 @@ configure_file(proto/person/person.proto.in ${CMAKE_CURRENT_BINARY_DIR}/person.p
 configure_file(proto/name/name.proto.in ${CMAKE_CURRENT_BINARY_DIR}/name.proto @ONLY)
 if(SPB_PROTO_BUILD_ETL_TESTS)
   configure_file(proto/etl/etl-scalar.proto.in ${CMAKE_CURRENT_BINARY_DIR}/etl-scalar.proto @ONLY)
+  configure_file(proto/etl/etl-person.proto.in ${CMAKE_CURRENT_BINARY_DIR}/etl-person.proto @ONLY)
 endif()
 
 SET(PB_PACKAGE ".gpb")
@@ -16,6 +17,7 @@ configure_file(proto/person/person.proto.in ${CMAKE_CURRENT_BINARY_DIR}/gpb-pers
 configure_file(proto/name/name.proto.in ${CMAKE_CURRENT_BINARY_DIR}/gpb-name.proto @ONLY)
 if(SPB_PROTO_BUILD_ETL_TESTS)
   configure_file(proto/etl/etl-scalar.proto.in ${CMAKE_CURRENT_BINARY_DIR}/gpb-etl-scalar.proto @ONLY)
+  configure_file(proto/etl/etl-person.proto.in ${CMAKE_CURRENT_BINARY_DIR}/gpb-etl-person.proto @ONLY)
 endif()
 
 spb_protobuf_generate(SPB_PROTO_SRCS SPB_PROTO_HDRS ${protos})
@@ -24,6 +26,7 @@ spb_protobuf_generate(SPB_PROTO_NAME_SRC SPB_PROTO_NAME_HDR ${CMAKE_CURRENT_BINA
 spb_protobuf_generate(SPB_PROTO_SCALAR_SRC SPB_PROTO_SCALAR_HDR ${CMAKE_CURRENT_BINARY_DIR}/scalar.proto)
 if(SPB_PROTO_BUILD_ETL_TESTS)
   spb_protobuf_generate(SPB_PROTO_ETL_SCALAR_SRC SPB_PROTO_ETL_HDR ${CMAKE_CURRENT_BINARY_DIR}/etl-scalar.proto)
+  spb_protobuf_generate(SPB_PROTO_ETL_PERSON_SRC SPB_PROTO_ETL_HDR ${CMAKE_CURRENT_BINARY_DIR}/etl-person.proto)
 endif()
 
 add_custom_target(unit_tests)
@@ -65,8 +68,9 @@ if(SPB_PROTO_BUILD_COMPATIBILITY_TESTS)
   PROTOBUF_GENERATE_CPP(PROTO_NAME_SRC PROTO_NAME_HDR ${CMAKE_CURRENT_BINARY_DIR}/gpb-name.proto)
   PROTOBUF_GENERATE_CPP(PROTO_SCALAR_SRC PROTO_SCALAR_HDR ${CMAKE_CURRENT_BINARY_DIR}/gpb-scalar.proto)
   PROTOBUF_GENERATE_CPP(PROTO_ETL_SCALAR_SRC PROTO_ETL_HDR ${CMAKE_CURRENT_BINARY_DIR}/gpb-etl-scalar.proto)
+  PROTOBUF_GENERATE_CPP(PROTO_ETL_PERSON_SRC PROTO_ETL_HDR ${CMAKE_CURRENT_BINARY_DIR}/gpb-etl-person.proto)
 
-  add_library(gpb-proto STATIC ${PROTO_ETL_SCALAR_SRC} ${PROTO_SCALAR_SRC} ${PROTO_PERSON_SRC} ${PROTO_NAME_SRC})
+  add_library(gpb-proto STATIC ${PROTO_ETL_PERSON_SRC} ${PROTO_ETL_SCALAR_SRC} ${PROTO_SCALAR_SRC} ${PROTO_PERSON_SRC} ${PROTO_NAME_SRC})
 
   if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND EXISTS "/etc/arch-release")
     # On Arch Linux protobuf::libprotobuf needs to be linked with absl
@@ -93,7 +97,7 @@ if(SPB_PROTO_BUILD_COMPATIBILITY_TESTS)
 
     FetchContent_MakeAvailable(etl)
 
-    add_executable(etl-compatibility-test etl-compatibility.cpp ${SPB_PROTO_ETL_SCALAR_SRC})
+    add_executable(etl-compatibility-test etl-compatibility.cpp ${SPB_PROTO_ETL_SCALAR_SRC} ${SPB_PROTO_ETL_PERSON_SRC})
     spb_enable_warnings(etl-compatibility-test)
     target_link_libraries(etl-compatibility-test PUBLIC spb-proto gpb-proto etl::etl)
     add_dependencies(unit_tests etl-compatibility-test)
