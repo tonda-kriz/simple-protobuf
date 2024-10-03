@@ -5,7 +5,7 @@
 ![Mac-build](https://github.com/tonda-kriz/simple-protobuf/actions/workflows/ci-macos-tests.yml/badge.svg)
 
 **simple data struct** serialization library for C++. With this library you can serialize and deserialize C++ structs directly to [JSON](https://json.org) or [protobuf](https://github.com/protocolbuffers/protobuf).
-When used together with [etl library](https://github.com/ETLCPP/etl) it doesn't need to allocate any memory, so its suitable for embedded environments (see [extensions](doc/Extensions.md)).
+When used together with [etl library](https://github.com/ETLCPP/etl) it doesn't need to allocate any memory, so its suitable for embedded environments (see [extensions](doc/extensions.md)).
 
 ```CPP
 namespace PhoneBook
@@ -216,7 +216,7 @@ API is prefixed with `spb::json::` for **json** and `spb::pb::` for **protobuf**
 | `optional`          | `std::unique_ptr` | if there is cyclic dependency between messages ( A -> B, B -> A )|
 | `repeated`          | `std::vector`  |             |
 
-See also [extensions](doc/Extensions.md) for user specific types and advanced usage.
+See also [extensions](doc/extensions.md) for user specific types and advanced usage.
 
 ## example
 
