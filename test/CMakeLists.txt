@@ -6,16 +6,19 @@ SET(PB_PACKAGE "")
 configure_file(proto/scalar/scalar.proto.in ${CMAKE_CURRENT_BINARY_DIR}/scalar.proto @ONLY)
 configure_file(proto/person/person.proto.in ${CMAKE_CURRENT_BINARY_DIR}/person.proto @ONLY)
 configure_file(proto/name/name.proto.in ${CMAKE_CURRENT_BINARY_DIR}/name.proto @ONLY)
+configure_file(proto/etl/etl.proto.in ${CMAKE_CURRENT_BINARY_DIR}/etl.proto @ONLY)
 
 SET(PB_PACKAGE ".gpb")
 configure_file(proto/scalar/scalar.proto.in ${CMAKE_CURRENT_BINARY_DIR}/gpb-scalar.proto @ONLY)
 configure_file(proto/person/person.proto.in ${CMAKE_CURRENT_BINARY_DIR}/gpb-person.proto @ONLY)
 configure_file(proto/name/name.proto.in ${CMAKE_CURRENT_BINARY_DIR}/gpb-name.proto @ONLY)
+configure_file(proto/etl/etl.proto.in ${CMAKE_CURRENT_BINARY_DIR}/gpb-etl.proto @ONLY)
 
 spb_protobuf_generate(SPB_PROTO_SRCS SPB_PROTO_HDRS ${protos})
 spb_protobuf_generate(SPB_PROTO_PERSON_SRC SPB_PROTO_PERSON_HDR ${CMAKE_CURRENT_BINARY_DIR}/person.proto)
 spb_protobuf_generate(SPB_PROTO_NAME_SRC SPB_PROTO_NAME_HDR ${CMAKE_CURRENT_BINARY_DIR}/name.proto)
 spb_protobuf_generate(SPB_PROTO_SCALAR_SRC SPB_PROTO_SCALAR_HDR ${CMAKE_CURRENT_BINARY_DIR}/scalar.proto)
+spb_protobuf_generate(SPB_PROTO_ETL_SRC SPB_PROTO_ETL_HDR ${CMAKE_CURRENT_BINARY_DIR}/etl.proto)
 
 add_custom_target(unit_tests)
 
@@ -55,8 +58,9 @@ if(SPB_PROTO_BUILD_COMPATIBILITY_TESTS)
   PROTOBUF_GENERATE_CPP(PROTO_PERSON_SRC PROTO_PERSON_HDR ${CMAKE_CURRENT_BINARY_DIR}/gpb-person.proto)
   PROTOBUF_GENERATE_CPP(PROTO_NAME_SRC PROTO_NAME_HDR ${CMAKE_CURRENT_BINARY_DIR}/gpb-name.proto)
   PROTOBUF_GENERATE_CPP(PROTO_SCALAR_SRC PROTO_SCALAR_HDR ${CMAKE_CURRENT_BINARY_DIR}/gpb-scalar.proto)
+  PROTOBUF_GENERATE_CPP(PROTO_ETL_SRC PROTO_ETL_HDR ${CMAKE_CURRENT_BINARY_DIR}/gpb-etl.proto)
 
-  add_library(gpb-proto STATIC ${PROTO_SCALAR_SRC} ${PROTO_PERSON_SRC} ${PROTO_NAME_SRC})
+  add_library(gpb-proto STATIC ${PROTO_ETL_SRC} ${PROTO_SCALAR_SRC} ${PROTO_PERSON_SRC} ${PROTO_NAME_SRC})
 
   if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND EXISTS "/etc/arch-release")
     # On Arch Linux protobuf::libprotobuf needs to be linked with absl
@@ -71,6 +75,24 @@ if(SPB_PROTO_BUILD_COMPATIBILITY_TESTS)
   target_link_libraries(gpb-compatibility-test PUBLIC spb-proto gpb-proto)
   add_dependencies(unit_tests gpb-compatibility-test)
   doctest_discover_tests(gpb-compatibility-test)
+
+  if(SPB_PROTO_BUILD_ETL_TESTS)
+    Include(FetchContent)
+
+    FetchContent_Declare(
+      etl
+      GIT_REPOSITORY https://github.com/ETLCPP/etl
+      GIT_TAG        "20.39.4"
+    )
+
+    FetchContent_MakeAvailable(etl)
+
+    add_executable(etl-compatibility-test etl-compatibility.cpp ${SPB_PROTO_ETL_SRC})
+    spb_enable_warnings(etl-compatibility-test)
+    target_link_libraries(etl-compatibility-test PUBLIC spb-proto gpb-proto etl::etl)
+    add_dependencies(unit_tests etl-compatibility-test)
+    doctest_discover_tests(etl-compatibility-test)  
+  endif()
 endif()
 
 add_executable(spb-protoc-test parser.cpp 
