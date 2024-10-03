@@ -108,42 +108,6 @@ auto contains_std_type( const proto_field & field, std::string_view type ) -> bo
         field.options.find( option_field_type ) == field.options.end( );
 }
 
-auto contains_type( const proto_messages & messages, std::string_view type ) -> bool
-{
-    for( const auto & message : messages )
-    {
-        for( const auto & field : message.fields )
-        {
-            if( field.type == type )
-            {
-                return true;
-            }
-        }
-        for( const auto & map : message.maps )
-        {
-            if( map.value_type == type )
-            {
-                return true;
-            }
-        }
-        for( const auto & oneof : message.oneofs )
-        {
-            for( const auto & field : oneof.fields )
-            {
-                if( field.type == type )
-                {
-                    return true;
-                }
-            }
-        }
-        if( contains_type( message.messages, type ) )
-        {
-            return true;
-        }
-    }
-    return false;
-}
-
 auto contains_map( const proto_messages & messages ) -> bool
 {
     for( const auto & message : messages )
