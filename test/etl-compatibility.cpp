@@ -1,7 +1,7 @@
 #include <cstdint>
-#include <etl.pb.h>
+#include <etl-scalar.pb.h>
 #include <google/protobuf/util/json_util.h>
-#include <gpb-etl.pb.h>
+#include <gpb-etl-scalar.pb.h>
 #include <optional>
 #include <span>
 #include <string>
