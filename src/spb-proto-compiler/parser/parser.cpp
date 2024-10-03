@@ -320,7 +320,9 @@ void consume_statement_end( spb::char_stream & stream, proto_comment & comment )
     skip_white_space_until_new_line( stream );
     if( stream.current_char( ) == '/' )
     {
-        auto line_comment = parse_comment( stream );
+        stream.consume_current_char( false );
+        auto line_comment = proto_comment( );
+        parse_comment_line( stream, line_comment );
         comment.comments.insert( comment.comments.end( ), line_comment.comments.begin( ), line_comment.comments.end( ) );
     }
     stream.consume_space( );
@@ -779,6 +781,8 @@ void parse_message_body( spb::char_stream & stream, proto_messages & messages, p
     } };
 
     consume_or_fail( stream, '{' );
+    parse_options_from_comments( new_message.options, new_message.comment );
+
     while( !stream.consume( '}' ) )
     {
         auto comment = parse_comment( stream );
