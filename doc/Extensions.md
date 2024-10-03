@@ -1,12 +1,12 @@
-# Extensions
+# extensions
 
 All extensions to the .proto files are compatible with gpb.
 
-## Container types
+## container types
 
 The library lets you specify your own types for containers (`repeated`, `string`, `bytes`, `optionals`).
 
-### How to use
+### how to use
 
 Containers types are specified in the comments, so they are ignored by the gpb protoc.
 Each container has 2 attributes `.type` (user type) and `.include` (include header for the type).
@@ -42,7 +42,7 @@ You can use those attributes ...
 
 you can combine them as you want, the more specific ones will be preferred.
 
-### Integration with [etl library](https://github.com/ETLCPP/etl)
+### integration with [etl library](https://github.com/ETLCPP/etl)
 
 1. define a schema for you data in a `person.proto` file
 

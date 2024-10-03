@@ -1,4 +1,4 @@
-name: Linux build + tests
+name: Linux build + gpb compatibility tests
 
 on:
   push:
