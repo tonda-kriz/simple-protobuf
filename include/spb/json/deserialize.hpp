@@ -29,7 +29,6 @@
 #include <string_view>
 #include <type_traits>
 #include <variant>
-#include <vector>
 
 namespace spb::json::detail
 {
@@ -459,12 +458,7 @@ static inline void deserialize( istream & stream, spb::detail::bytes_container a
         return;
     }
 
-    auto encoded = std::string( );
-    deserialize( stream, encoded );
-    if( !base64_decode( value, encoded ) )
-    {
-        throw std::runtime_error( "invalid base64" );
-    }
+    base64_decode_string( value, stream );
 }
 
 template < typename T >
