@@ -31,12 +31,10 @@ auto base64_encode( std::string_view value ) -> std::string
 
 auto generate_random_bytes( size_t size ) -> std::string
 {
-    srand( size );
-
     auto result = std::string( size, 0 );
     for( auto & c : result )
     {
-        c = rand( );
+        c = ( char ) rand( );
     }
     return result;
 }
@@ -101,6 +99,8 @@ TEST_CASE( "base64" )
     {
         for( auto i = 8U; i < SPB_READ_BUFFER_SIZE * 10; i++ )
         {
+            srand( i );
+
             auto bytes   = generate_random_bytes( i );
             auto encoded = base64_encode( bytes );
             CHECK( ( encoded.size( ) % 4 ) == 0 );
