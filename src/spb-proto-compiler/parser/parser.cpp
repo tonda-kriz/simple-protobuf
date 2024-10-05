@@ -10,6 +10,7 @@
 
 #include "parser.h"
 #include "ast/proto-file.h"
+#include "options.h"
 #include <array>
 #include <ast/ast.h>
 #include <cctype>
@@ -319,7 +320,9 @@ void consume_statement_end( spb::char_stream & stream, proto_comment & comment )
     skip_white_space_until_new_line( stream );
     if( stream.current_char( ) == '/' )
     {
-        auto line_comment = parse_comment( stream );
+        stream.consume_current_char( false );
+        auto line_comment = proto_comment( );
+        parse_comment_line( stream, line_comment );
         comment.comments.insert( comment.comments.end( ), line_comment.comments.begin( ), line_comment.comments.end( ) );
     }
     stream.consume_space( );
@@ -432,22 +435,7 @@ void parse_top_level_package( spb::char_stream & stream, proto_base & package, p
     }
     return parse_full_ident( stream );
 }
-/*
-auto parse_option_message( spb::char_stream & stream )
-{
-    //- Message = { Field } ;
 
-}
-
-auto parse_option_message_value( spb::char_stream & stream, proto_options & options ) -> bool
-{
-    //- MessageValue = "{", Message, "}" | "<", Message, ">" ;
-    if( !stream.consume( '{' ) )
-    {
-        return false;
-    }
-}
-*/
 void parse_option_body( spb::char_stream & stream, proto_options & options )
 {
     const auto option_name = parse_option_name( stream );
@@ -455,7 +443,43 @@ void parse_option_body( spb::char_stream & stream, proto_options & options )
     options[ option_name ] = parse_constant( stream );
 }
 
-[[nodiscard]] auto parse_option( spb::char_stream & stream, proto_options & options, proto_comment && ) -> bool
+void parse_option_from_comment( proto_options & options, std::string_view comment )
+{
+    for( ;; )
+    {
+        auto start = comment.find( "[[" );
+        if( start == std::string_view::npos )
+        {
+            return;
+        }
+        auto end = comment.find( "]]", start + 2 );
+        if( end == std::string_view::npos )
+        {
+            return;
+        }
+        try
+        {
+            auto option = comment.substr( start + 2, end - start - 2 );
+            comment.remove_prefix( end + 2 );
+            auto stream = spb::char_stream( option );
+            parse_option_body( stream, options );
+        }
+        catch( const std::exception & e )
+        {
+            fprintf( stderr, "warning: %s\n", e.what( ) );
+        }
+    }
+}
+
+void parse_options_from_comments( proto_options & options, const proto_comment & comment )
+{
+    for( auto & c : comment.comments )
+    {
+        parse_option_from_comment( options, c );
+    }
+}
+
+[[nodiscard]] auto parse_option( spb::char_stream & stream, proto_options & options, proto_comment && comment ) -> bool
 {
     //- "option" optionName  "=" constant ";"
     if( !stream.consume( "option" ) )
@@ -463,8 +487,8 @@ void parse_option_body( spb::char_stream & stream, proto_options & options )
         return false;
     }
     parse_option_body( stream, options );
-    auto comment = proto_comment{ };
     consume_statement_end( stream, comment );
+    parse_options_from_comments( options, comment );
     return true;
 }
 
@@ -577,9 +601,15 @@ void parse_enum_field( spb::char_stream & stream, proto_enum & new_enum, proto_c
 {
     //- enumBody = "{" { option | enumField | emptyStatement | reserved } "}"
 
-    auto new_enum = proto_enum{ proto_base{ .name = parse_ident( stream ), .comment = std::move( enum_comment ) } };
-
+    auto new_enum = proto_enum{
+        proto_base{
+            .name    = parse_ident( stream ),
+            .comment = std::move( enum_comment ),
+        },
+    };
     consume_or_fail( stream, '{' );
+
+    parse_options_from_comments( new_enum.options, new_enum.comment );
 
     while( !stream.consume( '}' ) )
     {
@@ -643,6 +673,7 @@ void parse_field( spb::char_stream & stream, proto_fields & fields, proto_commen
     new_field.options = parse_field_options( stream );
     new_field.comment = std::move( comment );
     consume_statement_end( stream, new_field.comment );
+    parse_options_from_comments( new_field.options, new_field.comment );
     fields.push_back( new_field );
 }
 
@@ -750,6 +781,8 @@ void parse_message_body( spb::char_stream & stream, proto_messages & messages, p
     } };
 
     consume_or_fail( stream, '{' );
+    parse_options_from_comments( new_message.options, new_message.comment );
+
     while( !stream.consume( '}' ) )
     {
         auto comment = parse_comment( stream );
@@ -827,6 +860,24 @@ void parse_top_level( spb::char_stream & stream, proto_file & file, proto_commen
     }
 }
 
+void set_default_options( proto_file & file )
+{
+    file.options[ option_optional_type ]    = "std::optional<$>";
+    file.options[ option_optional_include ] = "<optional>";
+
+    file.options[ option_repeated_type ]    = "std::vector<$>";
+    file.options[ option_repeated_include ] = "<vector>";
+
+    file.options[ option_string_type ]    = "std::string";
+    file.options[ option_string_include ] = "<string>";
+
+    file.options[ option_bytes_type ]    = "std::vector<$>";
+    file.options[ option_bytes_include ] = "<vector>";
+
+    file.options[ option_pointer_type ]    = "std::unique_ptr<$>";
+    file.options[ option_pointer_include ] = "<memory>";
+}
+
 [[nodiscard]] auto parse_proto_file( const std::filesystem::path & file, parsed_files & already_parsed, std::span< const std::filesystem::path > import_paths ) -> proto_file
 {
     try
@@ -838,6 +889,7 @@ void parse_top_level( spb::char_stream & stream, proto_file & file, proto_commen
             .content = load_file( file_path ),
         };
 
+        set_default_options( result );
         parse_proto_file_content( result );
         already_parsed.insert( file.string( ) );
         result.file_imports = parse_all_imports( result.imports, already_parsed, import_paths );
@@ -859,6 +911,7 @@ void parse_proto_file_content( proto_file & file )
     while( !stream.empty( ) )
     {
         auto comment = parse_comment( stream );
+        parse_options_from_comments( file.options, comment );
         parse_top_level( stream, file, std::move( comment ) );
     }
 }

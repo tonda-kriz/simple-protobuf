@@ -5,6 +5,7 @@
 ![Mac-build](https://github.com/tonda-kriz/simple-protobuf/actions/workflows/ci-macos-tests.yml/badge.svg)
 
 **simple data struct** serialization library for C++. With this library you can serialize and deserialize C++ structs directly to [JSON](https://json.org) or [protobuf](https://github.com/protocolbuffers/protobuf).
+When used together with [etl library](https://github.com/ETLCPP/etl) it doesn't need to allocate any memory, so its suitable for embedded environments (see [extensions](doc/extensions.md)).
 
 ```CPP
 namespace PhoneBook
@@ -17,7 +18,7 @@ struct Person {
     };
     struct PhoneNumber {
         // phone number is always required
-        std::string number;
+        etl::string<16> number;
         std::optional< PhoneType > type;
     };
     std::optional< std::string > name;
@@ -61,7 +62,7 @@ spb is an alternative implementation of [protobuf](https://github.com/protocolbu
 
 * C++ compiler (at least C++20)
 * cmake
-* std library
+* *(optional) std library*
 * *(optional) clang-format for code formatting*
 
 ### cheat sheet
@@ -160,18 +161,18 @@ auto person2 = spb::pb::deserialize< PhoneBook::Person >( pb );
 All generated messages (and enums) are using the following API [`include/spb/json.hpp`](include/spb/json.hpp) and [`include/spb/pb.hpp`](include/spb/pb.hpp)
 
 ```CPP
+//- serialize message via writer (all other `serialize` are just wrappers around this one)
+auto serialize( const auto & message, spb::io::writer on_write ) -> size_t;
+
 //- return size in bytes of serialized message
 auto serialize_size( const auto & message ) noexcept -> size_t;
-
-//- serialize message via writer
-auto serialize( const auto & message, spb::io::writer on_write ) -> size_t;
 
 //- serialize message into string
 auto serialize( const auto & message ) -> std::string
 ```
 
 ```CPP
-//- deserialize message from reader
+//- deserialize message from reader (all other `deserialize` are just wrappers around this one)
 void deserialize( auto & result, spb::io::reader on_read );
 
 //- deserialize message from data
@@ -214,6 +215,8 @@ API is prefixed with `spb::json::` for **json** and `spb::pb::` for **protobuf**
 | `optional`          | `std::optional` |             |
 | `optional`          | `std::unique_ptr` | if there is cyclic dependency between messages ( A -> B, B -> A )|
 | `repeated`          | `std::vector`  |             |
+
+See also [extensions](doc/extensions.md) for user specific types and advanced usage.
 
 ## example
 

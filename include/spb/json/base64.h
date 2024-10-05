@@ -10,11 +10,11 @@
 
 #pragma once
 
+#include "../concepts.h"
 #include <cstddef>
 #include <cstdint>
 #include <span>
-#include <string_view>
-#include <vector>
+#include <stdexcept>
 
 namespace spb::json::detail
 {
@@ -61,7 +61,8 @@ static inline void base64_encode( ostream & output, std::span< const std::byte >
     }
 }
 
-[[nodiscard]] static inline auto base64_decode( std::vector< std::byte > & output, std::string_view input ) -> bool
+template < typename istream >
+static inline void base64_decode_string( spb::detail::bytes_container auto & output, istream & stream )
 {
     static constexpr uint8_t decode_table[ 256 ] = {
         128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
@@ -80,54 +81,102 @@ static inline void base64_encode( ostream & output, std::span< const std::byte >
         128, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51
     };*/
 
-    if( input.empty( ) )
+    output.clear( );
+    if( stream.current_char( ) != '"' ) [[unlikely]]
     {
-        return true;
+        throw std::runtime_error( "expecting '\"'" );
     }
 
-    if( input.size( ) % 4 != 0 )
+    stream.consume_current_char( false );
+    if( stream.consume( '"' ) )
     {
-        return false;
+        return;
     }
-
     auto mask = uint8_t( 0 );
 
-    output.resize( ( input.size( ) + 3 ) / 4 * 3 );
-
-    auto * p_out       = output.data( );
-    const auto * p_in  = reinterpret_cast< const uint8_t * >( input.data( ) );
-    const auto * p_end = p_in + input.size( ) - 4;//- exclude the last 4 chars (possible padding)
-
-    while( p_in < p_end )
+    for( ;; )
     {
-        uint8_t v0 = decode_table[ *p_in++ ];
-        uint8_t v1 = decode_table[ *p_in++ ];
-        uint8_t v2 = decode_table[ *p_in++ ];
-        uint8_t v3 = decode_table[ *p_in++ ];
-        mask |= ( v0 | v1 | v2 | v3 );
+        auto view      = stream.view( UINT32_MAX );
+        auto length    = view.find( '"' );
+        auto end_found = length < view.npos;
+        if( ( end_found && length % 4 != 0 ) ||
+            view.size( ) <= 4 ) [[unlikely]]
+        {
+            throw std::runtime_error( "invalid base64" );
+        }
+        length = std::min( length, view.size( ) );
 
-        *p_out++ = std::byte( ( v0 << 2 ) | ( v1 >> 4 ) );
-        *p_out++ = std::byte( ( v1 << 4 ) | ( v2 >> 2 ) );
-        *p_out++ = std::byte( ( v2 << 6 ) | ( v3 ) );
+        //- align to 4 bytes
+        auto aligned_length = length & ~3;
+        if( aligned_length > 4 ) [[likely]]
+        {
+            auto out_length = ( ( aligned_length - 4 ) / 4 ) * 3;
+            view            = view.substr( 0, aligned_length );
+
+            output.resize( output.size( ) + out_length );
+
+            auto * p_out       = output.data( ) + output.size( ) - out_length;
+            const auto * p_in  = reinterpret_cast< const uint8_t * >( view.data( ) );
+            const auto * p_end = p_in + aligned_length - 4;//- exclude the last 4 chars (possible padding)
+
+            while( p_in < p_end ) [[likely]]
+            {
+                uint8_t v0 = decode_table[ *p_in++ ];
+                uint8_t v1 = decode_table[ *p_in++ ];
+                uint8_t v2 = decode_table[ *p_in++ ];
+                uint8_t v3 = decode_table[ *p_in++ ];
+                mask |= ( v0 | v1 | v2 | v3 );
+
+                *p_out++ = std::byte( ( v0 << 2 ) | ( v1 >> 4 ) );
+                *p_out++ = std::byte( ( v1 << 4 ) | ( v2 >> 2 ) );
+                *p_out++ = std::byte( ( v2 << 6 ) | ( v3 ) );
+            }
+            auto consumed_bytes = p_in - reinterpret_cast< const uint8_t * >( view.data( ) );
+            view.remove_prefix( consumed_bytes );
+            stream.skip( consumed_bytes );
+        }
+
+        if( end_found )
+        {
+            //- handle padding
+            const auto * p_in = reinterpret_cast< const uint8_t * >( view.data( ) );
+
+            uint8_t v0 = decode_table[ *p_in++ ];
+            uint8_t v1 = decode_table[ *p_in++ ];
+            auto i1    = *p_in++;
+            uint8_t v2 = i1 == '=' ? 0 : decode_table[ i1 ];
+            auto i2    = *p_in++;
+            uint8_t v3 = i2 == '=' ? 0 : decode_table[ i2 ];
+            mask |= ( v0 | v1 | v2 | v3 );
+            mask |= ( ( i1 == '=' ) & ( i2 != '=' ) ) ? 128 : 0;
+            if( mask & 128 ) [[unlikely]]
+            {
+                throw std::runtime_error( "invalid base64" );
+            }
+
+            auto padding_size   = ( i1 == '=' ? 1 : 0 ) + ( i2 == '=' ? 1 : 0 );
+            auto consumed_bytes = 3 - padding_size;
+            //- +1 is for "
+            stream.skip( 5 );
+            output.resize( output.size( ) + consumed_bytes );
+            auto * p_out = output.data( ) + output.size( ) - consumed_bytes;
+            if( padding_size == 0 )
+            {
+                *p_out++ = std::byte( ( v0 << 2 ) | ( v1 >> 4 ) );
+                *p_out++ = std::byte( ( v1 << 4 ) | ( v2 >> 2 ) );
+                *p_out++ = std::byte( ( v2 << 6 ) | ( v3 ) );
+            }
+            else if( padding_size == 1 )
+            {
+                *p_out++ = std::byte( ( v0 << 2 ) | ( v1 >> 4 ) );
+                *p_out++ = std::byte( ( v1 << 4 ) | ( v2 >> 2 ) );
+            }
+            else if( padding_size == 2 )
+            {
+                *p_out++ = std::byte( ( v0 << 2 ) | ( v1 >> 4 ) );
+            }
+            return;
+        }
     }
-
-    //- handle padding
-    uint8_t v0 = decode_table[ *p_in++ ];
-    uint8_t v1 = decode_table[ *p_in++ ];
-    auto i1    = *p_in++;
-    uint8_t v2 = i1 == '=' ? 0 : decode_table[ i1 ];
-    auto i2    = *p_in++;
-    uint8_t v3 = i2 == '=' ? 0 : decode_table[ i2 ];
-    mask |= ( v0 | v1 | v2 | v3 );
-
-    mask |= ( i1 == '=' && i2 != '=' ) ? 128 : 0;
-    auto padding_size = ( i1 == '=' ? 1 : 0 ) + ( i2 == '=' ? 1 : 0 );
-
-    *p_out++ = std::byte( ( v0 << 2 ) | ( v1 >> 4 ) );
-    *p_out++ = std::byte( ( v1 << 4 ) | ( v2 >> 2 ) );
-    *p_out++ = std::byte( ( v2 << 6 ) | ( v3 ) );
-
-    output.resize( size_t( p_out - output.data( ) - padding_size ) );
-    return ( mask & 128 ) == 0;
 }
 }// namespace spb::json::detail

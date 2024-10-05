@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include "../concepts.h"
 #include "../from_chars.h"
 #include "base64.h"
 #include <algorithm>
@@ -21,7 +22,6 @@
 #include <cstring>
 #include <map>
 #include <memory>
-#include <optional>
 #include <spb/io/buffer-io.hpp>
 #include <spb/io/io.hpp>
 #include <stdexcept>
@@ -29,7 +29,6 @@
 #include <string_view>
 #include <type_traits>
 #include <variant>
-#include <vector>
 
 namespace spb::json::detail
 {
@@ -217,10 +216,7 @@ static inline auto is_escape( char c ) -> bool
     return escape_chars.find( c ) != std::string_view::npos;
 }
 
-template < class T >
-concept is_enum_only = ::std::is_enum_v< T >;
-
-static inline void deserialize( istream & stream, is_enum_only auto & value )
+static inline void deserialize( istream & stream, spb::detail::is_enum auto & value )
 {
     deserialize_value( stream, value );
 }
@@ -287,19 +283,20 @@ static inline auto deserialize_string_view( istream & stream, size_t min_size, s
     return { };
 }
 
-static inline void unescape( std::string & str )
+static inline void unescape( spb::detail::string_container auto & str )
 {
-    if( str.find( escape ) == std::string::npos )
+    auto value = std::string_view( str.data( ), str.size( ) );
+
+    if( value.find( escape ) == std::string_view::npos )
     {
         return;
     }
 
-    auto value  = std::string_view( str );
-    auto result = std::string( );
-    result.reserve( value.size( ) );
+    auto result = str;
+    result.clear( );
     for( auto esc_offset = value.find( escape ); esc_offset != std::string_view::npos; esc_offset = value.find( escape ) )
     {
-        result += value.substr( 0, esc_offset );
+        result.append( value.data( ), esc_offset );
         value.remove_prefix( esc_offset + 1 );
         switch( value.front( ) )
         {
@@ -332,11 +329,11 @@ static inline void unescape( std::string & str )
         }
         value.remove_prefix( 1 );
     }
-    result += value;
-    str.swap( result );
+    result.append( value.data( ), value.size( ) );
+    str = result;
 }
 
-static inline void deserialize( istream & stream, std::string & value )
+static inline void deserialize( istream & stream, spb::detail::string_container auto & value )
 {
     if( stream.current_char( ) != '"' )
     {
@@ -355,7 +352,7 @@ static inline void deserialize( istream & stream, std::string & value )
         {
             if( current == '"' && last != escape )
             {
-                value.append( view.substr( 0, length ) );
+                value.append( view.data( ), length );
                 unescape( value );
                 stream.skip( length + 1 );
                 return;
@@ -368,7 +365,7 @@ static inline void deserialize( istream & stream, std::string & value )
     }
 }
 
-static inline void deserialize_number( istream & stream, auto & value )
+static inline void deserialize( istream & stream, spb::detail::is_int_or_float auto & value )
 {
     if( stream.current_char( ) == '"' ) [[unlikely]]
     {
@@ -407,26 +404,15 @@ static inline void deserialize( istream & stream, bool & value )
     }
 }
 
-static inline void deserialize( istream & stream, std::floating_point auto & value )
-{
-    deserialize_number( stream, value );
-}
-
-static inline void deserialize( istream & stream, std::integral auto & value )
-{
-    deserialize_number( stream, value );
-}
-
 static inline void deserialize( istream & stream, auto & value );
 
 template < typename keyT, typename valueT >
 static inline void deserialize( istream & stream, std::map< keyT, valueT > & value );
 
-template < typename T >
-static inline void deserialize( istream & stream, std::optional< T > & value );
+static inline void deserialize( istream & stream, spb::detail::optional_container auto & value );
 
-template < typename T >
-static inline void deserialize( istream & stream, std::vector< T > & value )
+template < spb::detail::repeated_container C >
+static inline void deserialize( istream & stream, C & value )
 {
     if( stream.consume( "null"sv ) )
     {
@@ -434,46 +420,45 @@ static inline void deserialize( istream & stream, std::vector< T > & value )
         return;
     }
 
-    if constexpr( std::is_same_v< T, std::byte > )
+    if( !stream.consume( '[' ) )
     {
-        auto encoded = std::string( );
-        deserialize( stream, encoded );
-        if( !base64_decode( value, encoded ) )
-        {
-            throw std::runtime_error( "invalid base64" );
-        }
+        throw std::runtime_error( "expecting '['" );
     }
-    else
+
+    if( stream.consume( ']' ) )
     {
-        if( !stream.consume( '[' ) )
-        {
-            throw std::runtime_error( "expecting '['" );
-        }
-
-        if( stream.consume( ']' ) )
-        {
-            return;
-        }
-
-        do
-        {
-            if constexpr( std::is_same_v< T, bool > )
-            {
-                auto b = false;
-                deserialize( stream, b );
-                value.push_back( b );
-            }
-            else
-            {
-                deserialize( stream, value.emplace_back( ) );
-            }
-        } while( stream.consume( ',' ) );
-
-        if( !stream.consume( ']' ) )
-        {
-            throw std::runtime_error( "expecting ']'" );
-        }
+        return;
     }
+
+    do
+    {
+        if constexpr( std::is_same_v< typename C::value_type, bool > )
+        {
+            auto b = false;
+            deserialize( stream, b );
+            value.push_back( b );
+        }
+        else
+        {
+            deserialize( stream, value.emplace_back( ) );
+        }
+    } while( stream.consume( ',' ) );
+
+    if( !stream.consume( ']' ) )
+    {
+        throw std::runtime_error( "expecting ']'" );
+    }
+}
+
+static inline void deserialize( istream & stream, spb::detail::bytes_container auto & value )
+{
+    if( stream.consume( "null"sv ) )
+    {
+        value.clear( );
+        return;
+    }
+
+    base64_decode_string( value, stream );
 }
 
 template < typename T >
@@ -533,22 +518,21 @@ static inline void deserialize( istream & stream, std::map< keyT, valueT > & val
     }
 }
 
-template < typename T >
-static inline void deserialize( istream & stream, std::optional< T > & value )
+static inline void deserialize( istream & stream, spb::detail::optional_container auto & p_value )
 {
     if( stream.consume( "null"sv ) )
     {
-        value.reset( );
+        p_value.reset( );
         return;
     }
 
-    if( value.has_value( ) )
+    if( p_value.has_value( ) )
     {
-        deserialize( stream, *value );
+        deserialize( stream, *p_value );
     }
     else
     {
-        deserialize( stream, value.emplace( T{ } ) );
+        deserialize( stream, p_value.emplace( typename std::decay_t< decltype( p_value ) >::value_type( ) ) );
     }
 }
 

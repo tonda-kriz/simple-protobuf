@@ -13,11 +13,16 @@
 #include "ast/proto-common.h"
 #include "ast/proto-field.h"
 #include "ast/proto-file.h"
+#include "ast/proto-import.h"
+#include "ast/proto-message.h"
 #include "io/file.h"
+#include "parser/options.h"
 #include "parser/parser.h"
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <functional>
+#include <initializer_list>
 #include <spb/json/deserialize.hpp>
 #include <sstream>
 #include <stdexcept>
@@ -29,10 +34,18 @@ using namespace std::literals;
 namespace
 {
 
+using cpp_includes = std::set< std::string >;
+
 void dump_comment( std::ostream & stream, const proto_comment & comment )
 {
     for( const auto & comm : comment.comments )
     {
+        if( comm.starts_with( "//[[" ) )
+        {
+            //- ignore options in comments
+            continue;
+        }
+
         stream << comm;
         if( comm.back( ) != '\n' )
         {
@@ -41,59 +54,48 @@ void dump_comment( std::ostream & stream, const proto_comment & comment )
     }
 }
 
-auto contains_label( const proto_messages & messages, proto_field::Label label ) -> bool
+auto trim_include( std::string_view str ) -> std::string
 {
-    for( const auto & message : messages )
+    auto p_begin = str.data( );
+    auto p_end   = str.data( ) + str.size( );
+    while( p_begin < p_end &&
+           isspace( *p_begin ) )
     {
-        for( const auto & field : message.fields )
-        {
-            if( field.label == label )
-            {
-                return true;
-            }
-        }
-        if( contains_label( message.messages, label ) )
-        {
-            return true;
-        }
+        p_begin++;
     }
-    return false;
+
+    while( p_begin < p_end &&
+           isspace( p_end[ -1 ] ) )
+    {
+        p_end--;
+    }
+
+    if( p_begin == p_end )
+    {
+        return { };
+    }
+
+    auto add_prefix  = *p_begin != '"' && *p_begin != '<';
+    auto add_postfix = p_end[ -1 ] != '"' && p_end[ -1 ] != '>';
+
+    if( add_prefix || add_postfix )
+    {
+        return '"' + std::string( str ) + '"';
+    }
+    return std::string( str );
 }
 
-auto contains_type( const proto_messages & messages, std::string_view type ) -> bool
+void dump_includes( std::ostream & stream, const cpp_includes & includes )
 {
-    for( const auto & message : messages )
+    for( auto & include : includes )
     {
-        for( const auto & field : message.fields )
+        auto file = trim_include( include );
+        if( !file.empty( ) )
         {
-            if( field.type == type )
-            {
-                return true;
-            }
-        }
-        for( const auto & map : message.maps )
-        {
-            if( map.value_type == type )
-            {
-                return true;
-            }
-        }
-        for( const auto & oneof : message.oneofs )
-        {
-            for( const auto & field : oneof.fields )
-            {
-                if( field.type == type )
-                {
-                    return true;
-                }
-            }
-        }
-        if( contains_type( message.messages, type ) )
-        {
-            return true;
+            stream << "#include " << file << "\n";
         }
     }
-    return false;
+    stream << "\n";
 }
 
 auto contains_map( const proto_messages & messages ) -> bool
@@ -130,39 +132,84 @@ auto contains_oneof( const proto_messages & messages ) -> bool
     return false;
 }
 
-void dump_std_includes( std::ostream & stream, const proto_file & file )
+void get_std_includes( cpp_includes & includes, const proto_file & file )
 {
-    stream << "#include <spb/json.hpp>\n#include <spb/pb.hpp>\n#include <cstdint>\n#include <string>\n";
+    includes.insert( "<spb/json.hpp>" );
+    includes.insert( "<spb/pb.hpp>" );
+    includes.insert( "<cstdint>" );
+    includes.insert( "<cstddef>" );
 
-    if( contains_label( file.package.messages, proto_field::Label::LABEL_REPEATED ) ||
-        contains_type( file.package.messages, "bytes" ) )
-    {
-        stream << "#include <vector>\n#include <cstddef>\n";
-    }
-    if( contains_label( file.package.messages, proto_field::Label::LABEL_OPTIONAL ) )
-    {
-        stream << "#include <optional>\n";
-    }
-    if( contains_label( file.package.messages, proto_field::Label::LABEL_PTR ) )
-    {
-        stream << "#include <memory>\n";
-    }
     if( contains_map( file.package.messages ) )
     {
-        stream << "#include <map>\n";
+        includes.insert( "<map>" );
     }
     if( contains_oneof( file.package.messages ) )
     {
-        stream << "#include <variant>\n";
+        includes.insert( "<variant>" );
     }
-    stream << "\n";
 }
 
-void dump_imports( std::ostream & stream, const proto_file & file )
+void get_include_from_options( cpp_includes & includes, const proto_options & options, const proto_options & message_options, const proto_options & file_options, std::string_view option_include )
+{
+    if( auto include = options.find( option_include ); include != options.end( ) )
+    {
+        includes.insert( std::string( include->second ) );
+        return;
+    }
+    if( auto include = message_options.find( option_include ); include != message_options.end( ) )
+    {
+        includes.insert( std::string( include->second ) );
+        return;
+    }
+    if( auto include = file_options.find( option_include ); include != file_options.end( ) )
+    {
+        includes.insert( std::string( include->second ) );
+        return;
+    }
+}
+
+void get_message_includes( cpp_includes & includes, const proto_message & message, const proto_file & file )
+{
+    for( const auto & field : message.fields )
+    {
+        if( field.label == proto_field::Label::LABEL_OPTIONAL )
+        {
+            get_include_from_options( includes, field.options, message.options, file.options, option_optional_include );
+        }
+        if( field.label == proto_field::Label::LABEL_REPEATED )
+        {
+            get_include_from_options( includes, field.options, message.options, file.options, option_repeated_include );
+        }
+        if( field.label == proto_field::Label::LABEL_PTR )
+        {
+            get_include_from_options( includes, field.options, message.options, file.options, option_pointer_include );
+        }
+        if( field.type == "string"sv )
+        {
+            get_include_from_options( includes, field.options, message.options, file.options, option_string_include );
+        }
+        if( field.type == "bytes"sv )
+        {
+            get_include_from_options( includes, field.options, message.options, file.options, option_bytes_include );
+        }
+    }
+
+    for( const auto & m : message.messages )
+    {
+        get_message_includes( includes, m, file );
+    }
+}
+
+void get_user_includes( cpp_includes & includes, const proto_file & file )
+{
+    get_message_includes( includes, file.package, file );
+}
+
+void get_imports( cpp_includes & includes, const proto_file & file )
 {
     for( const auto & import : file.file_imports )
     {
-        stream << "#include \"" << cpp_file_name_from_proto( import.path, ".pb.h" ).string( ) << "\"\n";
+        includes.insert( "\"" + cpp_file_name_from_proto( import.path, ".pb.h" ).string( ) + "\"" );
     }
 }
 
@@ -219,7 +266,27 @@ auto type_literal_suffix( std::string_view type ) -> std::string_view
     return { };
 }
 
-auto convert_to_ctype( std::string_view type, const proto_options & options = { } ) -> std::string
+auto get_container_type( const proto_options & options, const proto_options & message_options, const proto_options & file_options, std::string_view option, std::string_view ctype, std::string_view default_type = { } ) -> std::string
+{
+    if( auto p_name = options.find( option ); p_name != options.end( ) )
+    {
+        return replace( p_name->second, "$", ctype );
+    }
+
+    if( auto p_name = message_options.find( option ); p_name != message_options.end( ) )
+    {
+        return replace( p_name->second, "$", ctype );
+    }
+
+    if( auto p_name = file_options.find( option ); p_name != file_options.end( ) )
+    {
+        return replace( p_name->second, "$", ctype );
+    }
+
+    return replace( default_type, "$", ctype );
+}
+
+auto convert_to_ctype( std::string_view type, const proto_options & options = { }, const proto_options & message_options = { }, const proto_options & file_options = { } ) -> std::string
 {
     static constexpr auto type_map = std::array< std::pair< std::string_view, std::string_view >, 12 >{ {
         { "int32", "int32_t" },
@@ -232,14 +299,16 @@ auto convert_to_ctype( std::string_view type, const proto_options & options = { 
         { "fixed64", "uint64_t" },
         { "sfixed32", "int32_t" },
         { "sfixed64", "int64_t" },
-        { "string", "std::string" },
-        { "bytes", "std::vector< std::byte >" },
     } };
 
-    auto ctype = std::string_view( );
-    if( auto p_option_ctype = options.find( "ctype" ); p_option_ctype != options.end( ) )
+    if( type == "string"sv )
     {
-        ctype = p_option_ctype->second;
+        return get_container_type( options, message_options, file_options, option_string_type, "char", "std::string" );
+    }
+
+    if( type == "bytes"sv )
+    {
+        return get_container_type( options, message_options, file_options, option_bytes_type, "std::byte", "std::vector<$>" );
     }
 
     for( auto [ proto_type, c_type ] : type_map )
@@ -253,30 +322,26 @@ auto convert_to_ctype( std::string_view type, const proto_options & options = { 
     return replace( type, ".", "::" );
 }
 
-/*auto is_bytes( const proto_field & field ) -> bool
+void dump_field_type_and_name( std::ostream & stream, const proto_field & field, const proto_message & message, const proto_file & file )
 {
-    return field.type == "bytes";
-}*/
+    const auto ctype = convert_to_ctype( field.type, field.options, message.options, file.options );
 
-void dump_field_type( std::ostream & stream, proto_field::Label label, const proto_field & field )
-{
-    const auto ctype = convert_to_ctype( field.type, field.options );
-
-    switch( label )
+    switch( field.label )
     {
     case proto_field::Label::LABEL_NONE:
-        stream << ctype << " ";
+        stream << ctype;
         break;
     case proto_field::Label::LABEL_OPTIONAL:
-        stream << "std::optional< " << ctype << " > ";
+        stream << get_container_type( field.options, message.options, file.options, option_optional_type, ctype, "std::optional<$>" );
         break;
     case proto_field::Label::LABEL_REPEATED:
-        stream << "std::vector< " << ctype << " > ";
+        stream << get_container_type( field.options, message.options, file.options, option_repeated_type, ctype, "std::vector<$>" );
         break;
     case proto_field::Label::LABEL_PTR:
-        stream << "std::unique_ptr< " << ctype << " > ";
+        stream << get_container_type( field.options, message.options, file.options, option_pointer_type, ctype, "std::unique_ptr<$>" );
         break;
     }
+    stream << ' ' << field.name;
 }
 
 void dump_message_oneof( std::ostream & stream, const proto_oneof & oneof )
@@ -337,12 +402,11 @@ void dump_deprecated_attribute( std::ostream & stream, const proto_field & field
     }
 }
 
-void dump_message_field( std::ostream & stream, const proto_field & field )
+void dump_message_field( std::ostream & stream, const proto_field & field, const proto_message & message, const proto_file & file )
 {
     dump_comment( stream, field.comment );
     dump_deprecated_attribute( stream, field );
-    dump_field_type( stream, field.label, field );
-    stream << field.name;
+    dump_field_type_and_name( stream, field, message, file );
     dump_default_value( stream, field );
     stream << ";\n";
 }
@@ -359,7 +423,7 @@ void dump_forwards( std::ostream & stream, const forwarded_declarations & forwar
     }
 }
 
-void dump_message( std::ostream & stream, const proto_message & message )
+void dump_message( std::ostream & stream, const proto_message & message, const proto_file & file )
 {
     dump_comment( stream, message.comment );
 
@@ -373,12 +437,12 @@ void dump_message( std::ostream & stream, const proto_message & message )
 
     for( const auto & sub_message : message.messages )
     {
-        dump_message( stream, sub_message );
+        dump_message( stream, sub_message, file );
     }
 
     for( const auto & field : message.fields )
     {
-        dump_message_field( stream, field );
+        dump_message_field( stream, field, message, file );
     }
 
     for( const auto & map : message.maps )
@@ -402,7 +466,7 @@ void dump_messages( std::ostream & stream, const proto_file & file )
     dump_forwards( stream, file.package.forwards );
     for( const auto & message : file.package.messages )
     {
-        dump_message( stream, message );
+        dump_message( stream, message, file );
     }
 }
 
@@ -434,9 +498,12 @@ void dump_package_end( std::ostream & stream, const proto_file & file )
 
 void dump_cpp_header( const proto_file & file, std::ostream & stream )
 {
+    auto includes = cpp_includes( );
     dump_pragma( stream, file );
-    dump_imports( stream, file );
-    dump_std_includes( stream, file );
+    get_imports( includes, file );
+    get_std_includes( includes, file );
+    get_user_includes( includes, file );
+    dump_includes( stream, includes );
     dump_syntax( stream, file );
     dump_package_begin( stream, file );
     dump_enums( stream, file );

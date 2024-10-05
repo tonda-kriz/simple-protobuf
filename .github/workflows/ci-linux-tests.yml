@@ -1,4 +1,4 @@
-name: Linux build + tests
+name: Linux build + gpb compatibility tests
 
 on:
   push:
@@ -72,6 +72,7 @@ jobs:
         -DSPB_PROTO_BUILD_TESTS=ON
         -DSPB_PROTO_BUILD_EXAMPLES=ON
         -DSPB_PROTO_BUILD_COMPATIBILITY_TESTS=ON
+        -DSPB_PROTO_BUILD_ETL_TESTS=ON
         -S ${{ github.workspace }}
 
     - name: Build
