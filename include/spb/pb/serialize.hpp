@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <cctype>
 #include <charconv>
+#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -117,38 +118,59 @@ static inline void serialize_as( ostream & stream, uint32_t field_number, spb::d
 template < scalar_encoder encoder >
 static inline void serialize_as( ostream & stream, spb::detail::is_int_or_float auto value )
 {
+    using T = std::remove_cvref_t< decltype( value ) >;
+
     const auto type = type1( encoder );
 
     if constexpr( type == scalar_encoder::varint )
     {
-        static_assert( std::is_integral_v< decltype( value ) > );
+        static_assert( std::is_integral_v< T > );
 
-        if constexpr( std::is_same_v< bool, decltype( value ) > )
+        if constexpr( std::is_same_v< bool, T > )
         {
             const uint8_t tmp = value ? 1 : 0;
             return stream.write( &tmp, 1 );
         }
+        else if constexpr( std::is_signed_v< T > )
+        {
+            //- GPB is serializing all negative ints always as int64_t
+            auto u_value = uint64_t( int64_t( value ) );
+            return serialize_varint( stream, u_value );
+        }
         else
         {
-            using u_int = std::make_unsigned_t< decltype( value ) >;
-            return serialize_varint( stream, u_int( value ) );
+            return serialize_varint( stream, value );
         }
     }
     else if constexpr( type == scalar_encoder::svarint )
     {
-        static_assert( std::is_signed_v< decltype( value ) > && std::is_integral_v< decltype( value ) > );
+        static_assert( std::is_signed_v< T > && std::is_integral_v< T > );
 
         return serialize_svarint( stream, value );
     }
     else if constexpr( type == scalar_encoder::i32 )
     {
-        static_assert( sizeof( value ) == sizeof( uint32_t ) );
-        return stream.write( &value, sizeof( value ) );
+        if constexpr( sizeof( value ) == sizeof( uint32_t ) )
+        {
+            return stream.write( &value, sizeof( value ) );
+        }
+        else
+        {
+            const auto tmp = uint32_t( value );
+            return stream.write( &tmp, sizeof( tmp ) );
+        }
     }
     else if constexpr( type == scalar_encoder::i64 )
     {
-        static_assert( sizeof( value ) == sizeof( uint64_t ) );
-        return stream.write( &value, sizeof( value ) );
+        if constexpr( sizeof( value ) == sizeof( uint64_t ) )
+        {
+            return stream.write( &value, sizeof( value ) );
+        }
+        else
+        {
+            const auto tmp = uint64_t( value );
+            return stream.write( &tmp, sizeof( tmp ) );
+        }
     }
 }
 

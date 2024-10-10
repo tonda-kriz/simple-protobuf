@@ -277,8 +277,20 @@ static inline void deserialize_as( istream & stream, spb::detail::is_int_or_floa
         {
             check_wire_type( type, wire_type::fixed32 );
         }
-        static_assert( sizeof( value ) == sizeof( uint32_t ) );
-        stream.read_exact( &value, sizeof( value ) );
+        if constexpr( sizeof( value ) == sizeof( uint32_t ) )
+        {
+            stream.read_exact( &value, sizeof( value ) );
+        }
+        else
+        {
+            auto tmp = uint32_t( 0 );
+            if( tmp > std::numeric_limits< T >::max( ) )
+            {
+                throw std::runtime_error( "int overflow" );
+            }
+            stream.read_exact( &tmp, sizeof( tmp ) );
+            value = tmp;
+        }
     }
     else if constexpr( type1( encoder ) == scalar_encoder::i64 )
     {
@@ -286,8 +298,20 @@ static inline void deserialize_as( istream & stream, spb::detail::is_int_or_floa
         {
             check_wire_type( type, wire_type::fixed64 );
         }
-        static_assert( sizeof( value ) == sizeof( uint64_t ) );
-        stream.read_exact( &value, sizeof( value ) );
+        if constexpr( sizeof( value ) == sizeof( uint64_t ) )
+        {
+            stream.read_exact( &value, sizeof( value ) );
+        }
+        else
+        {
+            auto tmp = uint64_t( 0 );
+            if( tmp > std::numeric_limits< T >::max( ) )
+            {
+                throw std::runtime_error( "int overflow" );
+            }
+            stream.read_exact( &tmp, sizeof( tmp ) );
+            value = tmp;
+        }
     }
 }
 
