@@ -2,11 +2,26 @@
 
 All extensions to the .proto files are compatible with gpb.
 
+## small int types
+
+The library lets you specify also 8 and 16 bit ints (`int8`, `uint8`, `int16`, `uint16`).
+Warning: due to compatibility with gpb, always use types with the same sign, like `int32` and `int8`, combinations like `int32` and `uint8` are invalid.
+
+### how to use small ints
+
+Small int types are specified in the comments, so they are ignored by the gpb protoc.
+Each field has an attribute `.type`. Example:
+
+```proto
+//[[ field.type = "int16"]]
+optional int32 id = 2;
+```
+
 ## container types
 
 The library lets you specify your own types for containers (`repeated`, `string`, `bytes`, `optionals`).
 
-### how to use
+### how to use user container types
 
 Containers types are specified in the comments, so they are ignored by the gpb protoc.
 Each container has 2 attributes `.type` (user type) and `.include` (include header for the type).
@@ -58,6 +73,7 @@ package PhoneBook.Etl;
 message Person {
     //[[ string.type = "std::string"]]
     optional string name = 1;
+    //[[ field.type = "int16"]]
     optional int32 id = 2;
     //[[ string.type = "etl::string<64>"]]
     optional string email = 3;
@@ -102,7 +118,7 @@ struct Person
         std::optional< PhoneType > type;
     };
     std::optional< std::string > name;
-    std::optional< int32_t > id;
+    std::optional< int16_t > id;
     std::optional< etl::string< 64 > > email;
     etl::vector< PhoneNumber, 60 > phones;
 };
