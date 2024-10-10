@@ -20,7 +20,7 @@ namespace spb_std_emu = std;
 #include <concepts>
 #include <cstdlib>
 #include <cstring>
-#include <string_view>
+#include <limits>
 #include <system_error>
 #include <type_traits>
 
@@ -41,13 +41,28 @@ static inline auto from_chars( const char * first, const char * last, std::integ
     buffer[ copy_size ] = '\0';
     const char * end    = nullptr;
 
-    static_assert( sizeof( number ) == 4 || sizeof( number ) == 8, "unsupported size" );
-    errno       = 0;
-    auto result = std::decay_t< decltype( number ) >{ 0 };
+    using T = std::decay_t< decltype( number ) >;
 
-    if constexpr( std::is_signed_v< decltype( number ) > )
+    static_assert( sizeof( number ) >= 1 && sizeof( number ) <= 8, "unsupported size" );
+    errno       = 0;
+    auto result = T( 0 );
+
+    if constexpr( std::is_signed_v< T > )
     {
-        if constexpr( sizeof( number ) == 4 )
+        if constexpr( sizeof( number ) < 4 )
+        {
+            auto tmp = strtol( buffer, ( char ** ) &end, base );
+            if( tmp <= std::numeric_limits< T >::max( ) &&
+                tmp >= std::numeric_limits< T >::min( ) ) [[likely]]
+            {
+                result = T( tmp );
+            }
+            else
+            {
+                errno = ERANGE;
+            }
+        }
+        else if constexpr( sizeof( number ) == 4 )
         {
             result = strtol( buffer, ( char ** ) &end, base );
         }
@@ -58,7 +73,19 @@ static inline auto from_chars( const char * first, const char * last, std::integ
     }
     else
     {
-        if constexpr( sizeof( number ) == 4 )
+        if constexpr( sizeof( number ) < 4 )
+        {
+            auto tmp = strtoul( buffer, ( char ** ) &end, base );
+            if( tmp <= std::numeric_limits< T >::max( ) ) [[likely]]
+            {
+                result = T( tmp );
+            }
+            else
+            {
+                errno = ERANGE;
+            }
+        }
+        else if constexpr( sizeof( number ) == 4 )
         {
             result = strtoul( buffer, ( char ** ) &end, base );
         }

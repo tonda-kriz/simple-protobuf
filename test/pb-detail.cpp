@@ -199,7 +199,7 @@ TEST_CASE( "protobuf" )
             {
                 pb_test( Test::Scalar::ReqInt32{ .value = 0x42 }, "\x08\x42" );
                 pb_test( Test::Scalar::ReqInt32{ .value = 0xff }, "\x08\xff\x01" );
-                pb_test( Test::Scalar::ReqInt32{ .value = -2 }, "\x08\xfe\xff\xff\xff\x0f"sv );
+                pb_test( Test::Scalar::ReqInt32{ .value = -2 }, "\x08\xfe\xff\xff\xff\xff\xff\xff\xff\xff\x01"sv );
                 CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqInt32 >( "\x08" ) );
                 CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqInt32 >( "\x08\xff" ) );
                 CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqInt32 >( "\x08\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\x01" ) );
@@ -209,7 +209,7 @@ TEST_CASE( "protobuf" )
                 pb_test( Test::Scalar::OptInt32{ }, "" );
                 pb_test( Test::Scalar::OptInt32{ .value = 0x42 }, "\x08\x42" );
                 pb_test( Test::Scalar::OptInt32{ .value = 0xff }, "\x08\xff\x01" );
-                pb_test( Test::Scalar::OptInt32{ .value = -2 }, "\x08\xfe\xff\xff\xff\x0f"sv );
+                pb_test( Test::Scalar::OptInt32{ .value = -2 }, "\x08\xfe\xff\xff\xff\xff\xff\xff\xff\xff\x01"sv );
             }
             SUBCASE( "repeated" )
             {

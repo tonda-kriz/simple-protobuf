@@ -28,3 +28,6 @@ const auto option_bytes_include = "bytes.include"sv;
 
 const auto option_string_type    = "string.type"sv;
 const auto option_string_include = "string.include"sv;
+
+const auto option_field_type = "field.type"sv;
+const auto option_enum_type  = "enum.type"sv;
