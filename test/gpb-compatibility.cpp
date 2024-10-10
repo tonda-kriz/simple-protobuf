@@ -205,7 +205,7 @@ void gpb_compatibility_value( )
 template < typename GPB, typename SPB >
 void gpb_compatibility_array( )
 {
-    using T = decltype( SPB::value )::value_type;
+    using T = typename decltype( SPB::value )::value_type;
 
     gpb_compatibility< GPB >( SPB{ .value = { 0 } } );
     gpb_compatibility< GPB >( SPB{ .value = { 0x42 } } );
