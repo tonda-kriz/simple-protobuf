@@ -273,6 +273,8 @@ static inline void deserialize_as( istream & stream, spb::detail::is_int_or_floa
     }
     else if constexpr( type1( encoder ) == scalar_encoder::i32 )
     {
+        static_assert( sizeof( T ) <= sizeof( uint32_t ) );
+
         if constexpr( !is_packed( encoder ) )
         {
             check_wire_type( type, wire_type::fixed32 );
@@ -283,17 +285,32 @@ static inline void deserialize_as( istream & stream, spb::detail::is_int_or_floa
         }
         else
         {
-            auto tmp = uint32_t( 0 );
-            if( tmp > std::numeric_limits< T >::max( ) )
+            if constexpr( std::is_signed_v< T > )
             {
-                throw std::runtime_error( "int overflow" );
+                auto tmp = int32_t( 0 );
+                stream.read_exact( &tmp, sizeof( tmp ) );
+                if( tmp > std::numeric_limits< T >::max( ) ||
+                    tmp < std::numeric_limits< T >::min( ) )
+                {
+                    throw std::runtime_error( "int overflow" );
+                }
+                value = T( tmp );
             }
-            stream.read_exact( &tmp, sizeof( tmp ) );
-            value = tmp;
+            else
+            {
+                auto tmp = uint32_t( 0 );
+                stream.read_exact( &tmp, sizeof( tmp ) );
+                if( tmp > std::numeric_limits< T >::max( ) )
+                {
+                    throw std::runtime_error( "int overflow" );
+                }
+                value = T( tmp );
+            }
         }
     }
     else if constexpr( type1( encoder ) == scalar_encoder::i64 )
     {
+        static_assert( sizeof( T ) <= sizeof( uint64_t ) );
         if constexpr( !is_packed( encoder ) )
         {
             check_wire_type( type, wire_type::fixed64 );
@@ -304,13 +321,27 @@ static inline void deserialize_as( istream & stream, spb::detail::is_int_or_floa
         }
         else
         {
-            auto tmp = uint64_t( 0 );
-            if( tmp > std::numeric_limits< T >::max( ) )
+            if constexpr( std::is_signed_v< T > )
             {
-                throw std::runtime_error( "int overflow" );
+                auto tmp = int64_t( 0 );
+                stream.read_exact( &tmp, sizeof( tmp ) );
+                if( tmp > std::numeric_limits< T >::max( ) ||
+                    tmp < std::numeric_limits< T >::min( ) )
+                {
+                    throw std::runtime_error( "int overflow" );
+                }
+                value = T( tmp );
             }
-            stream.read_exact( &tmp, sizeof( tmp ) );
-            value = tmp;
+            else
+            {
+                auto tmp = uint64_t( 0 );
+                stream.read_exact( &tmp, sizeof( tmp ) );
+                if( tmp > std::numeric_limits< T >::max( ) )
+                {
+                    throw std::runtime_error( "int overflow" );
+                }
+                value = T( tmp );
+            }
         }
     }
 }
