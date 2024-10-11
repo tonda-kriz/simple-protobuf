@@ -586,6 +586,66 @@ TEST_CASE( "int" )
                 gpb_compatibility_array< Test::Scalar::gpb::RepPackFixed64, Test::Scalar::RepPackFixed64 >( );
             }
         }
+        SUBCASE( "uint8" )
+        {
+            SUBCASE( "required" )
+            {
+                gpb_compatibility_value< Test::Scalar::gpb::ReqFixed64_8, Test::Scalar::ReqFixed64_8, uint8_t >( );
+            }
+            SUBCASE( "optional" )
+            {
+                gpb_compatibility_value< Test::Scalar::gpb::OptFixed64_8, Test::Scalar::OptFixed64_8, uint8_t >( );
+            }
+            SUBCASE( "repeated" )
+            {
+                gpb_compatibility_array< Test::Scalar::gpb::RepFixed64_8, Test::Scalar::RepFixed64_8 >( );
+
+                SUBCASE( "packed" )
+                {
+                    gpb_compatibility_array< Test::Scalar::gpb::RepPackFixed64_8, Test::Scalar::RepPackFixed64_8 >( );
+                }
+            }
+        }
+        SUBCASE( "uint16" )
+        {
+            SUBCASE( "required" )
+            {
+                gpb_compatibility_value< Test::Scalar::gpb::ReqFixed64_16, Test::Scalar::ReqFixed64_16, uint16_t >( );
+            }
+            SUBCASE( "optional" )
+            {
+                gpb_compatibility_value< Test::Scalar::gpb::OptFixed64_16, Test::Scalar::OptFixed64_16, uint16_t >( );
+            }
+            SUBCASE( "repeated" )
+            {
+                gpb_compatibility_array< Test::Scalar::gpb::RepFixed64_16, Test::Scalar::RepFixed64_16 >( );
+
+                SUBCASE( "packed" )
+                {
+                    gpb_compatibility_array< Test::Scalar::gpb::RepPackFixed64_16, Test::Scalar::RepPackFixed64_16 >( );
+                }
+            }
+        }
+        SUBCASE( "uint32" )
+        {
+            SUBCASE( "required" )
+            {
+                gpb_compatibility_value< Test::Scalar::gpb::ReqFixed64_32, Test::Scalar::ReqFixed64_32, uint32_t >( );
+            }
+            SUBCASE( "optional" )
+            {
+                gpb_compatibility_value< Test::Scalar::gpb::OptFixed64_32, Test::Scalar::OptFixed64_32, uint32_t >( );
+            }
+            SUBCASE( "repeated" )
+            {
+                gpb_compatibility_array< Test::Scalar::gpb::RepFixed64_32, Test::Scalar::RepFixed64_32 >( );
+
+                SUBCASE( "packed" )
+                {
+                    gpb_compatibility_array< Test::Scalar::gpb::RepPackFixed64_32, Test::Scalar::RepPackFixed64_32 >( );
+                }
+            }
+        }
     }
     SUBCASE( "sfixed32" )
     {
@@ -606,6 +666,46 @@ TEST_CASE( "int" )
                 gpb_compatibility_array< Test::Scalar::gpb::RepPackSfixed32, Test::Scalar::RepPackSfixed32 >( );
             }
         }
+        SUBCASE( "int8" )
+        {
+            SUBCASE( "required" )
+            {
+                gpb_compatibility_value< Test::Scalar::gpb::ReqSfixed32_8, Test::Scalar::ReqSfixed32_8, int8_t >( );
+            }
+            SUBCASE( "optional" )
+            {
+                gpb_compatibility_value< Test::Scalar::gpb::OptSfixed32_8, Test::Scalar::OptSfixed32_8, int8_t >( );
+            }
+            SUBCASE( "repeated" )
+            {
+                gpb_compatibility_array< Test::Scalar::gpb::RepSfixed32_8, Test::Scalar::RepSfixed32_8 >( );
+
+                SUBCASE( "packed" )
+                {
+                    gpb_compatibility_array< Test::Scalar::gpb::RepPackSfixed32_8, Test::Scalar::RepPackSfixed32_8 >( );
+                }
+            }
+        }
+        SUBCASE( "int16" )
+        {
+            SUBCASE( "required" )
+            {
+                gpb_compatibility_value< Test::Scalar::gpb::ReqSfixed32_16, Test::Scalar::ReqSfixed32_16, int16_t >( );
+            }
+            SUBCASE( "optional" )
+            {
+                gpb_compatibility_value< Test::Scalar::gpb::OptSfixed32_16, Test::Scalar::OptSfixed32_16, int16_t >( );
+            }
+            SUBCASE( "repeated" )
+            {
+                gpb_compatibility_array< Test::Scalar::gpb::RepSfixed32_16, Test::Scalar::RepSfixed32_16 >( );
+
+                SUBCASE( "packed" )
+                {
+                    gpb_compatibility_array< Test::Scalar::gpb::RepPackSfixed32_16, Test::Scalar::RepPackSfixed32_16 >( );
+                }
+            }
+        }
     }
     SUBCASE( "sfixed64" )
     {
@@ -624,6 +724,66 @@ TEST_CASE( "int" )
             SUBCASE( "packed" )
             {
                 gpb_compatibility_array< Test::Scalar::gpb::RepPackSfixed64, Test::Scalar::RepPackSfixed64 >( );
+            }
+        }
+        SUBCASE( "int8" )
+        {
+            SUBCASE( "required" )
+            {
+                gpb_compatibility_value< Test::Scalar::gpb::ReqSfixed64_8, Test::Scalar::ReqSfixed64_8, int8_t >( );
+            }
+            SUBCASE( "optional" )
+            {
+                gpb_compatibility_value< Test::Scalar::gpb::OptSfixed64_8, Test::Scalar::OptSfixed64_8, int8_t >( );
+            }
+            SUBCASE( "repeated" )
+            {
+                gpb_compatibility_array< Test::Scalar::gpb::RepSfixed64_8, Test::Scalar::RepSfixed64_8 >( );
+
+                SUBCASE( "packed" )
+                {
+                    gpb_compatibility_array< Test::Scalar::gpb::RepPackSfixed64_8, Test::Scalar::RepPackSfixed64_8 >( );
+                }
+            }
+        }
+        SUBCASE( "int16" )
+        {
+            SUBCASE( "required" )
+            {
+                gpb_compatibility_value< Test::Scalar::gpb::ReqSfixed64_16, Test::Scalar::ReqSfixed64_16, int16_t >( );
+            }
+            SUBCASE( "optional" )
+            {
+                gpb_compatibility_value< Test::Scalar::gpb::OptSfixed64_16, Test::Scalar::OptSfixed64_16, int16_t >( );
+            }
+            SUBCASE( "repeated" )
+            {
+                gpb_compatibility_array< Test::Scalar::gpb::RepSfixed64_16, Test::Scalar::RepSfixed64_16 >( );
+
+                SUBCASE( "packed" )
+                {
+                    gpb_compatibility_array< Test::Scalar::gpb::RepPackSfixed64_16, Test::Scalar::RepPackSfixed64_16 >( );
+                }
+            }
+        }
+        SUBCASE( "int32" )
+        {
+            SUBCASE( "required" )
+            {
+                gpb_compatibility_value< Test::Scalar::gpb::ReqSfixed64_32, Test::Scalar::ReqSfixed64_32, int32_t >( );
+            }
+            SUBCASE( "optional" )
+            {
+                gpb_compatibility_value< Test::Scalar::gpb::OptSfixed64_32, Test::Scalar::OptSfixed64_32, int32_t >( );
+            }
+            SUBCASE( "repeated" )
+            {
+                gpb_compatibility_array< Test::Scalar::gpb::RepSfixed64_32, Test::Scalar::RepSfixed64_32 >( );
+
+                SUBCASE( "packed" )
+                {
+                    gpb_compatibility_array< Test::Scalar::gpb::RepPackSfixed64_32, Test::Scalar::RepPackSfixed64_32 >( );
+                }
             }
         }
     }

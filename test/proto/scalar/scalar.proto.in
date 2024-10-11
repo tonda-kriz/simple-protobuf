@@ -315,6 +315,70 @@ message RepPackFixed64
     repeated fixed64 value = 1 [ packed = true ];
 }
 
+message OptFixed64_8
+{
+    //[[ field.type = "uint8" ]]
+    optional fixed64 value = 1;
+}
+message ReqFixed64_8
+{
+    //[[ field.type = "uint8" ]]
+    required fixed64 value = 1;
+}
+message RepFixed64_8
+{
+    //[[ field.type = "uint8" ]]
+    repeated fixed64 value = 1;
+}
+
+message RepPackFixed64_8
+{
+    //[[ field.type = "uint8" ]]
+    repeated fixed64 value = 1 [ packed = true ];
+}
+
+message OptFixed64_16
+{
+    //[[ field.type = "uint16" ]]
+    optional fixed64 value = 1;
+}
+message ReqFixed64_16
+{
+    //[[ field.type = "uint16" ]]
+    required fixed64 value = 1;
+}
+message RepFixed64_16
+{
+    //[[ field.type = "uint16" ]]
+    repeated fixed64 value = 1;
+}
+message RepPackFixed64_16
+{
+    //[[ field.type = "uint16" ]]
+    repeated fixed64 value = 1 [ packed = true ];
+}
+
+message OptFixed64_32
+{
+    //[[ field.type = "uint32" ]]
+    optional fixed64 value = 1;
+}
+message ReqFixed64_32
+{
+    //[[ field.type = "uint32" ]]
+    required fixed64 value = 1;
+}
+message RepFixed64_32
+{
+    //[[ field.type = "uint32" ]]
+    repeated fixed64 value = 1;
+}
+message RepPackFixed64_32
+{
+    //[[ field.type = "uint32" ]]
+    repeated fixed64 value = 1 [ packed = true ];
+}
+
 message OptSfixed32_8
 {
     //[[ field.type = "int8" ]]
