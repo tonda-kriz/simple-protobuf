@@ -177,7 +177,7 @@ void gpb_json( const SPB & spb )
         REQUIRE( gpb.value( ).size( ) == opt_size( spb.value ) );
         for( size_t i = 0; i < opt_size( spb.value ); ++i )
         {
-            using value_type = decltype( SPB::value )::value_type;
+            using value_type = typename decltype( SPB::value )::value_type;
             if constexpr( std::is_enum_v< value_type > )
             {
                 REQUIRE( enum_value( spb.value[ i ] ) == gpb.value( i ) );
