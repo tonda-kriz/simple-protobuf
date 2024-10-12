@@ -98,9 +98,35 @@ auto opt_size( const std::vector< T > & opt ) -> std::size_t
     return opt.size( );
 }
 
+template < typename T >
+struct ExtractOptional
+{
+    using type = T;
+};
+
+template < typename T >
+struct ExtractOptional< std::optional< T > >
+{
+    using type = T;
+};
+
+template < typename T >
+auto enum_value( const T & value )
+{
+    return std::underlying_type_t< T >( value );
+}
+
+template < typename T >
+auto enum_value( const std::optional< T > & value )
+{
+    return enum_value( value.value( ) );
+}
+
 template < typename GPB, typename SPB >
 void gpb_test( const SPB & spb )
 {
+    using T = typename ExtractOptional< std::decay_t< decltype( SPB::value ) > >::type;
+
     auto gpb            = GPB( );
     auto spb_serialized = spb::pb::serialize( spb );
 
@@ -110,8 +136,20 @@ void gpb_test( const SPB & spb )
         REQUIRE( gpb.value( ).size( ) == opt_size( spb.value ) );
         for( size_t i = 0; i < opt_size( spb.value ); ++i )
         {
-            REQUIRE( gpb.value( i ) == spb.value[ i ] );
+            using value_type = decltype( SPB::value )::value_type;
+            if constexpr( std::is_enum_v< value_type > )
+            {
+                REQUIRE( enum_value( spb.value[ i ] ) == gpb.value( i ) );
+            }
+            else
+            {
+                REQUIRE( gpb.value( i ) == spb.value[ i ] );
+            }
         }
+    }
+    else if constexpr( std::is_enum_v< T > )
+    {
+        REQUIRE( enum_value( spb.value ) == gpb.value( ) );
     }
     else
     {
@@ -126,6 +164,8 @@ void gpb_test( const SPB & spb )
 template < typename GPB, typename SPB >
 void gpb_json( const SPB & spb )
 {
+    using T = typename ExtractOptional< std::decay_t< decltype( SPB::value ) > >::type;
+
     auto gpb            = GPB( );
     auto spb_serialized = spb::json::serialize( spb );
 
@@ -137,8 +177,20 @@ void gpb_json( const SPB & spb )
         REQUIRE( gpb.value( ).size( ) == opt_size( spb.value ) );
         for( size_t i = 0; i < opt_size( spb.value ); ++i )
         {
-            REQUIRE( gpb.value( i ) == spb.value[ i ] );
+            using value_type = decltype( SPB::value )::value_type;
+            if constexpr( std::is_enum_v< value_type > )
+            {
+                REQUIRE( enum_value( spb.value[ i ] ) == gpb.value( i ) );
+            }
+            else
+            {
+                REQUIRE( gpb.value( i ) == spb.value[ i ] );
+            }
         }
+    }
+    else if constexpr( std::is_enum_v< T > )
+    {
+        REQUIRE( enum_value( spb.value ) == gpb.value( ) );
     }
     else
     {
@@ -170,17 +222,35 @@ void gpb_compatibility( const SPB & spb )
     }
 }
 
-template < typename T >
-struct ExtractOptional
+template < typename GPB, typename SPB, typename POD >
+void gpb_compatibility_enum( )
 {
-    using type = T;
-};
+    using T = typename ExtractOptional< std::decay_t< decltype( SPB::value ) > >::type;
 
-template < typename T >
-struct ExtractOptional< std::optional< T > >
+    gpb_compatibility< GPB >( SPB{ .value = SPB::Enum::Enum_min } );
+    gpb_compatibility< GPB >( SPB{ .value = SPB::Enum::Enum_max } );
+    gpb_compatibility< GPB >( SPB{ .value = SPB::Enum::Enum_value } );
+
+    CHECK( std::is_same_v< std::underlying_type_t< T >, POD > );
+
+    if constexpr( !std::is_same_v< std::optional< T >, std::decay_t< decltype( SPB::value ) > > )
+    {
+        CHECK( sizeof( SPB ) == sizeof( POD ) );
+    }
+}
+
+template < typename GPB, typename SPB >
+void gpb_compatibility_enum_array( )
 {
-    using type = T;
-};
+    gpb_compatibility< GPB >( SPB{ .value = { SPB::Enum::Enum_min } } );
+    gpb_compatibility< GPB >( SPB{ .value = { SPB::Enum::Enum_max } } );
+    gpb_compatibility< GPB >( SPB{ .value = { SPB::Enum::Enum_value } } );
+    gpb_compatibility< GPB >( SPB{ .value = {
+                                       SPB::Enum::Enum_min,
+                                       SPB::Enum::Enum_max,
+                                       SPB::Enum::Enum_value,
+                                   } } );
+}
 
 template < typename GPB, typename SPB, typename POD >
 void gpb_compatibility_value( )
@@ -839,6 +909,101 @@ TEST_CASE( "bytes" )
         gpb_compatibility< Test::Scalar::gpb::RepBytes >( Test::Scalar::RepBytes{ .value = { to_bytes( "hello" ) } } );
         gpb_compatibility< Test::Scalar::gpb::RepBytes >( Test::Scalar::RepBytes{ .value = { to_bytes( "\x00\x01\x02"sv ) } } );
         gpb_compatibility< Test::Scalar::gpb::RepBytes >( Test::Scalar::RepBytes{ .value = { to_bytes( "\x00\x01\x02\x03\x04"sv ) } } );
+    }
+}
+TEST_CASE( "enum" )
+{
+    SUBCASE( "required" )
+    {
+        gpb_compatibility_enum< Test::Scalar::gpb::ReqEnum, Test::Scalar::ReqEnum, int32_t >( );
+    }
+    SUBCASE( "optional" )
+    {
+        gpb_compatibility_enum< Test::Scalar::gpb::OptEnum, Test::Scalar::OptEnum, int32_t >( );
+    }
+    SUBCASE( "repeated" )
+    {
+        gpb_compatibility_enum_array< Test::Scalar::gpb::RepEnum, Test::Scalar::RepEnum >( );
+    }
+
+    SUBCASE( "int8" )
+    {
+        SUBCASE( "required" )
+        {
+            gpb_compatibility_enum< Test::Scalar::gpb::ReqEnumInt8, Test::Scalar::ReqEnumInt8, int8_t >( );
+        }
+        SUBCASE( "optional" )
+        {
+            gpb_compatibility_enum< Test::Scalar::gpb::OptEnumInt8, Test::Scalar::OptEnumInt8, int8_t >( );
+        }
+        SUBCASE( "repeated" )
+        {
+            gpb_compatibility_enum_array< Test::Scalar::gpb::RepEnumInt8, Test::Scalar::RepEnumInt8 >( );
+        }
+    }
+
+    SUBCASE( "uint8" )
+    {
+        SUBCASE( "required" )
+        {
+            gpb_compatibility_enum< Test::Scalar::gpb::ReqEnumUint8, Test::Scalar::ReqEnumUint8, uint8_t >( );
+        }
+        SUBCASE( "optional" )
+        {
+            gpb_compatibility_enum< Test::Scalar::gpb::OptEnumUint8, Test::Scalar::OptEnumUint8, uint8_t >( );
+        }
+        SUBCASE( "repeated" )
+        {
+            gpb_compatibility_enum_array< Test::Scalar::gpb::RepEnumUint8, Test::Scalar::RepEnumUint8 >( );
+        }
+    }
+
+    SUBCASE( "int16" )
+    {
+        SUBCASE( "required" )
+        {
+            gpb_compatibility_enum< Test::Scalar::gpb::ReqEnumInt16, Test::Scalar::ReqEnumInt16, int16_t >( );
+        }
+        SUBCASE( "optional" )
+        {
+            gpb_compatibility_enum< Test::Scalar::gpb::OptEnumInt16, Test::Scalar::OptEnumInt16, int16_t >( );
+        }
+        SUBCASE( "repeated" )
+        {
+            gpb_compatibility_enum_array< Test::Scalar::gpb::RepEnumInt16, Test::Scalar::RepEnumInt16 >( );
+        }
+    }
+
+    SUBCASE( "uint16" )
+    {
+        SUBCASE( "required" )
+        {
+            gpb_compatibility_enum< Test::Scalar::gpb::ReqEnumUint16, Test::Scalar::ReqEnumUint16, uint16_t >( );
+        }
+        SUBCASE( "optional" )
+        {
+            gpb_compatibility_enum< Test::Scalar::gpb::OptEnumUint16, Test::Scalar::OptEnumUint16, uint16_t >( );
+        }
+        SUBCASE( "repeated" )
+        {
+            gpb_compatibility_enum_array< Test::Scalar::gpb::RepEnumUint16, Test::Scalar::RepEnumUint16 >( );
+        }
+    }
+
+    SUBCASE( "int32" )
+    {
+        SUBCASE( "required" )
+        {
+            gpb_compatibility_enum< Test::Scalar::gpb::ReqEnumInt32, Test::Scalar::ReqEnumInt32, int32_t >( );
+        }
+        SUBCASE( "optional" )
+        {
+            gpb_compatibility_enum< Test::Scalar::gpb::OptEnumInt32, Test::Scalar::OptEnumInt32, int32_t >( );
+        }
+        SUBCASE( "repeated" )
+        {
+            gpb_compatibility_enum_array< Test::Scalar::gpb::RepEnumInt32, Test::Scalar::RepEnumInt32 >( );
+        }
     }
 }
 TEST_CASE( "variant" )

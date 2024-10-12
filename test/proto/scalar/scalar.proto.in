@@ -613,3 +613,216 @@ message RepBytesView
 {
     repeated bytes value = 1 [ctype = STRING_PIECE];
 }
+
+message OptEnum
+{
+    enum Enum {
+        Enum_min = -2147483648;
+        Enum_max = 2147483647;
+        Enum_value = 1;
+    }
+    
+    optional Enum value = 1;
+}
+
+message ReqEnum
+{
+    enum Enum {
+        Enum_min = -2147483648;
+        Enum_max = 2147483647;
+        Enum_value = 1;
+    }
+    
+    required Enum value = 1;
+}
+
+message RepEnum
+{
+    enum Enum {
+        Enum_min = -2147483648;
+        Enum_max = 2147483647;
+        Enum_value = 1;
+    }
+    
+    repeated Enum value = 1;
+}
+
+message OptEnumInt8
+{
+    //[[ enum.type = "int8" ]]
+    enum Enum {
+        Enum_min = -128;
+        Enum_max = 127;
+        Enum_value = 1;
+    }
+    
+    optional Enum value = 1;
+}
+
+message ReqEnumInt8
+{
+    //[[ enum.type = "int8" ]]
+    enum Enum {
+        Enum_min = -128;
+        Enum_max = 127;
+        Enum_value = 1;
+    }
+    
+    required Enum value = 1;
+}
+
+message RepEnumInt8
+{
+    //[[ enum.type = "int8" ]]
+    enum Enum {
+        Enum_min = -128;
+        Enum_max = 127;
+        Enum_value = 1;
+    }
+    
+    repeated Enum value = 1;
+}
+
+message OptEnumUint8
+{
+    //[[ enum.type = "uint8" ]]
+    enum Enum {
+        Enum_min = 0;
+        Enum_max = 255;
+        Enum_value = 1;
+    }
+    
+    optional Enum value = 1;
+}
+
+message ReqEnumUint8
+{
+    //[[ enum.type = "uint8" ]]
+    enum Enum {
+        Enum_min = 0;
+        Enum_max = 255;
+        Enum_value = 1;
+    }
+    
+    required Enum value = 1;
+}
+
+message RepEnumUint8
+{
+    //[[ enum.type = "uint8" ]]
+    enum Enum {
+        Enum_min = 0;
+        Enum_max = 255;
+        Enum_value = 1;
+    }
+    
+    repeated Enum value = 1;
+}
+
+message OptEnumInt16
+{
+    //[[ enum.type = "int16" ]]
+    enum Enum {
+        Enum_min = -32768;
+        Enum_max = 32767;
+        Enum_value = 1;
+    }
+    
+    optional Enum value = 1;
+}
+
+message ReqEnumInt16
+{
+    //[[ enum.type = "int16" ]]
+    enum Enum {
+        Enum_min = -32768;
+        Enum_max = 32767;
+        Enum_value = 1;
+    }
+    
+    required Enum value = 1;
+}
+
+message RepEnumInt16
+{
+    //[[ enum.type = "int16" ]]
+    enum Enum {
+        Enum_min = -32768;
+        Enum_max = 32767;
+        Enum_value = 1;
+    }
+    
+    repeated Enum value = 1;
+}
+
+message OptEnumUint16
+{
+    //[[ enum.type = "uint16" ]]
+    enum Enum {
+        Enum_min = 0;
+        Enum_max = 65535;
+        Enum_value = 1;
+    }
+    
+    optional Enum value = 1;
+}
+
+message ReqEnumUint16
+{
+    //[[ enum.type = "uint16" ]]
+    enum Enum {
+        Enum_min = 0;
+        Enum_max = 65535;
+        Enum_value = 1;
+    }
+    
+    required Enum value = 1;
+}
+
+message RepEnumUint16
+{
+    //[[ enum.type = "uint16" ]]
+    enum Enum {
+        Enum_min = 0;
+        Enum_max = 65535;
+        Enum_value = 1;
+    }
+    
+    repeated Enum value = 1;
+}
+
+message OptEnumInt32
+{
+    //[[ enum.type = "int32" ]]
+    enum Enum {
+        Enum_min = -2147483648;
+        Enum_max = 2147483647;
+        Enum_value = 1;
+    }
+    
+    optional Enum value = 1;
+}
+
+message ReqEnumInt32
+{
+    //[[ enum.type = "int32" ]]
+    enum Enum {
+        Enum_min = -2147483648;
+        Enum_max = 2147483647;
+        Enum_value = 1;
+    }
+    
+    required Enum value = 1;
+}
+
+message RepEnumInt32
+{
+    //[[ enum.type = "int32" ]]
+    enum Enum {
+        Enum_min = -2147483648;
+        Enum_max = 2147483647;
+        Enum_value = 1;
+    }
+    
+    repeated Enum value = 1;
+}

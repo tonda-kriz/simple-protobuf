@@ -876,6 +876,8 @@ void set_default_options( proto_file & file )
 
     file.options[ option_pointer_type ]    = "std::unique_ptr<$>";
     file.options[ option_pointer_include ] = "<memory>";
+
+    file.options[ option_enum_type ] = "int32";
 }
 
 [[nodiscard]] auto parse_proto_file( const std::filesystem::path & file, parsed_files & already_parsed, std::span< const std::filesystem::path > import_paths ) -> proto_file
