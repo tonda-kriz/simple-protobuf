@@ -133,6 +133,12 @@ TEST_CASE( "json" )
                 CHECK( person.phones[ 0 ].type == PhoneBook::Person::PhoneType::HOME );
             }
         }
+        SUBCASE( "enum" )
+        {
+            CHECK( spb::json::deserialize< PhoneBook::Person::PhoneType >( "\"HOME\"" ) == PhoneBook::Person::PhoneType::HOME );
+            CHECK( spb::json::deserialize< PhoneBook::Person::PhoneType >( "1" ) == PhoneBook::Person::PhoneType::HOME );
+            REQUIRE_THROWS( ( void ) spb::json::deserialize< PhoneBook::Person::PhoneType >( "HME" ) );
+        }
         SUBCASE( "bool" )
         {
             {
@@ -587,6 +593,10 @@ TEST_CASE( "json" )
             {
                 CHECK( spb::json::serialize( std::map< std::string, Test::Name >{ { "hello", { .name = "john" } } } ) == R"({"hello":{"name":"john"}})" );
             }
+        }
+        SUBCASE( "enum" )
+        {
+            CHECK( spb::json::serialize( PhoneBook::Person::PhoneType::HOME ) == "\"HOME\"" );
         }
         SUBCASE( "person" )
         {
