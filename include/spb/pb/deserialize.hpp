@@ -153,7 +153,7 @@ static inline void check_if_empty( istream & stream )
         return 0;
     }
     auto byte = uint8_t( byte_or_eof );
-    auto tag  = uint32_t( byte );
+    auto tag  = uint32_t( byte & 0x7F );
 
     for( size_t shift = CHAR_BIT - 1; ( byte & 0x80 ) != 0; shift += CHAR_BIT - 1 )
     {

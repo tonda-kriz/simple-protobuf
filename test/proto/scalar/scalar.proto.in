@@ -276,3 +276,12 @@ message RepBytesView
 {
     repeated bytes value = 1 [ctype = STRING_PIECE];
 }
+
+message LargeFieldNumber
+{
+    optional string value = 100;
+}
+message VeryLargeFieldNumber
+{
+    optional string value = 536870911; // 2^29 - 1
+}
