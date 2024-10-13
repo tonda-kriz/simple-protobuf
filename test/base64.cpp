@@ -94,6 +94,10 @@ TEST_CASE( "base64" )
         CHECK( base64_decode( R"("Zm9vYg==")" ) == "foob" );
         CHECK( base64_decode( R"("Zm9vYmE=")" ) == "fooba" );
         CHECK( base64_decode( R"("Zm9vYmFy")" ) == "foobar" );
+        REQUIRE_THROWS( base64_decode( R"("Zm9vY!Fy")" ) );
+        REQUIRE_THROWS( base64_decode( R"("Zm9vY^Fy")" ) );
+        REQUIRE_THROWS( base64_decode( R"("!m9vYmFy")" ) );
+        REQUIRE_THROWS( base64_decode( R"("&m9vYmFy")" ) );
     }
     SUBCASE( "encode/decode" )
     {
