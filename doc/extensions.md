@@ -2,11 +2,54 @@
 
 All extensions to the .proto files are compatible with gpb.
 
+## small int types
+
+The library lets you specify also 8 and 16 bit ints (`int8`, `uint8`, `int16`, `uint16`) for scalars and for enums. Warning: due to compatibility with gpb, always use scalar types with the same sign, like `int32` and `int8`, combinations like `int32` and `uint8` are invalid.
+
+### how to use small ints for scalars
+
+Small int types are specified in the comments, so they are ignored by the gpb protoc.
+Each field has an attribute `.type`. Example:
+
+```proto
+//[[ field.type = "int16" ]]
+optional int32 id = 2;
+```
+
+### how to use small ints for enums
+
+Small int enum types are specified in the comments, so they are ignored by the gpb protoc.
+Each enum has an attribute `.type`. Valid values are (`int8`, `uint8`, `int16`, `uint16`, `int32`)
+Example:
+
+```proto
+//[[ enum.type = "int16" ]]
+enum PhoneType {
+    MOBILE = 0;
+    HOME = 1;
+    WORK = 2;
+}
+```
+
+Default is set to:
+
+```proto
+//[[ enum.type = "int32" ]]
+```
+
+You can use this attribute ...
+
+- before `package`, means its set for all enums in the **whole .proto file**
+- before `message`, means its set for all enums inside one **message only**
+- before `enum`, means its set for a specific **enum only**
+
+you can combine them as you want, the more specific ones will be preferred.
+
 ## container types
 
 The library lets you specify your own types for containers (`repeated`, `string`, `bytes`, `optionals`).
 
-### how to use
+### how to use user container types
 
 Containers types are specified in the comments, so they are ignored by the gpb protoc.
 Each container has 2 attributes `.type` (user type) and `.include` (include header for the type).
@@ -47,28 +90,29 @@ you can combine them as you want, the more specific ones will be preferred.
 1. define a schema for you data in a `person.proto` file
 
 ```proto
-//[[ repeated.type = "etl::vector<$,60>"]]
-//[[ repeated.include = "<etl/vector.h>"]]
+//[[ repeated.type = "etl::vector<$,60>" ]]
+//[[ repeated.include = "<etl/vector.h>" ]]
 
-//[[ string.type = "etl::string<32>"]]
-//[[ string.include = "<etl/string.h>"]]
+//[[ string.type = "etl::string<32>" ]]
+//[[ string.include = "<etl/string.h>" ]]
 
 package PhoneBook.Etl;
 
 message Person {
-    //[[ string.type = "std::string"]]
+    //[[ string.type = "std::string" ]]
     optional string name = 1;
+    //[[ field.type = "int16"]]
     optional int32 id = 2;
-    //[[ string.type = "etl::string<64>"]]
+    //[[ string.type = "etl::string<64>" ]]
     optional string email = 3;
-
+    //[[ enum.type = "uint8"]]
     enum PhoneType {
         MOBILE = 0;
         HOME = 1;
         WORK = 2;
     }
 
-    //[[ string.type = "etl::string<16>"]]
+    //[[ string.type = "etl::string<16>" ]]
     message PhoneNumber {
         required string number = 1;
         optional PhoneType type = 2;
@@ -90,7 +134,7 @@ namespace PhoneBook::Etl
 {
 struct Person
 {
-    enum class PhoneType : int32_t
+    enum class PhoneType : uint8_t
     {
         MOBILE = 0,
         HOME   = 1,
@@ -102,7 +146,7 @@ struct Person
         std::optional< PhoneType > type;
     };
     std::optional< std::string > name;
-    std::optional< int32_t > id;
+    std::optional< int16_t > id;
     std::optional< etl::string< 64 > > email;
     etl::vector< PhoneNumber, 60 > phones;
 };

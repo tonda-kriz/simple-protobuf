@@ -223,29 +223,12 @@ void dump_syntax( std::ostream & stream, const proto_file & file )
     dump_comment( stream, file.syntax.comments );
 }
 
-void dump_enum_field( std::ostream & stream, const proto_base & field )
-{
-    dump_comment( stream, field.comment );
-
-    stream << field.name << " = " << field.number << ",\n";
-}
-
-void dump_enum( std::ostream & stream, const proto_enum & my_enum )
-{
-    dump_comment( stream, my_enum.comment );
-
-    stream << "enum class " << my_enum.name << " : int32_t\n{\n";
-    for( const auto & field : my_enum.fields )
-    {
-        dump_enum_field( stream, field );
-    }
-    stream << "};\n";
-}
-
 auto type_literal_suffix( std::string_view type ) -> std::string_view
 {
     static constexpr auto type_map = std::array< std::pair< std::string_view, std::string_view >, 12 >{ {
         { "int64", "LL" },
+        { "uint8", "U" },
+        { "uint16", "U" },
         { "uint32", "U" },
         { "uint64", "ULL" },
         { "sint64", "LL" },
@@ -264,6 +247,47 @@ auto type_literal_suffix( std::string_view type ) -> std::string_view
     }
 
     return { };
+}
+
+auto types_are_compatible( std::string_view type, std::string_view field_type ) -> bool
+{
+    static constexpr auto type_map = std::array< std::pair< std::string_view, std::array< std::string_view, 4 > >, 16 >{ {
+        { "int8", { "int8" } },
+        { "uint8", { "uint8" } },
+        { "int16", { "int8", "int16" } },
+        { "uint16", { "uint8", "uint16" } },
+        { "int32", { "int8", "int16", "int32" } },
+        { "int64", { "int8", "int16", "int32", "int64" } },
+        { "uint32", { "uint8", "uint16", "uint32" } },
+        { "uint64", { "uint8", "uint16", "uint32", "uint64" } },
+        { "sint32", { "int8", "int16", "int32" } },
+        { "sint64", { "int8", "int16", "int32", "int64" } },
+        { "fixed32", { "uint8", "uint16", "uint32" } },
+        { "fixed64", { "uint8", "uint16", "uint32", "uint64" } },
+        { "sfixed32", { "int8", "int16", "int32" } },
+        { "sfixed64", { "int8", "int16", "int32", "int64" } },
+    } };
+
+    for( auto [ proto_type, types ] : type_map )
+    {
+        if( type == proto_type )
+        {
+            return std::find( types.begin( ), types.end( ), field_type ) != types.end( );
+        }
+    }
+    return false;
+}
+
+auto get_field_type( const proto_options & options, std::string_view ctype ) -> std::string
+{
+    if( auto p_name = options.find( option_field_type ); p_name != options.end( ) )
+    {
+        if( types_are_compatible( ctype, p_name->second ) )
+        {
+            return std::string( p_name->second );
+        }
+    }
+    return std::string( ctype );
 }
 
 auto get_container_type( const proto_options & options, const proto_options & message_options, const proto_options & file_options, std::string_view option, std::string_view ctype, std::string_view default_type = { } ) -> std::string
@@ -286,9 +310,53 @@ auto get_container_type( const proto_options & options, const proto_options & me
     return replace( default_type, "$", ctype );
 }
 
+auto get_enum_type( const proto_options & options, const proto_options & message_options, const proto_options & file_options, std::string_view default_type ) -> std::string_view
+{
+    static constexpr auto type_map = std::array< std::pair< std::string_view, std::string_view >, 6 >{ {
+        { "int8"sv, "int8_t"sv },
+        { "uint8"sv, "uint8_t"sv },
+        { "int16"sv, "int16_t"sv },
+        { "uint16"sv, "uint16_t"sv },
+        { "int32"sv, "int32_t"sv },
+    } };
+
+    auto ctype_from_pb = [ = ]( std::string_view type )
+    {
+        for( auto [ proto_type, c_type ] : type_map )
+        {
+            if( type == proto_type )
+            {
+                return c_type;
+            }
+        }
+        throw std::runtime_error( "invalid enum type" );
+    };
+
+    if( auto p_name = options.find( option_enum_type ); p_name != options.end( ) )
+    {
+        return ctype_from_pb( p_name->second );
+    }
+
+    if( auto p_name = message_options.find( option_enum_type ); p_name != message_options.end( ) )
+    {
+        return ctype_from_pb( p_name->second );
+    }
+
+    if( auto p_name = file_options.find( option_enum_type ); p_name != file_options.end( ) )
+    {
+        return ctype_from_pb( p_name->second );
+    }
+
+    return default_type;
+}
+
 auto convert_to_ctype( std::string_view type, const proto_options & options = { }, const proto_options & message_options = { }, const proto_options & file_options = { } ) -> std::string
 {
-    static constexpr auto type_map = std::array< std::pair< std::string_view, std::string_view >, 12 >{ {
+    static constexpr auto type_map = std::array< std::pair< std::string_view, std::string_view >, 16 >{ {
+        { "int8", "int8_t" },
+        { "uint8", "uint8_t" },
+        { "int16", "int16_t" },
+        { "uint16", "uint16_t" },
         { "int32", "int32_t" },
         { "int64", "int64_t" },
         { "uint32", "uint32_t" },
@@ -311,9 +379,11 @@ auto convert_to_ctype( std::string_view type, const proto_options & options = { 
         return get_container_type( options, message_options, file_options, option_bytes_type, "std::byte", "std::vector<$>" );
     }
 
+    auto type_str = get_field_type( options, type );
+
     for( auto [ proto_type, c_type ] : type_map )
     {
-        if( type == proto_type )
+        if( type_str == proto_type )
         {
             return std::string( c_type );
         }
@@ -342,6 +412,25 @@ void dump_field_type_and_name( std::ostream & stream, const proto_field & field,
         break;
     }
     stream << ' ' << field.name;
+}
+
+void dump_enum_field( std::ostream & stream, const proto_base & field )
+{
+    dump_comment( stream, field.comment );
+
+    stream << field.name << " = " << field.number << ",\n";
+}
+
+void dump_enum( std::ostream & stream, const proto_enum & my_enum, const proto_message & message, const proto_file & file )
+{
+    dump_comment( stream, my_enum.comment );
+
+    stream << "enum class " << my_enum.name << " : " << get_enum_type( my_enum.options, message.options, file.options, "int32_t" ) << "\n{\n";
+    for( const auto & field : my_enum.fields )
+    {
+        dump_enum_field( stream, field );
+    }
+    stream << "};\n";
 }
 
 void dump_message_oneof( std::ostream & stream, const proto_oneof & oneof )
@@ -432,7 +521,7 @@ void dump_message( std::ostream & stream, const proto_message & message, const p
     dump_forwards( stream, message.forwards );
     for( const auto & sub_enum : message.enums )
     {
-        dump_enum( stream, sub_enum );
+        dump_enum( stream, sub_enum, message, file );
     }
 
     for( const auto & sub_message : message.messages )
@@ -474,7 +563,7 @@ void dump_enums( std::ostream & stream, const proto_file & file )
 {
     for( const auto & my_enum : file.package.enums )
     {
-        dump_enum( stream, my_enum );
+        dump_enum( stream, my_enum, file.package, file );
     }
 }
 
