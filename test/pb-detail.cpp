@@ -135,6 +135,14 @@ using namespace std::literals;
 
 TEST_CASE( "protobuf" )
 {
+    SUBCASE( "tag" )
+    {
+        SUBCASE( "large field numbers" )
+        {
+            pb_test( Test::Scalar::LargeFieldNumber{ "hello" }, "\xa2\x06\x05hello" );
+            pb_test( Test::Scalar::VeryLargeFieldNumber{ "hello" }, "\xfa\xff\xff\xff\x0f\x05hello" );
+        }
+    }
     SUBCASE( "string" )
     {
         SUBCASE( "required" )

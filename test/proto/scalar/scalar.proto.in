@@ -826,3 +826,14 @@ message RepEnumInt32
     
     repeated Enum value = 1;
 }
+
+message LargeFieldNumber
+{
+    optional string value = 100;
+}
+
+message VeryLargeFieldNumber
+{
+    optional string value = 536870911; // 2^29 - 1
+}
+
