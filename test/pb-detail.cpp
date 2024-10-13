@@ -399,6 +399,66 @@ TEST_CASE( "protobuf" )
                     CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::RepPackFixed32 >( "\x0a\x08\x42\x00\x00\x00\x03\x00\x00"sv ) );
                 }
             }
+            SUBCASE( "uint8" )
+            {
+                SUBCASE( "required" )
+                {
+                    pb_test( Test::Scalar::ReqFixed32_8{ .value = 0x42 }, "\x0d\x42\x00\x00\x00"sv );
+                    pb_test( Test::Scalar::ReqFixed32_8{ .value = 0xff }, "\x0d\xff\x00\x00\x00"sv );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqFixed32_8 >( "\x0d\xfe\xff\xff\xff"sv ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqFixed32_8 >( "\x0d\x42\x00\x00"sv ) );
+                }
+                SUBCASE( "optional" )
+                {
+                    pb_test( Test::Scalar::OptFixed32_8{ .value = 0x42 }, "\x0d\x42\x00\x00\x00"sv );
+                    pb_test( Test::Scalar::OptFixed32_8{ .value = 0xff }, "\x0d\xff\x00\x00\x00"sv );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqFixed32_8 >( "\x0d\xfe\xff\xff\xff"sv ) );
+                }
+                SUBCASE( "repeated" )
+                {
+                    pb_test( Test::Scalar::RepFixed32_8{ .value = { 0x42 } }, "\x0d\x42\x00\x00\x00"sv );
+                    pb_test( Test::Scalar::RepFixed32_8{ .value = { 0x42, 0x3 } }, "\x0d\x42\x00\x00\x00\x0d\x03\x00\x00\x00"sv );
+                    pb_test( Test::Scalar::RepFixed32_8{ .value = {} }, ""sv );
+
+                    SUBCASE( "packed" )
+                    {
+                        pb_test( Test::Scalar::RepPackFixed32_8{ .value = { 0x42 } }, "\x0a\x04\x42\x00\x00\x00"sv );
+                        pb_test( Test::Scalar::RepPackFixed32_8{ .value = { 0x42, 0x3 } }, "\x0a\x08\x42\x00\x00\x00\x03\x00\x00\x00"sv );
+                        pb_test( Test::Scalar::RepPackFixed32_8{ .value = {} }, ""sv );
+                        CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::RepPackFixed32_8 >( "\x0a\x08\x42\x00\x00\x00\x03\x00\x00"sv ) );
+                    }
+                }
+            }
+            SUBCASE( "uint16" )
+            {
+                SUBCASE( "required" )
+                {
+                    pb_test( Test::Scalar::ReqFixed32_16{ .value = 0x42 }, "\x0d\x42\x00\x00\x00"sv );
+                    pb_test( Test::Scalar::ReqFixed32_16{ .value = 0xff }, "\x0d\xff\x00\x00\x00"sv );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqFixed32_16 >( "\x0d\xfe\xff\xff\xff"sv ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqFixed32_16 >( "\x0d\x42\x00\x00"sv ) );
+                }
+                SUBCASE( "optional" )
+                {
+                    pb_test( Test::Scalar::OptFixed32_16{ .value = 0x42 }, "\x0d\x42\x00\x00\x00"sv );
+                    pb_test( Test::Scalar::OptFixed32_16{ .value = 0xff }, "\x0d\xff\x00\x00\x00"sv );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqFixed32_16 >( "\x0d\xfe\xff\xff\xff"sv ) );
+                }
+                SUBCASE( "repeated" )
+                {
+                    pb_test( Test::Scalar::RepFixed32_16{ .value = { 0x42 } }, "\x0d\x42\x00\x00\x00"sv );
+                    pb_test( Test::Scalar::RepFixed32_16{ .value = { 0x42, 0x3 } }, "\x0d\x42\x00\x00\x00\x0d\x03\x00\x00\x00"sv );
+                    pb_test( Test::Scalar::RepFixed32_16{ .value = {} }, ""sv );
+
+                    SUBCASE( "packed" )
+                    {
+                        pb_test( Test::Scalar::RepPackFixed32_16{ .value = { 0x42 } }, "\x0a\x04\x42\x00\x00\x00"sv );
+                        pb_test( Test::Scalar::RepPackFixed32_16{ .value = { 0x42, 0x3 } }, "\x0a\x08\x42\x00\x00\x00\x03\x00\x00\x00"sv );
+                        pb_test( Test::Scalar::RepPackFixed32_16{ .value = {} }, ""sv );
+                        CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::RepPackFixed32_16 >( "\x0a\x08\x42\x00\x00\x00\x03\x00\x00"sv ) );
+                    }
+                }
+            }
         }
         SUBCASE( "fixed64" )
         {
@@ -427,6 +487,34 @@ TEST_CASE( "protobuf" )
                     pb_test( Test::Scalar::RepPackFixed64{ .value = {} }, ""sv );
                 }
             }
+            SUBCASE( "uint8" )
+            {
+                SUBCASE( "required" )
+                {
+                    pb_test( Test::Scalar::ReqFixed64_8{ .value = 0x42 }, "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv );
+                    pb_test( Test::Scalar::ReqFixed64_8{ .value = 0xff }, "\x09\xff\x00\x00\x00\x00\x00\x00\x00"sv );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqFixed64_8 >( "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqFixed64_8 >( "\x09\x42\x00\x00\x00\x00\x00\x00"sv ) );
+                }
+                SUBCASE( "optional" )
+                {
+                    pb_test( Test::Scalar::OptFixed64_8{ .value = 0x42 }, "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv );
+                    pb_test( Test::Scalar::OptFixed64_8{ .value = 0xff }, "\x09\xff\x00\x00\x00\x00\x00\x00\x00"sv );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::OptFixed64_8 >( "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv ) );
+                }
+                SUBCASE( "repeated" )
+                {
+                    pb_test( Test::Scalar::RepFixed64_8{ .value = { 0x42 } }, "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv );
+                    pb_test( Test::Scalar::RepFixed64_8{ .value = { 0x42, 0x3 } }, "\x09\x42\x00\x00\x00\x00\x00\x00\x00\x09\x03\x00\x00\x00\x00\x00\x00\x00"sv );
+                    pb_test( Test::Scalar::RepFixed64_8{ .value = {} }, ""sv );
+                    SUBCASE( "packed" )
+                    {
+                        pb_test( Test::Scalar::RepPackFixed64_8{ .value = { 0x42 } }, "\x0a\x08\x42\x00\x00\x00\x00\x00\x00\x00"sv );
+                        pb_test( Test::Scalar::RepPackFixed64_8{ .value = { 0x42, 0x3 } }, "\x0a\x10\x42\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00"sv );
+                        pb_test( Test::Scalar::RepPackFixed64_8{ .value = {} }, ""sv );
+                    }
+                }
+            }
         }
         SUBCASE( "sfixed32" )
         {
@@ -439,9 +527,9 @@ TEST_CASE( "protobuf" )
             }
             SUBCASE( "optional" )
             {
-                pb_test( Test::Scalar::ReqSfixed32{ .value = 0x42 }, "\x0d\x42\x00\x00\x00"sv );
-                pb_test( Test::Scalar::ReqSfixed32{ .value = 0xff }, "\x0d\xff\x00\x00\x00"sv );
-                pb_test( Test::Scalar::ReqSfixed32{ .value = -2 }, "\x0d\xfe\xff\xff\xff"sv );
+                pb_test( Test::Scalar::OptSfixed32{ .value = 0x42 }, "\x0d\x42\x00\x00\x00"sv );
+                pb_test( Test::Scalar::OptSfixed32{ .value = 0xff }, "\x0d\xff\x00\x00\x00"sv );
+                pb_test( Test::Scalar::OptSfixed32{ .value = -2 }, "\x0d\xfe\xff\xff\xff"sv );
             }
             SUBCASE( "repeated" )
             {
@@ -454,6 +542,35 @@ TEST_CASE( "protobuf" )
                     pb_test( Test::Scalar::RepPackSfixed32{ .value = { 0x42 } }, "\x0a\x04\x42\x00\x00\x00"sv );
                     pb_test( Test::Scalar::RepPackSfixed32{ .value = { 0x42, 0x3 } }, "\x0a\x08\x42\x00\x00\x00\x03\x00\x00\x00"sv );
                     pb_test( Test::Scalar::RepPackSfixed32{ .value = {} }, ""sv );
+                }
+            }
+            SUBCASE( "int8" )
+            {
+                SUBCASE( "required" )
+                {
+                    pb_test( Test::Scalar::ReqSfixed32_8{ .value = 0x42 }, "\x0d\x42\x00\x00\x00"sv );
+                    pb_test( Test::Scalar::ReqSfixed32_8{ .value = -2 }, "\x0d\xfe\xff\xff\xff"sv );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed32_8 >( "\x0d\xff\x00\x00\x00"sv ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed32_8 >( "\x0d\x42\x00\x00"sv ) );
+                }
+                SUBCASE( "optional" )
+                {
+                    pb_test( Test::Scalar::OptSfixed32_8{ .value = 0x42 }, "\x0d\x42\x00\x00\x00"sv );
+                    pb_test( Test::Scalar::OptSfixed32_8{ .value = -2 }, "\x0d\xfe\xff\xff\xff"sv );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::OptSfixed32_8 >( "\x0d\xff\x00\x00\x00"sv ) );
+                }
+                SUBCASE( "repeated" )
+                {
+                    pb_test( Test::Scalar::RepSfixed32_8{ .value = { 0x42 } }, "\x0d\x42\x00\x00\x00"sv );
+                    pb_test( Test::Scalar::RepSfixed32_8{ .value = { 0x42, 0x3 } }, "\x0d\x42\x00\x00\x00\x0d\x03\x00\x00\x00"sv );
+                    pb_test( Test::Scalar::RepSfixed32_8{ .value = {} }, ""sv );
+
+                    SUBCASE( "packed" )
+                    {
+                        pb_test( Test::Scalar::RepPackSfixed32_8{ .value = { 0x42 } }, "\x0a\x04\x42\x00\x00\x00"sv );
+                        pb_test( Test::Scalar::RepPackSfixed32_8{ .value = { 0x42, 0x3 } }, "\x0a\x08\x42\x00\x00\x00\x03\x00\x00\x00"sv );
+                        pb_test( Test::Scalar::RepPackSfixed32_8{ .value = {} }, ""sv );
+                    }
                 }
             }
         }
@@ -482,6 +599,34 @@ TEST_CASE( "protobuf" )
                     pb_test( Test::Scalar::RepPackSfixed64{ .value = { 0x42 } }, "\x0a\x08\x42\x00\x00\x00\x00\x00\x00\x00"sv );
                     pb_test( Test::Scalar::RepPackSfixed64{ .value = { 0x42, 0x3 } }, "\x0a\x10\x42\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00"sv );
                     pb_test( Test::Scalar::RepPackSfixed64{ .value = {} }, ""sv );
+                }
+            }
+            SUBCASE( "int8" )
+            {
+                SUBCASE( "required" )
+                {
+                    pb_test( Test::Scalar::ReqSfixed64_8{ .value = 0x42 }, "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv );
+                    pb_test( Test::Scalar::ReqSfixed64_8{ .value = -2 }, "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed64_8 >( "\x09\xff\x00\x00\x00\x00\x00\x00\x00"sv ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed64_8 >( "\x09\x42\x00\x00\x00\x00\x00\x00"sv ) );
+                }
+                SUBCASE( "optional" )
+                {
+                    pb_test( Test::Scalar::OptSfixed64_8{ .value = 0x42 }, "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv );
+                    pb_test( Test::Scalar::OptSfixed64_8{ .value = -2 }, "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::OptSfixed64_8 >( "\x09\xff\x00\x00\x00\x00\x00\x00\x00"sv ) );
+                }
+                SUBCASE( "repeated" )
+                {
+                    pb_test( Test::Scalar::RepSfixed64_8{ .value = { 0x42 } }, "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv );
+                    pb_test( Test::Scalar::RepSfixed64_8{ .value = { 0x42, 0x3 } }, "\x09\x42\x00\x00\x00\x00\x00\x00\x00\x09\x03\x00\x00\x00\x00\x00\x00\x00"sv );
+                    pb_test( Test::Scalar::RepSfixed64_8{ .value = {} }, ""sv );
+                    SUBCASE( "packed" )
+                    {
+                        pb_test( Test::Scalar::RepPackSfixed64_8{ .value = { 0x42 } }, "\x0a\x08\x42\x00\x00\x00\x00\x00\x00\x00"sv );
+                        pb_test( Test::Scalar::RepPackSfixed64_8{ .value = { 0x42, 0x3 } }, "\x0a\x10\x42\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00"sv );
+                        pb_test( Test::Scalar::RepPackSfixed64_8{ .value = {} }, ""sv );
+                    }
                 }
             }
         }
