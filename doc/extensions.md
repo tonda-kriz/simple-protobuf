@@ -105,7 +105,7 @@ message Person {
     optional int32 id = 2;
     //[[ string.type = "etl::string<64>" ]]
     optional string email = 3;
-
+    //[[ enum.type = "uint8"]]
     enum PhoneType {
         MOBILE = 0;
         HOME = 1;
@@ -134,7 +134,7 @@ namespace PhoneBook::Etl
 {
 struct Person
 {
-    enum class PhoneType : int32_t
+    enum class PhoneType : uint8_t
     {
         MOBILE = 0,
         HOME   = 1,
