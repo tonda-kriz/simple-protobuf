@@ -297,7 +297,7 @@ static inline auto deserialize_bitfield_as( istream & stream, uint32_t bits, wir
             auto tmp = create_tmp_var< T, int32_t, uint32_t >( );
             stream.read_exact( &tmp, sizeof( tmp ) );
             spb::detail::check_if_value_fit_in_bits( tmp, bits );
-            return T( tmp );
+            value = T( tmp );
         }
     }
     else if constexpr( type1( encoder ) == scalar_encoder::i64 )
@@ -314,7 +314,7 @@ static inline auto deserialize_bitfield_as( istream & stream, uint32_t bits, wir
             auto tmp = create_tmp_var< T, int64_t, uint64_t >( );
             stream.read_exact( &tmp, sizeof( tmp ) );
             spb::detail::check_if_value_fit_in_bits( tmp, bits );
-            return T( tmp );
+            value = T( tmp );
         }
     }
     spb::detail::check_if_value_fit_in_bits( value, bits );
