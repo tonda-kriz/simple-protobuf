@@ -10,6 +10,7 @@
 
 #pragma once
 
+#include "../bits.h"
 #include "../concepts.h"
 #include "wire-types.h"
 #include <climits>
@@ -52,6 +53,9 @@ public:
 
     template < size_t ordinal, scalar_encoder encoder, typename T >
     void deserialize_variant_as( T & variant, uint32_t tag );
+
+    template < scalar_encoder encoder, typename T >
+    auto deserialize_bitfield_as( uint32_t bits, uint32_t tag ) -> T;
 
     [[nodiscard]] auto read_byte( ) -> uint8_t
     {
@@ -248,6 +252,74 @@ static inline void deserialize_as( istream & stream, C & p_value, wire_type type
 
 template < typename T >
 static inline void deserialize( istream & stream, std::unique_ptr< T > & value, wire_type type );
+
+template < typename T, typename signedT, typename unsignedT >
+static auto create_tmp_var( )
+{
+    if constexpr( std::is_signed< T >::value )
+    {
+        return signedT( );
+    }
+    else
+    {
+        return unsignedT( );
+    }
+}
+
+template < scalar_encoder encoder, typename T >
+static inline auto deserialize_bitfield_as( istream & stream, uint32_t bits, wire_type type ) -> T
+{
+    auto value = T( );
+    if constexpr( type1( encoder ) == scalar_encoder::svarint )
+    {
+        check_wire_type( type, wire_type::varint );
+
+        auto tmp = read_varint< std::make_unsigned_t< T > >( stream );
+        value    = T( ( tmp >> 1 ) ^ ( ~( tmp & 1 ) + 1 ) );
+    }
+    else if constexpr( type1( encoder ) == scalar_encoder::varint )
+    {
+        check_wire_type( type, wire_type::varint );
+        value = read_varint< T >( stream );
+    }
+    else if constexpr( type1( encoder ) == scalar_encoder::i32 )
+    {
+        static_assert( sizeof( T ) <= sizeof( uint32_t ) );
+
+        check_wire_type( type, wire_type::fixed32 );
+
+        if constexpr( sizeof( value ) == sizeof( uint32_t ) )
+        {
+            stream.read_exact( &value, sizeof( value ) );
+        }
+        else
+        {
+            auto tmp = create_tmp_var< T, int32_t, uint32_t >( );
+            stream.read_exact( &tmp, sizeof( tmp ) );
+            spb::detail::check_if_value_fit_in_bits( tmp, bits );
+            return T( tmp );
+        }
+    }
+    else if constexpr( type1( encoder ) == scalar_encoder::i64 )
+    {
+        static_assert( sizeof( T ) <= sizeof( uint64_t ) );
+        check_wire_type( type, wire_type::fixed64 );
+
+        if constexpr( sizeof( value ) == sizeof( uint64_t ) )
+        {
+            stream.read_exact( &value, sizeof( value ) );
+        }
+        else
+        {
+            auto tmp = create_tmp_var< T, int64_t, uint64_t >( );
+            stream.read_exact( &tmp, sizeof( tmp ) );
+            spb::detail::check_if_value_fit_in_bits( tmp, bits );
+            return T( tmp );
+        }
+    }
+    spb::detail::check_if_value_fit_in_bits( value, bits );
+    return value;
+}
 
 template < scalar_encoder encoder >
 static inline void deserialize_as( istream & stream, spb::detail::is_int_or_float auto & value, wire_type type )
@@ -614,6 +686,12 @@ template < size_t ordinal, scalar_encoder encoder, typename T >
 inline void istream::deserialize_variant_as( T & variant, uint32_t tag )
 {
     detail::deserialize_variant_as< ordinal, encoder >( *this, variant, wire_type_from_tag( tag ) );
+}
+
+template < scalar_encoder encoder, typename T >
+inline auto istream::deserialize_bitfield_as( uint32_t bits, uint32_t tag ) -> T
+{
+    return detail::deserialize_bitfield_as< encoder, T >( *this, bits, wire_type_from_tag( tag ) );
 }
 
 static inline void deserialize( auto & value, spb::io::reader on_read )

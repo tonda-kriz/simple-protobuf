@@ -219,8 +219,8 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_enum & my_en
 {
     if( my_enum.fields.empty( ) )
     {
-        stream << "auto deserialize_value( detail::istream &, " << full_name << " & ) -> bool\n{\n";
-        stream << "\treturn true;\n}\n\n";
+        stream << "void deserialize_value( detail::istream &, " << full_name << " & )\n{\n";
+        stream << "\n}\n\n";
         return;
     }
 
@@ -235,7 +235,7 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_enum & my_en
         key_size_max = std::max( key_size_max, field.name.size( ) );
     }
 
-    stream << "auto deserialize_value( detail::istream & stream, " << full_name << " & value ) -> bool\n{\n";
+    stream << "void deserialize_value( detail::istream & stream, " << full_name << " & value )\n{\n";
     stream << "\tauto enum_value = stream.deserialize_string_or_int( " << key_size_min << ", " << key_size_max << " );\n";
     stream << "\tstd::visit( detail::overloaded{\n\t\t[&]( std::string_view enum_str )\n\t\t{\n";
     stream << "\t\t\tconst auto enum_hash = djb2_hash( enum_str );\n";
@@ -265,7 +265,7 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_enum & my_en
     }
     stream << "\t\t\t\tvalue = " << full_name << "( enum_int );\n\t\t\t\treturn ;\n";
     stream << "\t\t\t}\n\t\t\tthrow std::system_error( std::make_error_code( std::errc::invalid_argument ) );\n";
-    stream << "\t\t}\n\t}, enum_value );\n\treturn true;\n}\n\n";
+    stream << "\t\t}\n\t}, enum_value );\n}\n\n";
 }
 
 void dump_cpp_serialize_value( std::ostream & stream, const proto_message & message, std::string_view full_name )
@@ -296,8 +296,8 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & me
 {
     if( message.fields.empty( ) && message.maps.empty( ) && message.oneofs.empty( ) )
     {
-        stream << "auto deserialize_value( detail::istream &, " << full_name << " & ) -> bool\n{\n";
-        stream << "\treturn true;\n}\n\n";
+        stream << "void deserialize_value( detail::istream &, " << full_name << " & )\n{\n";
+        stream << "\n}\n\n";
         return;
     }
 
@@ -307,6 +307,7 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & me
         std::string parsed_name;
         std::string_view name;
         size_t oneof_index = SIZE_MAX;
+        std::string_view bitfield;
     };
 
     size_t key_size_min = UINT32_MAX;
@@ -323,6 +324,7 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & me
                           one_field{
                               .parsed_name = field_name,
                               .name        = field.name,
+                              .bitfield    = field.bit_field,
                           } );
         if( field_name != field.name )
         {
@@ -333,6 +335,7 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & me
                               one_field{
                                   .parsed_name = std::string( field.name ),
                                   .name        = field.name,
+                                  .bitfield    = field.bit_field,
                               } );
         }
     }
@@ -386,39 +389,44 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & me
         }
     }
 
-    stream << "auto deserialize_value( detail::istream & stream, " << full_name << " & value ) -> bool\n{\n";
-    stream << "\tswitch( djb2_hash( stream.deserialize_key( " << key_size_min << ", " << key_size_max << " ) ) )\n\t{\n";
+    stream << "void deserialize_value( detail::istream & stream, " << full_name << " & value )\n{\n";
+    stream << "auto key = stream.deserialize_key( " << key_size_min << ", " << key_size_max << " );\n";
+    stream << "\tswitch( djb2_hash( key ) )\n\t{\n";
 
     auto last_hash = name_map.begin( )->first + 1;
-    auto put_or    = false;
+    auto put_break = false;
     for( const auto & [ hash, field ] : name_map )
     {
         if( hash != last_hash )
         {
-            if( put_or )
+            if( put_break )
             {
-                stream << ";\n";
+                stream << "\t\t\t\tbreak;\n";
             }
+            put_break = true;
             last_hash = hash;
-            stream << "\t\tcase detail::djb2_hash( \"" << field.parsed_name << "\"sv ):\n\t\t\treturn\n";
-            put_or = false;
+            stream << "\t\tcase detail::djb2_hash( \"" << field.parsed_name << "\"sv ):\n";
         }
-        if( put_or )
-        {
-            stream << " ||\n";
-        }
+        stream << "\t\t\t\tif( key == \"" << field.parsed_name << "\"sv )\n\t\t\t\t{\n";
         if( field.oneof_index == SIZE_MAX )
         {
-            stream << "\t\t\t\tstream.deserialize( \"" << field.parsed_name << "\"sv, value." << field.name << " )";
+            if( !field.bitfield.empty( ) )
+            {
+
+                stream << "\t\t\t\t\tvalue." << field.name << " = stream.deserialize_bitfield< decltype( value." << field.name << " ) >( " << field.bitfield << " );\n";
+            }
+            else
+            {
+                stream << "\t\t\t\treturn stream.deserialize( value." << field.name << " );\n";
+            }
         }
         else
         {
-            stream << "\t\t\t\tstream.deserialize_variant<" << field.oneof_index << ">( \"" << field.parsed_name << "\"sv, value." << field.name << " )";
+            stream << "\t\t\t\treturn stream.deserialize_variant<" << field.oneof_index << ">( value." << field.name << " );\n";
         }
-        put_or = true;
+        stream << "\t\t\t\t}\n";
     }
-
-    stream << ";\n\t}\n\treturn false;\n}\n";
+    stream << "\tbreak;\n\t}\t\treturn stream.skip_value( );\n\t}\n";
 }
 
 void dump_cpp_enum( std::ostream & stream, const proto_enum & my_enum, std::string_view parent )

@@ -278,16 +278,37 @@ auto types_are_compatible( std::string_view type, std::string_view field_type ) 
     return false;
 }
 
+auto remove_bitfield( std::string_view type ) -> std::string_view
+{
+    return type.substr( 0, type.find( ':' ) );
+}
+
 auto get_field_type( const proto_options & options, std::string_view ctype ) -> std::string
 {
     if( auto p_name = options.find( option_field_type ); p_name != options.end( ) )
     {
-        if( types_are_compatible( ctype, p_name->second ) )
+        auto field_type = remove_bitfield( p_name->second );
+
+        if( types_are_compatible( ctype, field_type ) )
         {
-            return std::string( p_name->second );
+            return std::string( field_type );
         }
     }
     return std::string( ctype );
+}
+
+auto get_field_bits( const proto_field & field ) -> std::string_view
+{
+    if( auto p_name = field.options.find( option_field_type ); p_name != field.options.end( ) )
+    {
+        auto bitfield = p_name->second;
+        if( auto index = bitfield.find( ':' ); index != std::string_view::npos )
+        {
+            const_cast< proto_field & >( field ).bit_field = bitfield.substr( index + 1 );
+            return bitfield.substr( index );
+        }
+    }
+    return { };
 }
 
 auto get_container_type( const proto_options & options, const proto_options & message_options, const proto_options & file_options, std::string_view option, std::string_view ctype, std::string_view default_type = { } ) -> std::string
@@ -411,7 +432,7 @@ void dump_field_type_and_name( std::ostream & stream, const proto_field & field,
         stream << get_container_type( field.options, message.options, file.options, option_pointer_type, ctype, "std::unique_ptr<$>" );
         break;
     }
-    stream << ' ' << field.name;
+    stream << ' ' << field.name << get_field_bits( field );
 }
 
 void dump_enum_field( std::ostream & stream, const proto_base & field )
