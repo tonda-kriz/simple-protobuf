@@ -60,16 +60,11 @@ auto find_file_in_paths( const std::filesystem::path & file_name, std::span< con
     throw std::runtime_error( std::string( " " ) + strerror( ENOENT ) );
 }
 
-[[noreturn]] void throw_parse_error( spb::char_stream & stream, std::string_view message )
-{
-    throw std::runtime_error( std::to_string( stream.current_line( ) ) + ":" + std::to_string( stream.current_column( ) ) + ": " + std::string( message ) );
-}
-
 void parse_or_throw( bool parsed, spb::char_stream & stream, std::string_view message )
 {
     if( !parsed )
     {
-        throw_parse_error( stream, message );
+        stream.throw_parse_error( message );
     }
 }
 
@@ -77,7 +72,7 @@ void consume_or_fail( spb::char_stream & stream, char c )
 {
     if( !stream.consume( c ) )
     {
-        return throw_parse_error( stream, "(expecting '" + std::string( 1, c ) + "')" );
+        return stream.throw_parse_error( "(expecting '" + std::string( 1, c ) + "')" );
     }
 }
 
@@ -85,7 +80,7 @@ void consume_or_fail( spb::char_stream & stream, std::string_view token )
 {
     if( !stream.consume( token ) )
     {
-        return throw_parse_error( stream, "(expecting '" + std::string( token ) + "')" );
+        return stream.throw_parse_error( "(expecting '" + std::string( token ) + "')" );
     }
 }
 
@@ -155,7 +150,7 @@ auto parse_number( spb::char_stream & stream ) -> T
     {
         return result;
     }
-    throw_parse_error( stream, "expecting number" );
+    stream.throw_parse_error( "expecting number" );
 }
 
 auto parse_int_or_float( spb::char_stream & stream ) -> std::string_view
@@ -168,7 +163,7 @@ auto parse_int_or_float( spb::char_stream & stream ) -> std::string_view
         stream.skip_to( result.ptr );
         return { start, result.ptr };
     }
-    throw_parse_error( stream, "expecting number" );
+    stream.throw_parse_error( "expecting number" );
 }
 
 //- parse single line comment // \n
@@ -178,7 +173,7 @@ void parse_comment_line( spb::char_stream & stream, proto_comment & comment )
     const auto end     = stream.content( ).find( '\n' );
     if( end == std::string_view::npos )
     {
-        throw_parse_error( stream, "expecting \\n" );
+        stream.throw_parse_error( "expecting \\n" );
     }
 
     comment.comments.emplace_back( start - 2, end + 2 );
@@ -193,7 +188,7 @@ void parse_comment_multiline( spb::char_stream & stream, proto_comment & comment
     const auto end     = stream.content( ).find( "*/" );
     if( end == std::string_view::npos )
     {
-        throw_parse_error( stream, "expecting */" );
+        stream.throw_parse_error( "expecting */" );
     }
 
     comment.comments.emplace_back( start - 2, end + 4 );
@@ -220,7 +215,7 @@ auto parse_comment( spb::char_stream & stream ) -> proto_comment
         }
         else
         {
-            throw_parse_error( stream, "expecting // or /*" );
+            stream.throw_parse_error( "expecting // or /*" );
         }
     }
     return result;
@@ -238,7 +233,7 @@ auto parse_comment( spb::char_stream & stream ) -> proto_comment
     const auto c = stream.current_char( );
     if( c != '"' && c != '\'' )
     {
-        throw_parse_error( stream, "expecting \" or '" );
+        stream.throw_parse_error( "expecting \" or '" );
         return { };
     }
 
@@ -253,7 +248,7 @@ auto parse_comment( spb::char_stream & stream ) -> proto_comment
 
     if( current != c )
     {
-        throw_parse_error( stream, "missing string end" );
+        stream.throw_parse_error( "missing string end" );
     }
 
     auto result = std::string_view( start, static_cast< size_t >( stream.begin( ) - start ) );
@@ -267,7 +262,7 @@ auto parse_comment( spb::char_stream & stream ) -> proto_comment
 
     if( isalpha( stream.current_char( ) ) == 0 )
     {
-        throw_parse_error( stream, "expecting identifier(a-zA-Z)" );
+        stream.throw_parse_error( "expecting identifier(a-zA-Z)" );
         return { };
     }
 
@@ -307,14 +302,14 @@ auto parse_comment( spb::char_stream & stream ) -> proto_comment
 
 void parse_top_level_service_body( spb::char_stream & stream, proto_file &, proto_comment && )
 {
-    return throw_parse_error( stream, "not implemented" );
+    return stream.throw_parse_error( "not implemented" );
 }
 
 void consume_statement_end( spb::char_stream & stream, proto_comment & comment )
 {
     if( stream.current_char( ) != ';' )
     {
-        return throw_parse_error( stream, R"(expecting ";")" );
+        return stream.throw_parse_error( R"(expecting ";")" );
     }
     stream.consume_current_char( false );
     skip_white_space_until_new_line( stream );
@@ -347,7 +342,7 @@ void parse_top_level_syntax_body( spb::char_stream & stream, proto_syntax & synt
         return consume_statement_end( stream, syntax.comments );
     }
 
-    throw_parse_error( stream, "expecting proto2 or proto3" );
+    stream.throw_parse_error( "expecting proto2 or proto3" );
 }
 
 void parse_top_level_syntax_or_service( spb::char_stream & stream, proto_file & file, proto_comment && comment )
@@ -362,7 +357,7 @@ void parse_top_level_syntax_or_service( spb::char_stream & stream, proto_file & 
         return parse_top_level_service_body( stream, file, std::move( comment ) );
     }
 
-    throw_parse_error( stream, "expecting syntax or service" );
+    stream.throw_parse_error( "expecting syntax or service" );
 }
 
 void parse_top_level_import( spb::char_stream & stream, proto_imports & imports, proto_comment && comment )
@@ -656,7 +651,7 @@ void parse_enum_field( spb::char_stream & stream, proto_enum & new_enum, proto_c
     }
 
     return proto_field::LABEL_OPTIONAL;
-    // throw_parse_error( stream, "expecting label" );
+    // stream.throw_parse_error( "expecting label" );
 }
 
 void parse_field( spb::char_stream & stream, proto_fields & fields, proto_comment && comment )
@@ -692,7 +687,7 @@ auto parse_map_key_type( spb::char_stream & stream ) -> std::string_view
             return key_type;
         }
     }
-    throw_parse_error( stream, "expecting map key type" );
+    stream.throw_parse_error( "expecting map key type" );
 }
 
 auto parse_map_body( spb::char_stream & stream, proto_comment && comment ) -> proto_map
@@ -856,7 +851,7 @@ void parse_top_level( spb::char_stream & stream, proto_file & file, proto_commen
         return ( void ) parse_empty_statement( stream );
 
     default:
-        return throw_parse_error( stream, "expecting top level definition" );
+        return stream.throw_parse_error( "expecting top level definition" );
     }
 }
 
