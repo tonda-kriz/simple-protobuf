@@ -420,8 +420,8 @@ void dump_field_type_and_name( std::ostream & stream, const proto_field & field,
     switch( field.label )
     {
     case proto_field::Label::LABEL_NONE:
-        stream << ctype;
-        break;
+        stream << ctype << ' ' << field.name << get_field_bits( field );
+        return;
     case proto_field::Label::LABEL_OPTIONAL:
         stream << get_container_type( field.options, message.options, file.options, option_optional_type, ctype, "std::optional<$>" );
         break;
@@ -432,7 +432,7 @@ void dump_field_type_and_name( std::ostream & stream, const proto_field & field,
         stream << get_container_type( field.options, message.options, file.options, option_pointer_type, ctype, "std::unique_ptr<$>" );
         break;
     }
-    stream << ' ' << field.name << get_field_bits( field );
+    stream << ' ' << field.name;
 }
 
 void dump_enum_field( std::ostream & stream, const proto_base & field )
