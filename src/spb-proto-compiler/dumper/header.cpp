@@ -444,6 +444,10 @@ void dump_field_type_and_name( std::ostream & stream, const proto_field & field,
         stream << get_container_type( field.options, message.options, file.options, option_pointer_type, ctype, "std::unique_ptr<$>" );
         break;
     }
+    if( auto bitfield = get_field_bits( field ); !bitfield.empty( ) )
+    {
+        throw_parse_error( file, bitfield, "bitfield can be used only with `required` label" );
+    }
     stream << ' ' << field.name;
 }
 

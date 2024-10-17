@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include <dumper/header.h>
 #include <parser/parser.h>
 #include <sstream>
@@ -47,6 +48,14 @@ constexpr proto_file_test tests[] = {
     value = 1;
 })"sv,
       2 },
+    { R"(syntax = "proto2";
+    message OptUint8_1
+{
+    //[[ field.type = "uint8:1" ]]
+    optional uint32 value = 1;
+}
+)",
+      4 },
 };
 
 void test_proto_file( const proto_file_test & test )
@@ -61,9 +70,9 @@ void test_proto_file( const proto_file_test & test )
     }
     catch( const std::exception & ex )
     {
-        auto message = std::string_view( ex.what( ) );
-        auto line    = std::to_string( test.error_line ) + ":";
-        REQUIRE( message.starts_with( line ) );
+        auto line = std::strtoul( ex.what( ), nullptr, 10 );
+
+        REQUIRE( test.error_line == line );
     }
 }
 
