@@ -837,3 +837,86 @@ message VeryLargeFieldNumber
     optional string value = 536870911; // 2^29 - 1
 }
 
+message ReqUint8_1
+{
+    //[[ field.type = "uint8:1" ]]
+    required uint32 value = 1;
+}
+
+message ReqUint8_2
+{
+    //[[ field.type = "uint8:2" ]]
+    required uint32 value = 1;
+}
+
+message ReqInt8_1
+{
+    //[[ field.type = "int8:1" ]]
+    required int32 value = 1;
+}
+
+message ReqInt8_2
+{
+    //[[ field.type = "int8:2" ]]
+    required int32 value = 1;
+}
+
+message ReqSint8_1
+{
+    //[[ field.type = "int8:1" ]]
+    required sint32 value = 1;
+}
+
+message ReqSint8_2
+{
+    //[[ field.type = "int8:2" ]]
+    required sint32 value = 1;
+}
+
+message ReqFixed32_8_1
+{
+    //[[ field.type = "uint8:1" ]]
+    required fixed32 value = 1;
+}
+
+message ReqFixed32_8_2
+{
+    //[[ field.type = "uint8:2" ]]
+    required fixed32 value = 1;
+}
+
+message ReqSfixed32_8_1
+{
+    //[[ field.type = "int8:1" ]]
+    required sfixed32 value = 1;
+}
+
+message ReqSfixed32_8_2
+{
+    //[[ field.type = "int8:2" ]]
+    required sfixed32 value = 1;
+}
+
+message ReqFixed64_8_1
+{
+    //[[ field.type = "uint8:1" ]]
+    required fixed64 value = 1;
+}
+
+message ReqFixed64_8_2
+{
+    //[[ field.type = "uint8:2" ]]
+    required fixed64 value = 1;
+}
+
+message ReqSfixed64_8_1
+{
+    //[[ field.type = "int8:1" ]]
+    required sfixed64 value = 1;
+}
+
+message ReqSfixed64_8_2
+{
+    //[[ field.type = "int8:2" ]]
+    required sfixed64 value = 1;
+}

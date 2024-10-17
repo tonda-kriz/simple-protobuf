@@ -45,6 +45,19 @@ You can use this attribute ...
 
 you can combine them as you want, the more specific ones will be preferred.
 
+## bit-fields
+
+The library lets you specify bit fields (`int8:1`, `uint8:2` ...) for [small ints](#small-int-types)
+
+### how to use bit-fields
+
+Bit fields are used similar as in C with [small ints](#small-int-types)
+
+```proto
+//[[ field.type = "int16:4" ]]
+optional int32 id = 2;
+```
+
 ## container types
 
 The library lets you specify your own types for containers (`repeated`, `string`, `bytes`, `optionals`).

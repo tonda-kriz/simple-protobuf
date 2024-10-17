@@ -12,6 +12,8 @@
 #include <algorithm>
 #include <cassert>
 #include <cctype>
+#include <stdexcept>
+#include <string>
 #include <string_view>
 
 namespace spb
@@ -161,6 +163,10 @@ public:
             parsed.remove_prefix( p );
         }
         return std::max< size_t >( parsed.size( ), 1 );
+    }
+    [[noreturn]] void throw_parse_error( std::string_view message )
+    {
+        throw std::runtime_error( std::to_string( current_line( ) ) + ":" + std::to_string( current_column( ) ) + ": " + std::string( message ) );
     }
 };
 }// namespace spb

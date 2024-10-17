@@ -12,6 +12,8 @@
 #pragma once
 
 #include "proto-common.h"
+#include <cstdint>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -31,6 +33,8 @@ struct proto_field : public proto_base
 
     Label label = LABEL_OPTIONAL;
     std::string_view type;
+
+    std::string_view bit_field;
 };
 
 using proto_fields = std::vector< proto_field >;
