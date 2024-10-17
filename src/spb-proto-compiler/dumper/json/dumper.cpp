@@ -390,7 +390,7 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & me
     }
 
     stream << "void deserialize_value( detail::istream & stream, " << full_name << " & value )\n{\n";
-    stream << "auto key = stream.deserialize_key( " << key_size_min << ", " << key_size_max << " );\n";
+    stream << "\tauto key = stream.deserialize_key( " << key_size_min << ", " << key_size_max << " );\n";
     stream << "\tswitch( djb2_hash( key ) )\n\t{\n";
 
     auto last_hash = name_map.begin( )->first + 1;
@@ -407,7 +407,7 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & me
             last_hash = hash;
             stream << "\t\tcase detail::djb2_hash( \"" << field.parsed_name << "\"sv ):\n";
         }
-        stream << "\t\t\t\tif( key == \"" << field.parsed_name << "\"sv )\n\t\t\t\t{\n";
+        stream << "\t\t\tif( key == \"" << field.parsed_name << "\"sv )\n\t\t\t{\n";
         if( field.oneof_index == SIZE_MAX )
         {
             if( !field.bitfield.empty( ) )
@@ -424,9 +424,9 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & me
         {
             stream << "\t\t\t\treturn stream.deserialize_variant<" << field.oneof_index << ">( value." << field.name << " );\n";
         }
-        stream << "\t\t\t\t}\n";
+        stream << "\t\t\t}\n";
     }
-    stream << "\tbreak;\n\t}\t\treturn stream.skip_value( );\n\t}\n";
+    stream << "\t\t\tbreak;\n\t}\n\treturn stream.skip_value( );\n}\n";
 }
 
 void dump_cpp_enum( std::ostream & stream, const proto_enum & my_enum, std::string_view parent )
