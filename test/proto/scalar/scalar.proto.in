@@ -843,6 +843,12 @@ message ReqUint8_1
     required uint32 value = 1;
 }
 
+message OptUint8_1
+{
+    //[[ field.type = "uint8:1" ]]
+    optional uint32 value = 1;
+}
+
 message ReqUint8_2
 {
     //[[ field.type = "uint8:2" ]]
