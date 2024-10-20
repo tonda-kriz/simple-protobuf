@@ -9,6 +9,7 @@
 \***************************************************************************/
 
 #include "header.h"
+#include "../parser/char_stream.h"
 #include "ast/ast.h"
 #include "ast/proto-common.h"
 #include "ast/proto-field.h"
@@ -33,6 +34,13 @@ using namespace std::literals;
 
 namespace
 {
+
+[[noreturn]] void throw_parse_error( const proto_file & file, std::string_view at, std::string_view message )
+{
+    auto stream = spb::char_stream( file.content );
+    stream.skip_to( at.data( ) );
+    stream.throw_parse_error( message );
+}
 
 using cpp_includes = std::set< std::string >;
 
@@ -278,16 +286,41 @@ auto types_are_compatible( std::string_view type, std::string_view field_type ) 
     return false;
 }
 
-auto get_field_type( const proto_options & options, std::string_view ctype ) -> std::string
+auto remove_bitfield( std::string_view type ) -> std::string_view
+{
+    return type.substr( 0, type.find( ':' ) );
+}
+
+auto get_field_type( const proto_file & file, const proto_options & options, std::string_view ctype ) -> std::string
 {
     if( auto p_name = options.find( option_field_type ); p_name != options.end( ) )
     {
-        if( types_are_compatible( ctype, p_name->second ) )
+        auto field_type = remove_bitfield( p_name->second );
+
+        if( types_are_compatible( ctype, field_type ) )
         {
-            return std::string( p_name->second );
+            return std::string( field_type );
+        }
+        else
+        {
+            throw_parse_error( file, field_type, std::string( "incompatible int type: " ) + std::string( ctype ) + " and " + std::string( field_type ) );
         }
     }
     return std::string( ctype );
+}
+
+auto get_field_bits( const proto_field & field ) -> std::string_view
+{
+    if( auto p_name = field.options.find( option_field_type ); p_name != field.options.end( ) )
+    {
+        auto bitfield = p_name->second;
+        if( auto index = bitfield.find( ':' ); index != std::string_view::npos )
+        {
+            const_cast< proto_field & >( field ).bit_field = bitfield.substr( index + 1 );
+            return bitfield.substr( index );
+        }
+    }
+    return { };
 }
 
 auto get_container_type( const proto_options & options, const proto_options & message_options, const proto_options & file_options, std::string_view option, std::string_view ctype, std::string_view default_type = { } ) -> std::string
@@ -310,7 +343,7 @@ auto get_container_type( const proto_options & options, const proto_options & me
     return replace( default_type, "$", ctype );
 }
 
-auto get_enum_type( const proto_options & options, const proto_options & message_options, const proto_options & file_options, std::string_view default_type ) -> std::string_view
+auto get_enum_type( const proto_file & file, const proto_options & options, const proto_options & message_options, const proto_options & file_options, std::string_view default_type ) -> std::string_view
 {
     static constexpr auto type_map = std::array< std::pair< std::string_view, std::string_view >, 6 >{ {
         { "int8"sv, "int8_t"sv },
@@ -320,7 +353,7 @@ auto get_enum_type( const proto_options & options, const proto_options & message
         { "int32"sv, "int32_t"sv },
     } };
 
-    auto ctype_from_pb = [ = ]( std::string_view type )
+    auto ctype_from_pb = [ & ]( std::string_view type )
     {
         for( auto [ proto_type, c_type ] : type_map )
         {
@@ -329,7 +362,7 @@ auto get_enum_type( const proto_options & options, const proto_options & message
                 return c_type;
             }
         }
-        throw std::runtime_error( "invalid enum type" );
+        throw_parse_error( file, type, "invalid enum type: " + std::string( type ) );
     };
 
     if( auto p_name = options.find( option_enum_type ); p_name != options.end( ) )
@@ -350,7 +383,7 @@ auto get_enum_type( const proto_options & options, const proto_options & message
     return default_type;
 }
 
-auto convert_to_ctype( std::string_view type, const proto_options & options = { }, const proto_options & message_options = { }, const proto_options & file_options = { } ) -> std::string
+auto convert_to_ctype( const proto_file & file, std::string_view type, const proto_options & options = { }, const proto_options & message_options = { }, const proto_options & file_options = { } ) -> std::string
 {
     static constexpr auto type_map = std::array< std::pair< std::string_view, std::string_view >, 16 >{ {
         { "int8", "int8_t" },
@@ -379,7 +412,7 @@ auto convert_to_ctype( std::string_view type, const proto_options & options = { 
         return get_container_type( options, message_options, file_options, option_bytes_type, "std::byte", "std::vector<$>" );
     }
 
-    auto type_str = get_field_type( options, type );
+    auto type_str = get_field_type( file, options, type );
 
     for( auto [ proto_type, c_type ] : type_map )
     {
@@ -394,13 +427,13 @@ auto convert_to_ctype( std::string_view type, const proto_options & options = { 
 
 void dump_field_type_and_name( std::ostream & stream, const proto_field & field, const proto_message & message, const proto_file & file )
 {
-    const auto ctype = convert_to_ctype( field.type, field.options, message.options, file.options );
+    const auto ctype = convert_to_ctype( file, field.type, field.options, message.options, file.options );
 
     switch( field.label )
     {
     case proto_field::Label::LABEL_NONE:
-        stream << ctype;
-        break;
+        stream << ctype << ' ' << field.name << get_field_bits( field );
+        return;
     case proto_field::Label::LABEL_OPTIONAL:
         stream << get_container_type( field.options, message.options, file.options, option_optional_type, ctype, "std::optional<$>" );
         break;
@@ -410,6 +443,10 @@ void dump_field_type_and_name( std::ostream & stream, const proto_field & field,
     case proto_field::Label::LABEL_PTR:
         stream << get_container_type( field.options, message.options, file.options, option_pointer_type, ctype, "std::unique_ptr<$>" );
         break;
+    }
+    if( auto bitfield = get_field_bits( field ); !bitfield.empty( ) )
+    {
+        throw_parse_error( file, bitfield, "bitfield can be used only with `required` label" );
     }
     stream << ' ' << field.name;
 }
@@ -425,7 +462,7 @@ void dump_enum( std::ostream & stream, const proto_enum & my_enum, const proto_m
 {
     dump_comment( stream, my_enum.comment );
 
-    stream << "enum class " << my_enum.name << " : " << get_enum_type( my_enum.options, message.options, file.options, "int32_t" ) << "\n{\n";
+    stream << "enum class " << my_enum.name << " : " << get_enum_type( file, my_enum.options, message.options, file.options, "int32_t" ) << "\n{\n";
     for( const auto & field : my_enum.fields )
     {
         dump_enum_field( stream, field );
@@ -433,7 +470,7 @@ void dump_enum( std::ostream & stream, const proto_enum & my_enum, const proto_m
     stream << "};\n";
 }
 
-void dump_message_oneof( std::ostream & stream, const proto_oneof & oneof )
+void dump_message_oneof( std::ostream & stream, const proto_oneof & oneof, const proto_file & file )
 {
     dump_comment( stream, oneof.comment );
 
@@ -446,17 +483,17 @@ void dump_message_oneof( std::ostream & stream, const proto_oneof & oneof )
             stream << ", ";
         }
 
-        stream << convert_to_ctype( field.type );
+        stream << convert_to_ctype( file, field.type );
         put_comma = true;
     }
     stream << " > " << oneof.name << ";\n";
 }
 
-void dump_message_map( std::ostream & stream, const proto_map & map )
+void dump_message_map( std::ostream & stream, const proto_map & map, const proto_file & file )
 {
     dump_comment( stream, map.comment );
 
-    stream << "std::map< " << convert_to_ctype( map.key_type ) << ", " << convert_to_ctype( map.value_type ) << " > ";
+    stream << "std::map< " << convert_to_ctype( file, map.key_type ) << ", " << convert_to_ctype( file, map.value_type ) << " > ";
     stream << map.name << ";\n";
 }
 
@@ -536,12 +573,12 @@ void dump_message( std::ostream & stream, const proto_message & message, const p
 
     for( const auto & map : message.maps )
     {
-        dump_message_map( stream, map );
+        dump_message_map( stream, map, file );
     }
 
     for( const auto & oneof : message.oneofs )
     {
-        dump_message_oneof( stream, oneof );
+        dump_message_oneof( stream, oneof, file );
     }
 
     //- TODO: is this used in any way?

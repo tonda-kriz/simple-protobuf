@@ -144,6 +144,34 @@ auto map_encoder_type( std::string_view key_type, std::string_view value_type ) 
     return "_as< combine( " + scalar_encoder_from_type( key_type ) + ", " + scalar_encoder_from_type( value_type ) + " ) >";
 }
 
+auto bitfield_encoder_type( const proto_field & field ) -> std::string
+{
+    if( field.type == "int32" ||
+        field.type == "uint32" ||
+        field.type == "int64" ||
+        field.type == "uint64" )
+    {
+        return "_as< scalar_encoder::varint, decltype( value." + std::string( field.name ) + ") >";
+    }
+
+    if( field.type == "sint32" ||
+        field.type == "sint64" )
+    {
+        return "_as< scalar_encoder::svarint, decltype( value." + std::string( field.name ) + ") >";
+    }
+    if( field.type == "fixed32" ||
+        field.type == "sfixed32" )
+    {
+        return "_as< scalar_encoder::i32, decltype( value." + std::string( field.name ) + ") >";
+    }
+    if( field.type == "fixed64" ||
+        field.type == "sfixed64" )
+    {
+        return "_as< scalar_encoder::i64, decltype( value." + std::string( field.name ) + ") >";
+    }
+    throw std::runtime_error( "invalid bitfield type" );
+}
+
 auto encoder_type( const proto_field & field ) -> std::string
 {
     if( field.type == "bool" ||
@@ -240,8 +268,17 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & me
 
     for( const auto & field : message.fields )
     {
-        stream << "\t\tcase " << field.number << ":\n\t\t\treturn ";
-        stream << "stream.deserialize" << encoder_type( field ) << "( value." << field.name << ", tag );\n";
+
+        stream << "\t\tcase " << field.number << ":\n\t\t\t";
+        if( !field.bit_field.empty( ) )
+        {
+            stream << "value." << field.name << " = stream.deserialize_bitfield" << bitfield_encoder_type( field ) << "( " << field.bit_field << ", tag );\n";
+            stream << "\t\t\treturn;\n";
+        }
+        else
+        {
+            stream << "return stream.deserialize" << encoder_type( field ) << "( value." << field.name << ", tag );\n";
+        }
     }
     for( const auto & map : message.maps )
     {
