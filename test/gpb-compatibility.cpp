@@ -3,6 +3,7 @@
 #include <gpb-name.pb.h>
 #include <gpb-person.pb.h>
 #include <gpb-scalar.pb.h>
+#include <initializer_list>
 #include <limits>
 #include <name.pb.h>
 #include <optional>
@@ -272,6 +273,18 @@ void gpb_compatibility_value( )
     }
 }
 
+template < typename GPB, typename SPB, typename POD >
+void gpb_compatibility_bitfield_value( std::initializer_list< POD > values )
+{
+    using T = std::decay_t< decltype( SPB::value ) >;
+    CHECK( std::is_same_v< T, POD > );
+
+    for( auto value : values )
+    {
+        gpb_compatibility< GPB >( SPB{ .value = value } );
+    }
+}
+
 template < typename GPB, typename SPB >
 void gpb_compatibility_array( )
 {
@@ -339,6 +352,11 @@ TEST_CASE( "int" )
 {
     SUBCASE( "varint8" )
     {
+        SUBCASE( "bitfield" )
+        {
+            gpb_compatibility_bitfield_value< Test::Scalar::gpb::ReqInt8_1, Test::Scalar::ReqInt8_1, int8_t >( { -1, 0 } );
+            gpb_compatibility_bitfield_value< Test::Scalar::gpb::ReqInt8_2, Test::Scalar::ReqInt8_2, int8_t >( { -2, -1, 0, 1 } );
+        }
         SUBCASE( "required" )
         {
             gpb_compatibility_value< Test::Scalar::gpb::ReqInt8, Test::Scalar::ReqInt8, int8_t >( );
@@ -359,6 +377,11 @@ TEST_CASE( "int" )
     }
     SUBCASE( "varuint8" )
     {
+        SUBCASE( "bitfield" )
+        {
+            gpb_compatibility_bitfield_value< Test::Scalar::gpb::ReqUint8_1, Test::Scalar::ReqUint8_1, uint8_t >( { 0, 1 } );
+            gpb_compatibility_bitfield_value< Test::Scalar::gpb::ReqUint8_2, Test::Scalar::ReqUint8_2, uint8_t >( { 0, 1, 2, 3 } );
+        }
         SUBCASE( "required" )
         {
             gpb_compatibility_value< Test::Scalar::gpb::ReqUint8, Test::Scalar::ReqUint8, uint8_t >( );
@@ -499,6 +522,11 @@ TEST_CASE( "int" )
     }
     SUBCASE( "svarint8" )
     {
+        SUBCASE( "bitfield" )
+        {
+            gpb_compatibility_bitfield_value< Test::Scalar::gpb::ReqSint8_1, Test::Scalar::ReqSint8_1, int8_t >( { -1, 0 } );
+            gpb_compatibility_bitfield_value< Test::Scalar::gpb::ReqSint8_2, Test::Scalar::ReqSint8_2, int8_t >( { -2, -1, 0, 1 } );
+        }
         SUBCASE( "required" )
         {
             gpb_compatibility_value< Test::Scalar::gpb::ReqSint8, Test::Scalar::ReqSint8, int8_t >( );
@@ -579,6 +607,11 @@ TEST_CASE( "int" )
     }
     SUBCASE( "fixed32" )
     {
+        SUBCASE( "bitfield" )
+        {
+            gpb_compatibility_bitfield_value< Test::Scalar::gpb::ReqFixed32_8_1, Test::Scalar::ReqFixed32_8_1, uint8_t >( { 0, 1 } );
+            gpb_compatibility_bitfield_value< Test::Scalar::gpb::ReqFixed32_8_2, Test::Scalar::ReqFixed32_8_2, uint8_t >( { 0, 1, 2, 3 } );
+        }
         SUBCASE( "required" )
         {
             gpb_compatibility_value< Test::Scalar::gpb::ReqFixed32, Test::Scalar::ReqFixed32, uint32_t >( );
@@ -639,6 +672,11 @@ TEST_CASE( "int" )
     }
     SUBCASE( "fixed64" )
     {
+        SUBCASE( "bitfield" )
+        {
+            gpb_compatibility_bitfield_value< Test::Scalar::gpb::ReqFixed64_8_1, Test::Scalar::ReqFixed64_8_1, uint8_t >( { 0, 1 } );
+            gpb_compatibility_bitfield_value< Test::Scalar::gpb::ReqFixed64_8_2, Test::Scalar::ReqFixed64_8_2, uint8_t >( { 0, 1, 2, 3 } );
+        }
         SUBCASE( "required" )
         {
             gpb_compatibility_value< Test::Scalar::gpb::ReqFixed64, Test::Scalar::ReqFixed64, uint64_t >( );
@@ -719,6 +757,11 @@ TEST_CASE( "int" )
     }
     SUBCASE( "sfixed32" )
     {
+        SUBCASE( "bitfield" )
+        {
+            gpb_compatibility_bitfield_value< Test::Scalar::gpb::ReqSfixed32_8_1, Test::Scalar::ReqSfixed32_8_1, int8_t >( { 0, 1 } );
+            gpb_compatibility_bitfield_value< Test::Scalar::gpb::ReqSfixed32_8_2, Test::Scalar::ReqSfixed32_8_2, int8_t >( { 0, 1, 2, 3 } );
+        }
         SUBCASE( "required" )
         {
             gpb_compatibility_value< Test::Scalar::gpb::ReqSfixed32, Test::Scalar::ReqSfixed32, int32_t >( );
@@ -779,6 +822,11 @@ TEST_CASE( "int" )
     }
     SUBCASE( "sfixed64" )
     {
+        SUBCASE( "bitfield" )
+        {
+            gpb_compatibility_bitfield_value< Test::Scalar::gpb::ReqSfixed64_8_1, Test::Scalar::ReqSfixed64_8_1, int8_t >( { 0, 1 } );
+            gpb_compatibility_bitfield_value< Test::Scalar::gpb::ReqSfixed64_8_2, Test::Scalar::ReqSfixed64_8_2, int8_t >( { 0, 1, 2, 3 } );
+        }
         SUBCASE( "required" )
         {
             gpb_compatibility_value< Test::Scalar::gpb::ReqSfixed64, Test::Scalar::ReqSfixed64, int64_t >( );
