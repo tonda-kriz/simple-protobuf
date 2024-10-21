@@ -2,6 +2,7 @@
 #include <memory>
 #include <name.pb.h>
 #include <person.pb.h>
+#include <scalar.pb.h>
 #include <spb/json/deserialize.hpp>
 #include <spb/json/serialize.hpp>
 
@@ -137,6 +138,7 @@ TEST_CASE( "json" )
         {
             CHECK( spb::json::deserialize< PhoneBook::Person::PhoneType >( "\"HOME\"" ) == PhoneBook::Person::PhoneType::HOME );
             CHECK( spb::json::deserialize< PhoneBook::Person::PhoneType >( "1" ) == PhoneBook::Person::PhoneType::HOME );
+            REQUIRE_THROWS( ( void ) spb::json::deserialize< PhoneBook::Person::PhoneType >( "3" ) );
             REQUIRE_THROWS( ( void ) spb::json::deserialize< PhoneBook::Person::PhoneType >( "HME" ) );
         }
         SUBCASE( "bool" )
@@ -243,6 +245,7 @@ TEST_CASE( "json" )
         }
         SUBCASE( "int32" )
         {
+
             CHECK( spb::json::deserialize< int32_t >( "42" ) == 42 );
             CHECK( spb::json::deserialize< int32_t >( "\"42\"" ) == 42 );
             CHECK( spb::json::deserialize< int32_t >( "-42" ) == -42 );
@@ -290,6 +293,12 @@ TEST_CASE( "json" )
                 CHECK( *value == -2147483648 );
                 CHECK_NOTHROW( spb::json::deserialize( value, "null" ) );
                 CHECK( value == nullptr );
+            }
+            SUBCASE( "bitfield" )
+            {
+                CHECK( spb::json::deserialize< Test::Scalar::ReqUint8_1 >( R"({"value":0})" ).value == 0 );
+                CHECK( spb::json::deserialize< Test::Scalar::ReqUint8_1 >( R"({"value":1})" ).value == 1 );
+                CHECK_THROWS( ( void ) spb::json::deserialize< Test::Scalar::ReqUint8_1 >( R"({"value":2})" ) );
             }
         }
 

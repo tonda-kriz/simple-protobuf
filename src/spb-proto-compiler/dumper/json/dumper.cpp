@@ -413,7 +413,7 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & me
             if( !field.bitfield.empty( ) )
             {
 
-                stream << "\t\t\t\t\tvalue." << field.name << " = stream.deserialize_bitfield< decltype( value." << field.name << " ) >( " << field.bitfield << " );\n";
+                stream << "\t\t\t\tvalue." << field.name << " = stream.deserialize_bitfield< decltype( value." << field.name << " ) >( " << field.bitfield << " );\n\t\t\t\treturn ;\n";
             }
             else
             {

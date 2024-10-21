@@ -37,7 +37,7 @@ target_link_libraries(base64-test PUBLIC spb-proto)
 add_dependencies(unit_tests base64-test)
 doctest_discover_tests(base64-test)
 
-add_executable(json-detail-test json-detail.cpp ${SPB_PROTO_PERSON_SRC} ${SPB_PROTO_NAME_SRC})
+add_executable(json-detail-test json-detail.cpp ${SPB_PROTO_PERSON_SRC} ${SPB_PROTO_NAME_SRC} ${SPB_PROTO_SCALAR_SRC})
 spb_enable_warnings(json-detail-test)
 target_link_libraries(json-detail-test PUBLIC spb-proto)
 add_dependencies(unit_tests json-detail-test)
