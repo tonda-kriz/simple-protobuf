@@ -27,7 +27,7 @@ jobs:
         environment:
             name: github-pages
             url: ${{ steps.deployment.outputs.page_url }}
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-24.04
         steps:
             - name: Checkout
               uses: actions/checkout@v4
@@ -42,9 +42,9 @@ jobs:
             - name: Install Linux dependencies
               run: |
                   sudo add-apt-repository ppa:ubuntu-toolchain-r/test
-                  sudo apt-get install ninja-build protobuf-compiler lcov g++-13 gcc-13 bc
-                  echo "CXX=g++-13" >> ${GITHUB_ENV}
-                  echo "CC=gcc-13" >> ${GITHUB_ENV}
+                  sudo apt-get install ninja-build protobuf-compiler lcov g++-14 gcc-14 bc
+                  echo "CXX=g++-14" >> ${GITHUB_ENV}
+                  echo "CC=gcc-14" >> ${GITHUB_ENV}
 
             - name: Configure CMake
               # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
@@ -52,8 +52,8 @@ jobs:
               run: >
                 cmake -B ${{ steps.strings.outputs.build-output-dir }}
                 -G Ninja .
-                -DCMAKE_C_COMPILER=gcc-13
-                -DCMAKE_CXX_COMPILER=g++-13
+                -DCMAKE_C_COMPILER=gcc-14
+                -DCMAKE_CXX_COMPILER=g++-14
                 -DSPB_PROTO_BUILD_TESTS=ON
                 -DCMAKE_BUILD_TYPE=Debug
                 -DSPB_PROTO_USE_COVERAGE=ON
@@ -74,7 +74,7 @@ jobs:
               working-directory: ${{ steps.strings.outputs.build-output-dir }}
               run: |
                 genhtml --help
-                lcov --capture -o coverage.info  --directory . --exclude '/usr/*' --exclude '*/test/*' -q --gcov-tool gcov-13
+                lcov --capture -o coverage.info  --directory . --exclude '/usr/*' --exclude '*/test/*' -q --gcov-tool gcov-14
                 coverage=$(genhtml coverage.info --include 'include/*' --output-directory report/library | grep -P 'lines\.+'| grep -oP '[0-9]+[^%]*')
                 if (( $(echo "$coverage <= 50" | bc -l) )); then
                   color=red
