@@ -58,7 +58,7 @@ jobs:
       uses: coverallsapp/github-action@v1      
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
-        path-to-lcov: ${{ steps.strings.outputs.build-output-dir }}/report/coverage.info
+        path-to-lcov: ${{ steps.strings.outputs.build-output-dir }}/coverage.info
 
     - name: Update Coverage Badge
       uses: we-cli/coverage-badge-action@main
