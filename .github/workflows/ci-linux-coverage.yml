@@ -25,10 +25,10 @@ jobs:
       run: |
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test
           sudo apt-get install ninja-build protobuf-compiler lcov
-          sudo apt-get install g++-13
-          sudo apt-get install gcc-13
-          echo "CXX=g++-13" >> ${GITHUB_ENV}
-          echo "CC=gcc-13" >> ${GITHUB_ENV}
+          sudo apt-get install g++-14
+          sudo apt-get install gcc-14
+          echo "CXX=g++-14" >> ${GITHUB_ENV}
+          echo "CC=gcc-14" >> ${GITHUB_ENV}
 
     - name: Configure CMake
       # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
@@ -36,8 +36,8 @@ jobs:
       run: >
         cmake -B ${{ steps.strings.outputs.build-output-dir }}
         -G Ninja .
-        -DCMAKE_C_COMPILER=gcc-13
-        -DCMAKE_CXX_COMPILER=g++-13
+        -DCMAKE_C_COMPILER=gcc-14
+        -DCMAKE_CXX_COMPILER=g++-14
         -DSPB_PROTO_BUILD_TESTS=ON
         -DCMAKE_BUILD_TYPE=Debug
         -DSPB_PROTO_USE_COVERAGE=ON
@@ -52,7 +52,7 @@ jobs:
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: |
         ctest --output-on-failure
-        lcov --capture -o coverage.info  --directory . --exclude '/usr/*' --exclude '*/test/*' -q --gcov-tool gcov
+        lcov --capture -o coverage.info  --directory . --exclude '/usr/*' --exclude '*/test/*'
         genhtml coverage.info --output-directory report
 
     - name: Upload Coverage Results
