@@ -73,6 +73,7 @@ jobs:
             - name: coverage report
               working-directory: ${{ steps.strings.outputs.build-output-dir }}
               run: |
+                genhtml --help
                 lcov --capture -o coverage.info  --directory . --exclude '/usr/*' --exclude '*/test/*' -q --gcov-tool gcov-13
                 coverage=$(genhtml coverage.info --include 'include/*' --output-directory report/library | grep -P 'lines\.+'| grep -oP '[0-9]+[^%]*')
                 if (( $(echo "$coverage <= 50" | bc -l) )); then
