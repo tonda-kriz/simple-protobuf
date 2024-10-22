@@ -24,9 +24,8 @@ jobs:
     - name: Install Linux dependencies
       run: |
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test
-          sudo apt-get install ninja-build protobuf-compiler lcov
-          sudo apt-get install g++-13
-          sudo apt-get install gcc-13
+          sudo apt-get update
+          sudo apt-get install ninja-build protobuf-compiler lcov g++-13 gcc-13 gcov
           echo "CXX=g++-13" >> ${GITHUB_ENV}
           echo "CC=gcc-13" >> ${GITHUB_ENV}
 
