@@ -42,8 +42,7 @@ jobs:
             - name: Install Linux dependencies
               run: |
                   sudo add-apt-repository ppa:ubuntu-toolchain-r/test
-                  sudo apt-get update
-                  sudo apt-get install ninja-build protobuf-compiler lcov g++-13 gcc-13
+                  sudo apt-get install ninja-build protobuf-compiler lcov g++-13 gcc-13 bc
                   echo "CXX=g++-13" >> ${GITHUB_ENV}
                   echo "CC=gcc-13" >> ${GITHUB_ENV}
 
@@ -69,15 +68,41 @@ jobs:
               # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
               run: |
                 ctest --output-on-failure
-                lcov --capture -o coverage.info  --directory . --exclude '/usr/*' --exclude '*/test/*' --gcov-tool gcov-13
-                genhtml coverage.info --output-directory report
+                mkdir report
+
+            - name: Library coverage report
+              working-directory: ${{ steps.strings.outputs.build-output-dir }}
+              run: |
+                lcov --capture -o coverage.info  --directory . --exclude 'src/*' --exclude '/usr/*' --exclude '*/test/*' --gcov-tool gcov-13
+                coverage=$(genhtml coverage.info --output-directory report/library | grep -P 'lines\.+'| grep -oP '[0-9]+.*%')
+                if (( $(echo "$coverage <= 50" | bc -l) )); then
+                  color=red
+                elif (( $(echo "$coverage > 80" | bc -l) )); then
+                  color=green
+                else
+                  color=orange
+                fi
+                curl "https://img.shields.io/badge/coverage-$coverage%25-$color" > report/library/coverage.svg
+
+            - name: Compiler coverage report
+              working-directory: ${{ steps.strings.outputs.build-output-dir }}
+              run: |
+                  lcov --capture -o coverage.info  --directory . --exclude 'include/*' --exclude '/usr/*' --exclude '*/test/*' --gcov-tool gcov-13
+                  coverage=$(genhtml coverage.info --output-directory report/compiler | grep -P 'lines\.+'| grep -oP '[0-9]+.*%')
+                  if (( $(echo "$coverage <= 50" | bc -l) )); then
+                    color=red
+                  elif (( $(echo "$coverage > 80" | bc -l) )); then
+                    color=green
+                  else
+                    color=orange
+                  fi
+                  curl "https://img.shields.io/badge/coverage-$coverage%25-$color" > report/compiler/coverage.svg
 
             - name: Setup Pages
               uses: actions/configure-pages@v4
             - name: Upload artifact
               uses: actions/upload-pages-artifact@v3
               with:
-                  # Upload the coverage directory from the repository
                   path: ${{ steps.strings.outputs.build-output-dir }}/report
             - name: Deploy to GitHub Pages
               id: deployment
