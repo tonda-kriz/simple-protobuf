@@ -70,11 +70,11 @@ jobs:
                 ctest --output-on-failure
                 mkdir report
 
-            - name: Library coverage report
+            - name: coverage report
               working-directory: ${{ steps.strings.outputs.build-output-dir }}
               run: |
-                lcov --capture -o coverage.info  --directory . --exclude 'src/*' --exclude '/usr/*' --exclude '*/test/*' --gcov-tool gcov-13
-                coverage=$(genhtml coverage.info --output-directory report/library | grep -P 'lines\.+'| grep -oP '[0-9]+[^%]*')
+                lcov --capture -o coverage.info  --directory . --exclude '/usr/*' --exclude '*/test/*' -q --gcov-tool gcov-13
+                coverage=$(genhtml coverage.info --include 'include/*' --output-directory report/library | grep -P 'lines\.+'| grep -oP '[0-9]+[^%]*')
                 if (( $(echo "$coverage <= 50" | bc -l) )); then
                   color=red
                 elif (( $(echo "$coverage > 80" | bc -l) )); then
@@ -84,19 +84,15 @@ jobs:
                 fi
                 curl "https://img.shields.io/badge/coverage-$coverage%25-$color" > report/library/coverage.svg
 
-            - name: Compiler coverage report
-              working-directory: ${{ steps.strings.outputs.build-output-dir }}
-              run: |
-                  lcov --capture -o coverage.info  --directory . --exclude 'include/*' --exclude '/usr/*' --exclude '*/test/*' --gcov-tool gcov-13
-                  coverage=$(genhtml coverage.info --output-directory report/compiler | grep -P 'lines\.+'| grep -oP '[0-9]+[^%]*')
-                  if (( $(echo "$coverage <= 50" | bc -l) )); then
-                    color=red
-                  elif (( $(echo "$coverage > 80" | bc -l) )); then
-                    color=green
-                  else
-                    color=orange
-                  fi
-                  curl "https://img.shields.io/badge/coverage-$coverage%25-$color" > report/compiler/coverage.svg
+                coverage=$(genhtml coverage.info --include 'compiler/*' --output-directory report/compiler | grep -P 'lines\.+'| grep -oP '[0-9]+[^%]*')
+                if (( $(echo "$coverage <= 50" | bc -l) )); then
+                  color=red
+                elif (( $(echo "$coverage > 80" | bc -l) )); then
+                  color=green
+                else
+                  color=orange
+                fi
+                curl "https://img.shields.io/badge/coverage-$coverage%25-$color" > report/compiler/coverage.svg
 
             - name: Setup Pages
               uses: actions/configure-pages@v4
