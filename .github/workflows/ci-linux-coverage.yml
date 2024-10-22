@@ -22,9 +22,8 @@ concurrency:
     group: 'pages'
     cancel-in-progress: true
 
-jobs:
-    # Single deploy job since we're just deploying
-    deploy:
+jobs:    
+    coverage:
         environment:
             name: github-pages
             url: ${{ steps.deployment.outputs.page_url }}
@@ -79,8 +78,7 @@ jobs:
               uses: actions/upload-pages-artifact@v3
               with:
                   # Upload the coverage directory from the repository
-                  path: ${{ steps.strings.outputs.build-output-dir }}/report'
+                  path: ${{ steps.strings.outputs.build-output-dir }}/report
             - name: Deploy to GitHub Pages
               id: deployment
               uses: actions/deploy-pages@v4
-              
