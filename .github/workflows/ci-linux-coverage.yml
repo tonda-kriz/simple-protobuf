@@ -23,7 +23,9 @@ jobs:
     
     - name: Install Linux dependencies
       run: |
-          sudo apt-get install ninja-build protobuf-compiler lcov g++-13 gcc-13 gcovr
+          sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+          sudo apt-get update
+          sudo apt-get install ninja-build protobuf-compiler lcov g++-13 gcc-13
           echo "CXX=g++-13" >> ${GITHUB_ENV}
           echo "CC=gcc-13" >> ${GITHUB_ENV}
 
@@ -49,7 +51,7 @@ jobs:
       # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
       run: |
         ctest --output-on-failure
-        lcov --capture -o coverage.info  --directory . --exclude '/usr/*' --exclude '*/test/*'
+        lcov --capture -o coverage.info  --directory . --exclude '/usr/*' --exclude '*/test/*' --gcov-tool gcov-13
         genhtml coverage.info --output-directory report
 
     - name: Upload Coverage Results
