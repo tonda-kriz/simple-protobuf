@@ -25,7 +25,7 @@ jobs:
       run: |
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test
           sudo apt-get update
-          sudo apt-get install ninja-build protobuf-compiler lcov g++-13 gcc-13 gcov
+          sudo apt-get install ninja-build protobuf-compiler lcov g++-13 gcc-13 gcovr
           echo "CXX=g++-13" >> ${GITHUB_ENV}
           echo "CC=gcc-13" >> ${GITHUB_ENV}
 
