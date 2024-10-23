@@ -3,9 +3,6 @@ name: Code coverage report
 on:
     push:
         branches: ['master']
-    pull_request:
-      branches: [ 'master' ]
-
     workflow_dispatch:
 
 permissions:
@@ -74,21 +71,27 @@ jobs:
                 if (( $(echo "$coverage <= 50" | bc -l) )); then
                   color=red
                 elif (( $(echo "$coverage > 80" | bc -l) )); then
-                  color=green
+                  color=brightgreen
                 else
                   color=orange
                 fi
-                curl "https://img.shields.io/badge/library_coverage-$coverage%25-$color" > report/library/coverage.svg
+                curl "https://img.shields.io/badge/library_coverage-$coverage%25-$color?logo=github" > report/library/coverage.svg
                 coverage=$(genhtml coverage.info --include 'compiler/*' --output-directory report/compiler | grep -P 'lines\.+'| grep -oP '[0-9]+' | head -n1)
                 if (( $(echo "$coverage <= 50" | bc -l) )); then
                   color=red
                 elif (( $(echo "$coverage > 80" | bc -l) )); then
-                  color=green
+                  color=brightgreen
                 else
                   color=orange
                 fi
-                curl "https://img.shields.io/badge/protoc_coverage-$coverage%25-$color" > report/compiler/coverage.svg
-
+                curl "https://img.shields.io/badge/protoc_coverage-$coverage%25-$color?logo=github" > report/compiler/coverage.svg
+            
+            - name: Delete deployment
+              uses: strumwolf/delete-deployment-environment@v2
+              with:
+                token: ${{ secrets.GITHUB_TOKEN }}
+                environment: github-pages
+                onlyRemoveDeployments: true
             - name: Setup Pages
               uses: actions/configure-pages@v4
             - name: Upload artifact
