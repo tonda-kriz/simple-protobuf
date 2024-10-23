@@ -5,11 +5,8 @@ on:
         branches: ['master']
     workflow_dispatch:
 
-permissions:
-    contents: read
-    pages: write
-    id-token: write
-
+permissions: write-all
+    
 # Allow one concurrent deployment
 concurrency:
     group: 'pages'
@@ -31,7 +28,13 @@ jobs:
               shell: bash
               run: |
                 echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"        
-    
+                
+            - name: Delete deployment
+              uses: strumwolf/delete-deployment-environment@v2
+              with:
+                token: ${{ secrets.GITHUB_TOKEN }}
+                environment: github-pages
+                onlyRemoveDeployments: true
             - name: Install Linux dependencies
               run: |
                   sudo add-apt-repository ppa:ubuntu-toolchain-r/test
