@@ -84,14 +84,7 @@ jobs:
                 else
                   color=orange
                 fi
-                curl "https://img.shields.io/badge/protoc_coverage-$coverage%25-$color?logo=github" > report/compiler/coverage.svg
-            
-            - name: Delete deployment
-              uses: strumwolf/delete-deployment-environment@v2
-              with:
-                token: ${{ secrets.GITHUB_TOKEN }}
-                environment: github-pages
-                onlyRemoveDeployments: true
+                curl "https://img.shields.io/badge/protoc_coverage-$coverage%25-$color?logo=github" > report/compiler/coverage.svg                        
             - name: Setup Pages
               uses: actions/configure-pages@v4
             - name: Upload artifact
