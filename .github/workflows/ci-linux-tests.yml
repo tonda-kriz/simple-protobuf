@@ -8,8 +8,7 @@ on:
 
 jobs:
   build:
-    name: |
-      ${{ matrix.os }}, ${{ matrix.compiler }}, ${{ matrix.version }}
+    name: ${{ matrix.os }}, ${{ matrix.compiler }}, ${{ matrix.version }}, ${{ matrix.build_type }}
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -42,7 +41,10 @@ jobs:
             compiler: clang
             build_type: Release
             version: '16'
-
+          - os: ubuntu-24.04
+            compiler: clang
+            build_type: Debug
+            version: '16'
     steps:
     - uses: actions/checkout@v4
 
@@ -54,13 +56,12 @@ jobs:
         echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
 
     - name: Install Linux dependencies
-      if: startsWith(matrix.os, 'ubuntu-')
       run: >
           sudo apt-get install
           ninja-build
           protobuf-compiler
     - name: Install gcc
-      if: startsWith(matrix.os, 'ubuntu-') && matrix.compiler == 'gcc'
+      if: matrix.compiler == 'gcc'
       run: |
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test
           sudo apt-get install g++-${{ matrix.version }}
@@ -68,7 +69,7 @@ jobs:
           echo "CXX=g++-${{ matrix.version }}" >> ${GITHUB_ENV}
           echo "CC=gcc-${{ matrix.version }}" >> ${GITHUB_ENV}
     - name: Install clang
-      if: startsWith(matrix.os, 'ubuntu-') && matrix.compiler == 'clang'
+      if: matrix.compiler == 'clang'
       run: |
             sudo apt-get install clang-${{ matrix.version }}
             echo "CXX=clang++-${{ matrix.version }}" >> ${GITHUB_ENV}
