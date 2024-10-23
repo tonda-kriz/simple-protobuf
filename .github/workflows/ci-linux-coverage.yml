@@ -3,8 +3,6 @@ name: Code coverage report
 on:
     push:
         branches: ['master']
-    pull_request:
-      branches: [ "master" ]
       
     workflow_dispatch:
 
@@ -30,14 +28,8 @@ jobs:
               id: strings
               shell: bash
               run: |
-                echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"        
-                
-            - name: Delete deployment
-              uses: strumwolf/delete-deployment-environment@v2
-              with:
-                token: ${{ secrets.GITHUB_TOKEN }}
-                environment: github-pages
-                onlyRemoveDeployments: true
+                echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+
             - name: Install Linux dependencies
               run: |
                   sudo add-apt-repository ppa:ubuntu-toolchain-r/test
@@ -91,6 +83,12 @@ jobs:
                   color=orange
                 fi
                 curl "https://img.shields.io/badge/protoc_coverage-$coverage%25-$color?logo=github" > report/compiler/coverage.svg                        
+            - name: Delete deployment
+              uses: strumwolf/delete-deployment-environment@v2
+              with:
+                token: ${{ secrets.GITHUB_TOKEN }}
+                environment: github-pages
+                onlyRemoveDeployments: true
             - name: Setup Pages
               uses: actions/configure-pages@v4
             - name: Upload artifact
