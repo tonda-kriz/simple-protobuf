@@ -1,4 +1,4 @@
-name: Linux build + gpb compatibility tests
+name: Linux GPB compatibility
 
 on:
   push:
@@ -18,18 +18,30 @@ jobs:
 
       matrix:
         include:
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             compiler: gcc
             build_type: Release
             version: '13'
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
+            compiler: gcc
+            build_type: Release
+            version: '14'
+          - os: ubuntu-24.04
+            compiler: gcc
+            build_type: Debug
+            version: '14'          
+          - os: ubuntu-24.04
             compiler: clang
             build_type: Release
             version: '14'
-          - os: ubuntu-latest
+          - os: ubuntu-24.04
             compiler: clang
             build_type: Release
             version: '15'
+          - os: ubuntu-24.04
+            compiler: clang
+            build_type: Release
+            version: '16'
 
     steps:
     - uses: actions/checkout@v4
@@ -51,7 +63,6 @@ jobs:
       if: startsWith(matrix.os, 'ubuntu-') && matrix.compiler == 'gcc'
       run: |
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test
-          sudo apt-get update
           sudo apt-get install g++-${{ matrix.version }}
           sudo apt-get install gcc-${{ matrix.version }}
           echo "CXX=g++-${{ matrix.version }}" >> ${GITHUB_ENV}
@@ -59,7 +70,6 @@ jobs:
     - name: Install clang
       if: startsWith(matrix.os, 'ubuntu-') && matrix.compiler == 'clang'
       run: |
-            sudo apt-get update
             sudo apt-get install clang-${{ matrix.version }}
             echo "CXX=clang++-${{ matrix.version }}" >> ${GITHUB_ENV}
             echo "CC=clang-${{ matrix.version }}" >> ${GITHUB_ENV}

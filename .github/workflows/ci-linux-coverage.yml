@@ -1,17 +1,13 @@
-# A workflow for deploying the Unit Tests coverage report to GitHub Pages
-name: Deploy coverage report to Pages
+name: Code coverage report
 
 on:
-    # Runs on pushes targeting the default branch
     push:
         branches: ['master']
     pull_request:
       branches: [ 'master' ]
 
-    # Allows you to run this workflow manually from the Actions tab
     workflow_dispatch:
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
     contents: read
     pages: write
