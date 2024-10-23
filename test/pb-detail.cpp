@@ -212,6 +212,9 @@ TEST_CASE( "protobuf" )
                 CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqInt8_1 >( "\x08\xfe\xff\xff\xff\xff\xff\xff\xff\xff\x01"sv ) );
                 CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqInt8_1 >( "\x08\x01"sv ) );
 
+                pb_test( Test::Scalar::ReqInt32_1{ .value = -1 }, "\x08\xff\xff\xff\xff\xff\xff\xff\xff\xff\x01"sv );
+                pb_test( Test::Scalar::ReqInt32_1{ .value = 0 }, "\x08\x00"sv );
+
                 pb_test( Test::Scalar::ReqInt8_2{ .value = -2 }, "\x08\xfe\xff\xff\xff\xff\xff\xff\xff\xff\x01"sv );
                 pb_test( Test::Scalar::ReqInt8_2{ .value = -1 }, "\x08\xff\xff\xff\xff\xff\xff\xff\xff\xff\x01"sv );
                 pb_test( Test::Scalar::ReqInt8_2{ .value = 0 }, "\x08\x00"sv );
@@ -261,6 +264,9 @@ TEST_CASE( "protobuf" )
                 pb_test( Test::Scalar::ReqUint8_1{ .value = 1 }, "\x08\x01"sv );
                 CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqUint8_1 >( "\x08\xff\xff\xff\xff\xff\xff\xff\xff\xff\x01"sv ) );
                 CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqUint8_1 >( "\x08\x02"sv ) );
+
+                pb_test( Test::Scalar::ReqUint32_1{ .value = 0 }, "\x08\x00"sv );
+                pb_test( Test::Scalar::ReqUint32_1{ .value = 1 }, "\x08\x01"sv );
 
                 pb_test( Test::Scalar::ReqUint8_2{ .value = 0 }, "\x08\x00"sv );
                 pb_test( Test::Scalar::ReqUint8_2{ .value = 1 }, "\x08\x01"sv );
@@ -348,6 +354,9 @@ TEST_CASE( "protobuf" )
                 CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSint8_1 >( "\x08\x03"sv ) );
                 CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSint8_1 >( "\x08\x02"sv ) );
 
+                pb_test( Test::Scalar::ReqSint32_1{ .value = -1 }, "\x08\x01"sv );
+                pb_test( Test::Scalar::ReqSint32_1{ .value = 0 }, "\x08\x00"sv );
+
                 pb_test( Test::Scalar::ReqSint8_2{ .value = -2 }, "\x08\x03"sv );
                 pb_test( Test::Scalar::ReqSint8_2{ .value = -1 }, "\x08\x01"sv );
                 pb_test( Test::Scalar::ReqSint8_2{ .value = 0 }, "\x08\x00"sv );
@@ -427,19 +436,19 @@ TEST_CASE( "protobuf" )
         {
             SUBCASE( "bitfield" )
             {
-                pb_test( Test::Scalar::ReqFixed32_8_1{ .value = 0 }, "\x0d\x00\x00\x00\x00"sv );
-                pb_test( Test::Scalar::ReqFixed32_8_1{ .value = 1 }, "\x0d\x01\x00\x00\x00"sv );
+                pb_test( Test::Scalar::ReqFixed32_32_1{ .value = 0 }, "\x0d\x00\x00\x00\x00"sv );
+                pb_test( Test::Scalar::ReqFixed32_32_1{ .value = 1 }, "\x0d\x01\x00\x00\x00"sv );
 
-                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqFixed32_8_1 >( "\x0d\xff\xff\xff\xff"sv ) );
-                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqFixed32_8_1 >( "\x0d\x02\x00\x00\x00"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqFixed32_32_1 >( "\x0d\xff\xff\xff\xff"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqFixed32_32_1 >( "\x0d\x02\x00\x00\x00"sv ) );
 
-                pb_test( Test::Scalar::ReqFixed32_8_2{ .value = 0 }, "\x0d\x00\x00\x00\x00"sv );
-                pb_test( Test::Scalar::ReqFixed32_8_2{ .value = 1 }, "\x0d\x01\x00\x00\x00"sv );
-                pb_test( Test::Scalar::ReqFixed32_8_2{ .value = 2 }, "\x0d\x02\x00\x00\x00"sv );
-                pb_test( Test::Scalar::ReqFixed32_8_2{ .value = 3 }, "\x0d\x03\x00\x00\x00"sv );
+                pb_test( Test::Scalar::ReqFixed32_32_2{ .value = 0 }, "\x0d\x00\x00\x00\x00"sv );
+                pb_test( Test::Scalar::ReqFixed32_32_2{ .value = 1 }, "\x0d\x01\x00\x00\x00"sv );
+                pb_test( Test::Scalar::ReqFixed32_32_2{ .value = 2 }, "\x0d\x02\x00\x00\x00"sv );
+                pb_test( Test::Scalar::ReqFixed32_32_2{ .value = 3 }, "\x0d\x03\x00\x00\x00"sv );
 
-                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqFixed32_8_2 >( "\x0d\xff\xff\xff\xff"sv ) );
-                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqFixed32_8_2 >( "\x0d\x04\x00\x00\x00"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqFixed32_32_2 >( "\x0d\xff\xff\xff\xff"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqFixed32_32_2 >( "\x0d\x04\x00\x00\x00"sv ) );
             }
             SUBCASE( "required" )
             {
@@ -470,6 +479,22 @@ TEST_CASE( "protobuf" )
             }
             SUBCASE( "uint8" )
             {
+                SUBCASE( "bitfield" )
+                {
+                    pb_test( Test::Scalar::ReqFixed32_8_1{ .value = 0 }, "\x0d\x00\x00\x00\x00"sv );
+                    pb_test( Test::Scalar::ReqFixed32_8_1{ .value = 1 }, "\x0d\x01\x00\x00\x00"sv );
+
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqFixed32_8_1 >( "\x0d\xff\xff\xff\xff"sv ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqFixed32_8_1 >( "\x0d\x02\x00\x00\x00"sv ) );
+
+                    pb_test( Test::Scalar::ReqFixed32_8_2{ .value = 0 }, "\x0d\x00\x00\x00\x00"sv );
+                    pb_test( Test::Scalar::ReqFixed32_8_2{ .value = 1 }, "\x0d\x01\x00\x00\x00"sv );
+                    pb_test( Test::Scalar::ReqFixed32_8_2{ .value = 2 }, "\x0d\x02\x00\x00\x00"sv );
+                    pb_test( Test::Scalar::ReqFixed32_8_2{ .value = 3 }, "\x0d\x03\x00\x00\x00"sv );
+
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqFixed32_8_2 >( "\x0d\xff\xff\xff\xff"sv ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqFixed32_8_2 >( "\x0d\x04\x00\x00\x00"sv ) );
+                }
                 SUBCASE( "required" )
                 {
                     pb_test( Test::Scalar::ReqFixed32_8{ .value = 0x42 }, "\x0d\x42\x00\x00\x00"sv );
@@ -500,6 +525,22 @@ TEST_CASE( "protobuf" )
             }
             SUBCASE( "uint16" )
             {
+                SUBCASE( "bitfield" )
+                {
+                    pb_test( Test::Scalar::ReqFixed32_16_1{ .value = 0 }, "\x0d\x00\x00\x00\x00"sv );
+                    pb_test( Test::Scalar::ReqFixed32_16_1{ .value = 1 }, "\x0d\x01\x00\x00\x00"sv );
+
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqFixed32_16_1 >( "\x0d\xff\xff\xff\xff"sv ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqFixed32_16_1 >( "\x0d\x02\x00\x00\x00"sv ) );
+
+                    pb_test( Test::Scalar::ReqFixed32_16_2{ .value = 0 }, "\x0d\x00\x00\x00\x00"sv );
+                    pb_test( Test::Scalar::ReqFixed32_16_2{ .value = 1 }, "\x0d\x01\x00\x00\x00"sv );
+                    pb_test( Test::Scalar::ReqFixed32_16_2{ .value = 2 }, "\x0d\x02\x00\x00\x00"sv );
+                    pb_test( Test::Scalar::ReqFixed32_16_2{ .value = 3 }, "\x0d\x03\x00\x00\x00"sv );
+
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqFixed32_16_2 >( "\x0d\xff\xff\xff\xff"sv ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqFixed32_16_2 >( "\x0d\x04\x00\x00\x00"sv ) );
+                }
                 SUBCASE( "required" )
                 {
                     pb_test( Test::Scalar::ReqFixed32_16{ .value = 0x42 }, "\x0d\x42\x00\x00\x00"sv );
@@ -533,17 +574,17 @@ TEST_CASE( "protobuf" )
         {
             SUBCASE( "bitfield" )
             {
-                pb_test( Test::Scalar::ReqSfixed64_8_1{ .value = -1 }, "\x09\xff\xff\xff\xff\xff\xff\xff\xff"sv );
-                pb_test( Test::Scalar::ReqSfixed64_8_1{ .value = 0 }, "\x09\x00\x00\x00\x00\x00\x00\x00\x00"sv );
-                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed64_8_1 >( "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv ) );
-                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed64_8_1 >( "\x09\x01\x00\x00\x00\x00\x00\x00\x00"sv ) );
+                pb_test( Test::Scalar::ReqSfixed64_64_1{ .value = -1 }, "\x09\xff\xff\xff\xff\xff\xff\xff\xff"sv );
+                pb_test( Test::Scalar::ReqSfixed64_64_1{ .value = 0 }, "\x09\x00\x00\x00\x00\x00\x00\x00\x00"sv );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed64_64_1 >( "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed64_64_1 >( "\x09\x01\x00\x00\x00\x00\x00\x00\x00"sv ) );
 
-                pb_test( Test::Scalar::ReqSfixed64_8_2{ .value = -2 }, "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv );
-                pb_test( Test::Scalar::ReqSfixed64_8_2{ .value = -1 }, "\x09\xff\xff\xff\xff\xff\xff\xff\xff"sv );
-                pb_test( Test::Scalar::ReqSfixed64_8_2{ .value = 0 }, "\x09\x00\x00\x00\x00\x00\x00\x00\x00"sv );
-                pb_test( Test::Scalar::ReqSfixed64_8_2{ .value = 1 }, "\x09\x01\x00\x00\x00\x00\x00\x00\x00"sv );
-                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed64_8_2 >( "\x09\xfd\xff\xff\xff\xff\xff\xff\xff"sv ) );
-                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed64_8_2 >( "\x09\x02\x00\x00\x00\x00\x00\x00\x00"sv ) );
+                pb_test( Test::Scalar::ReqSfixed64_64_2{ .value = -2 }, "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv );
+                pb_test( Test::Scalar::ReqSfixed64_64_2{ .value = -1 }, "\x09\xff\xff\xff\xff\xff\xff\xff\xff"sv );
+                pb_test( Test::Scalar::ReqSfixed64_64_2{ .value = 0 }, "\x09\x00\x00\x00\x00\x00\x00\x00\x00"sv );
+                pb_test( Test::Scalar::ReqSfixed64_64_2{ .value = 1 }, "\x09\x01\x00\x00\x00\x00\x00\x00\x00"sv );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed64_64_2 >( "\x09\xfd\xff\xff\xff\xff\xff\xff\xff"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed64_64_2 >( "\x09\x02\x00\x00\x00\x00\x00\x00\x00"sv ) );
             }
             SUBCASE( "required" )
             {
@@ -572,6 +613,20 @@ TEST_CASE( "protobuf" )
             }
             SUBCASE( "uint8" )
             {
+                SUBCASE( "bitfield" )
+                {
+                    pb_test( Test::Scalar::ReqSfixed64_8_1{ .value = -1 }, "\x09\xff\xff\xff\xff\xff\xff\xff\xff"sv );
+                    pb_test( Test::Scalar::ReqSfixed64_8_1{ .value = 0 }, "\x09\x00\x00\x00\x00\x00\x00\x00\x00"sv );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed64_8_1 >( "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed64_8_1 >( "\x09\x01\x00\x00\x00\x00\x00\x00\x00"sv ) );
+
+                    pb_test( Test::Scalar::ReqSfixed64_8_2{ .value = -2 }, "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv );
+                    pb_test( Test::Scalar::ReqSfixed64_8_2{ .value = -1 }, "\x09\xff\xff\xff\xff\xff\xff\xff\xff"sv );
+                    pb_test( Test::Scalar::ReqSfixed64_8_2{ .value = 0 }, "\x09\x00\x00\x00\x00\x00\x00\x00\x00"sv );
+                    pb_test( Test::Scalar::ReqSfixed64_8_2{ .value = 1 }, "\x09\x01\x00\x00\x00\x00\x00\x00\x00"sv );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed64_8_2 >( "\x09\xfd\xff\xff\xff\xff\xff\xff\xff"sv ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed64_8_2 >( "\x09\x02\x00\x00\x00\x00\x00\x00\x00"sv ) );
+                }
                 SUBCASE( "required" )
                 {
                     pb_test( Test::Scalar::ReqFixed64_8{ .value = 0x42 }, "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv );
@@ -603,17 +658,17 @@ TEST_CASE( "protobuf" )
         {
             SUBCASE( "bitfield" )
             {
-                pb_test( Test::Scalar::ReqSfixed32_8_1{ .value = -1 }, "\x0d\xff\xff\xff\xff"sv );
-                pb_test( Test::Scalar::ReqSfixed32_8_1{ .value = 0 }, "\x0d\x00\x00\x00\x00"sv );
-                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed32_8_1 >( "\x0d\xfe\xff\xff\xff"sv ) );
-                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed32_8_1 >( "\x0d\x01\x00\x00\x00"sv ) );
+                pb_test( Test::Scalar::ReqSfixed32_32_1{ .value = -1 }, "\x0d\xff\xff\xff\xff"sv );
+                pb_test( Test::Scalar::ReqSfixed32_32_1{ .value = 0 }, "\x0d\x00\x00\x00\x00"sv );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed32_32_1 >( "\x0d\xfe\xff\xff\xff"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed32_32_1 >( "\x0d\x01\x00\x00\x00"sv ) );
 
-                pb_test( Test::Scalar::ReqSfixed32_8_2{ .value = -2 }, "\x0d\xfe\xff\xff\xff"sv );
-                pb_test( Test::Scalar::ReqSfixed32_8_2{ .value = -1 }, "\x0d\xff\xff\xff\xff"sv );
-                pb_test( Test::Scalar::ReqSfixed32_8_2{ .value = 0 }, "\x0d\x00\x00\x00\x00"sv );
-                pb_test( Test::Scalar::ReqSfixed32_8_2{ .value = 1 }, "\x0d\x01\x00\x00\x00"sv );
-                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed32_8_2 >( "\x0d\xfd\xff\xff\xff"sv ) );
-                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed32_8_2 >( "\x0d\x02\x00\x00\x00"sv ) );
+                pb_test( Test::Scalar::ReqSfixed32_32_2{ .value = -2 }, "\x0d\xfe\xff\xff\xff"sv );
+                pb_test( Test::Scalar::ReqSfixed32_32_2{ .value = -1 }, "\x0d\xff\xff\xff\xff"sv );
+                pb_test( Test::Scalar::ReqSfixed32_32_2{ .value = 0 }, "\x0d\x00\x00\x00\x00"sv );
+                pb_test( Test::Scalar::ReqSfixed32_32_2{ .value = 1 }, "\x0d\x01\x00\x00\x00"sv );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed32_32_2 >( "\x0d\xfd\xff\xff\xff"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed32_32_2 >( "\x0d\x02\x00\x00\x00"sv ) );
             }
             SUBCASE( "required" )
             {
@@ -643,6 +698,20 @@ TEST_CASE( "protobuf" )
             }
             SUBCASE( "int8" )
             {
+                SUBCASE( "bitfield" )
+                {
+                    pb_test( Test::Scalar::ReqSfixed32_8_1{ .value = -1 }, "\x0d\xff\xff\xff\xff"sv );
+                    pb_test( Test::Scalar::ReqSfixed32_8_1{ .value = 0 }, "\x0d\x00\x00\x00\x00"sv );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed32_8_1 >( "\x0d\xfe\xff\xff\xff"sv ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed32_8_1 >( "\x0d\x01\x00\x00\x00"sv ) );
+
+                    pb_test( Test::Scalar::ReqSfixed32_8_2{ .value = -2 }, "\x0d\xfe\xff\xff\xff"sv );
+                    pb_test( Test::Scalar::ReqSfixed32_8_2{ .value = -1 }, "\x0d\xff\xff\xff\xff"sv );
+                    pb_test( Test::Scalar::ReqSfixed32_8_2{ .value = 0 }, "\x0d\x00\x00\x00\x00"sv );
+                    pb_test( Test::Scalar::ReqSfixed32_8_2{ .value = 1 }, "\x0d\x01\x00\x00\x00"sv );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed32_8_2 >( "\x0d\xfd\xff\xff\xff"sv ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed32_8_2 >( "\x0d\x02\x00\x00\x00"sv ) );
+                }
                 SUBCASE( "required" )
                 {
                     pb_test( Test::Scalar::ReqSfixed32_8{ .value = 0x42 }, "\x0d\x42\x00\x00\x00"sv );
@@ -675,17 +744,17 @@ TEST_CASE( "protobuf" )
         {
             SUBCASE( "bitfield" )
             {
-                pb_test( Test::Scalar::ReqSfixed64_8_1{ .value = -1 }, "\x09\xff\xff\xff\xff\xff\xff\xff\xff"sv );
-                pb_test( Test::Scalar::ReqSfixed64_8_1{ .value = 0 }, "\x09\x00\x00\x00\x00\x00\x00\x00\x00"sv );
-                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed64_8_1 >( "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv ) );
-                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed64_8_1 >( "\x09\x01\x00\x00\x00\x00\x00\x00\x00"sv ) );
+                pb_test( Test::Scalar::ReqSfixed64_64_1{ .value = -1 }, "\x09\xff\xff\xff\xff\xff\xff\xff\xff"sv );
+                pb_test( Test::Scalar::ReqSfixed64_64_1{ .value = 0 }, "\x09\x00\x00\x00\x00\x00\x00\x00\x00"sv );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed64_64_1 >( "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed64_64_1 >( "\x09\x01\x00\x00\x00\x00\x00\x00\x00"sv ) );
 
-                pb_test( Test::Scalar::ReqSfixed64_8_2{ .value = -2 }, "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv );
-                pb_test( Test::Scalar::ReqSfixed64_8_2{ .value = -1 }, "\x09\xff\xff\xff\xff\xff\xff\xff\xff"sv );
-                pb_test( Test::Scalar::ReqSfixed64_8_2{ .value = 0 }, "\x09\x00\x00\x00\x00\x00\x00\x00\x00"sv );
-                pb_test( Test::Scalar::ReqSfixed64_8_2{ .value = 1 }, "\x09\x01\x00\x00\x00\x00\x00\x00\x00"sv );
-                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed64_8_2 >( "\x09\xfd\xff\xff\xff\xff\xff\xff\xff"sv ) );
-                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed64_8_2 >( "\x09\x02\x00\x00\x00\x00\x00\x00\x00"sv ) );
+                pb_test( Test::Scalar::ReqSfixed64_64_2{ .value = -2 }, "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv );
+                pb_test( Test::Scalar::ReqSfixed64_64_2{ .value = -1 }, "\x09\xff\xff\xff\xff\xff\xff\xff\xff"sv );
+                pb_test( Test::Scalar::ReqSfixed64_64_2{ .value = 0 }, "\x09\x00\x00\x00\x00\x00\x00\x00\x00"sv );
+                pb_test( Test::Scalar::ReqSfixed64_64_2{ .value = 1 }, "\x09\x01\x00\x00\x00\x00\x00\x00\x00"sv );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed64_64_2 >( "\x09\xfd\xff\xff\xff\xff\xff\xff\xff"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed64_64_2 >( "\x09\x02\x00\x00\x00\x00\x00\x00\x00"sv ) );
             }
             SUBCASE( "required" )
             {
@@ -714,6 +783,20 @@ TEST_CASE( "protobuf" )
             }
             SUBCASE( "int8" )
             {
+                SUBCASE( "bitfield" )
+                {
+                    pb_test( Test::Scalar::ReqSfixed64_8_1{ .value = -1 }, "\x09\xff\xff\xff\xff\xff\xff\xff\xff"sv );
+                    pb_test( Test::Scalar::ReqSfixed64_8_1{ .value = 0 }, "\x09\x00\x00\x00\x00\x00\x00\x00\x00"sv );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed64_8_1 >( "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed64_8_1 >( "\x09\x01\x00\x00\x00\x00\x00\x00\x00"sv ) );
+
+                    pb_test( Test::Scalar::ReqSfixed64_8_2{ .value = -2 }, "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv );
+                    pb_test( Test::Scalar::ReqSfixed64_8_2{ .value = -1 }, "\x09\xff\xff\xff\xff\xff\xff\xff\xff"sv );
+                    pb_test( Test::Scalar::ReqSfixed64_8_2{ .value = 0 }, "\x09\x00\x00\x00\x00\x00\x00\x00\x00"sv );
+                    pb_test( Test::Scalar::ReqSfixed64_8_2{ .value = 1 }, "\x09\x01\x00\x00\x00\x00\x00\x00\x00"sv );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed64_8_2 >( "\x09\xfd\xff\xff\xff\xff\xff\xff\xff"sv ) );
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqSfixed64_8_2 >( "\x09\x02\x00\x00\x00\x00\x00\x00\x00"sv ) );
+                }
                 SUBCASE( "required" )
                 {
                     pb_test( Test::Scalar::ReqSfixed64_8{ .value = 0x42 }, "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv );
