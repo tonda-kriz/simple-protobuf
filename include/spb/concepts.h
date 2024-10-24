@@ -24,7 +24,9 @@ concept is_int_or_float = ::std::is_integral_v< T > || ::std::is_floating_point_
 
 template < class T >
 concept bytes_container = requires( T container ) {
-    { container.emplace_back( ) };
+    { container.data( ) };
+    { container.size( ) };
+    { container.resize( 0 ) };
     { container.empty( ) };
     { container.begin( ) };
     { container.end( ) };
