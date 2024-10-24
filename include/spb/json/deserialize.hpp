@@ -234,7 +234,7 @@ static inline auto is_escape( char c ) -> bool
     return escape_chars.find( c ) != std::string_view::npos;
 }
 
-static inline void deserialize( istream & stream, spb::detail::is_enum auto & value )
+static inline void deserialize( istream & stream, spb::detail::proto_enum auto & value )
 {
     deserialize_value( stream, value );
 }
@@ -301,7 +301,7 @@ static inline auto deserialize_string_view( istream & stream, size_t min_size, s
     return { };
 }
 
-static inline void unescape( spb::detail::string_container auto & str )
+static inline void unescape( spb::detail::proto_field_string auto & str )
 {
     auto value = std::string_view( str.data( ), str.size( ) );
 
@@ -351,7 +351,7 @@ static inline void unescape( spb::detail::string_container auto & str )
     str = result;
 }
 
-static inline void deserialize( istream & stream, spb::detail::string_container auto & value )
+static inline void deserialize( istream & stream, spb::detail::proto_field_string auto & value )
 {
     if( stream.current_char( ) != '"' )
     {
@@ -383,7 +383,7 @@ static inline void deserialize( istream & stream, spb::detail::string_container 
     }
 }
 
-static inline void deserialize( istream & stream, spb::detail::is_int_or_float auto & value )
+static inline void deserialize( istream & stream, spb::detail::proto_field_int_or_float auto & value )
 {
     if( stream.current_char( ) == '"' ) [[unlikely]]
     {
@@ -427,9 +427,9 @@ static inline void deserialize( istream & stream, auto & value );
 template < typename keyT, typename valueT >
 static inline void deserialize( istream & stream, std::map< keyT, valueT > & value );
 
-static inline void deserialize( istream & stream, spb::detail::optional_container auto & value );
+static inline void deserialize( istream & stream, spb::detail::proto_label_optional auto & value );
 
-template < spb::detail::repeated_container C >
+template < spb::detail::proto_label_repeated C >
 static inline void deserialize( istream & stream, C & value )
 {
     if( stream.consume( "null"sv ) )
@@ -468,7 +468,7 @@ static inline void deserialize( istream & stream, C & value )
     }
 }
 
-static inline void deserialize( istream & stream, spb::detail::bytes_container auto & value )
+static inline void deserialize( istream & stream, spb::detail::proto_field_bytes auto & value )
 {
     if( stream.consume( "null"sv ) )
     {
@@ -536,7 +536,7 @@ static inline void deserialize( istream & stream, std::map< keyT, valueT > & val
     }
 }
 
-static inline void deserialize( istream & stream, spb::detail::optional_container auto & p_value )
+static inline void deserialize( istream & stream, spb::detail::proto_label_optional auto & p_value )
 {
     if( stream.consume( "null"sv ) )
     {

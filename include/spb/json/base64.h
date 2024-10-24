@@ -62,7 +62,7 @@ static inline void base64_encode( ostream & output, std::span< const std::byte >
 }
 
 template < typename istream >
-static inline void base64_decode_string( spb::detail::bytes_container auto & output, istream & stream )
+static inline void base64_decode_string( spb::detail::proto_field_bytes auto & output, istream & stream )
 {
     static constexpr uint8_t decode_table[ 256 ] = {
         128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
