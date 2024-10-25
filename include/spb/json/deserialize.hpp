@@ -84,6 +84,19 @@ static constexpr inline auto fnv1a_hash( std::string_view str ) noexcept -> uint
     return hash;
 }
 
+template < spb::detail::container T >
+void clear( T & container )
+{
+    if constexpr( spb::detail::has_clear< T > )
+    {
+        container.clear( );
+    }
+    else
+    {
+        std::fill( container.begin( ), container.end( ), typename T::value_type( ) );
+    }
+}
+
 struct istream
 {
 private:
@@ -472,7 +485,7 @@ static inline void deserialize( istream & stream, spb::detail::proto_field_bytes
 {
     if( stream.consume( "null"sv ) )
     {
-        value.clear( );
+        clear( value );
         return;
     }
 

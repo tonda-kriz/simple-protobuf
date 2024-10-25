@@ -1,5 +1,7 @@
+#include <array.pb.h>
 #include <cstdint>
 #include <google/protobuf/util/json_util.h>
+#include <gpb-array.pb.h>
 #include <gpb-name.pb.h>
 #include <gpb-person.pb.h>
 #include <gpb-scalar.pb.h>
@@ -19,10 +21,22 @@
 
 namespace std
 {
+auto operator==( span< byte > lhs, span< byte > rhs ) noexcept -> bool
+{
+    return lhs.size( ) == rhs.size( ) && ( memcmp( lhs.data( ), rhs.data( ), lhs.size( ) ) == 0 );
+}
+
 auto operator==( const string & lhs, const vector< byte > & rhs ) noexcept -> bool
 {
     return lhs.size( ) == rhs.size( ) && ( memcmp( lhs.data( ), rhs.data( ), lhs.size( ) ) == 0 );
 }
+
+template < size_t N >
+auto operator==( const string & lhs, const array< byte, N > & rhs ) noexcept -> bool
+{
+    return lhs.size( ) == rhs.size( ) && ( memcmp( lhs.data( ), rhs.data( ), lhs.size( ) ) == 0 );
+}
+
 }// namespace std
 
 namespace Test
@@ -74,6 +88,14 @@ auto to_bytes( std::string_view str ) -> std::vector< std::byte >
 {
     auto span = std::span< std::byte >( ( std::byte * ) str.data( ), str.size( ) );
     return { span.data( ), span.data( ) + span.size( ) };
+}
+
+template < size_t N >
+auto to_array( const char ( &string )[ N ] )
+{
+    auto result = std::array< std::byte, N - 1 >( );
+    memcpy( result.data( ), &string, result.size( ) );
+    return result;
 }
 
 template < typename T >
@@ -158,7 +180,7 @@ void gpb_test( const SPB & spb )
     }
     auto gpb_serialized = std::string( );
     REQUIRE( gpb.SerializeToString( &gpb_serialized ) );
-    REQUIRE( spb::pb::deserialize< SPB >( gpb_serialized ) == spb );
+    REQUIRE( spb::pb::deserialize< SPB >( gpb_serialized ).value == spb.value );
     REQUIRE( gpb_serialized == spb_serialized );
 }
 
@@ -202,12 +224,12 @@ void gpb_json( const SPB & spb )
     print_options.preserve_proto_field_names = true;
 
     ( void ) MessageToJsonString( gpb, &json_string, print_options );
-    REQUIRE( spb::json::deserialize< SPB >( json_string ) == spb );
+    REQUIRE( spb::json::deserialize< SPB >( json_string ).value == spb.value );
 
     print_options.preserve_proto_field_names = false;
     json_string.clear( );
     ( void ) MessageToJsonString( gpb, &json_string, print_options );
-    REQUIRE( spb::json::deserialize< SPB >( json_string ) == spb );
+    REQUIRE( spb::json::deserialize< SPB >( json_string ).value == spb.value );
 }
 
 template < typename GPB, typename SPB >
@@ -1050,8 +1072,25 @@ TEST_CASE( "bytes" )
     SUBCASE( "repeated" )
     {
         gpb_compatibility< Test::Scalar::gpb::RepBytes >( Test::Scalar::RepBytes{ .value = { to_bytes( "hello" ) } } );
-        gpb_compatibility< Test::Scalar::gpb::RepBytes >( Test::Scalar::RepBytes{ .value = { to_bytes( "\x00\x01\x02"sv ) } } );
-        gpb_compatibility< Test::Scalar::gpb::RepBytes >( Test::Scalar::RepBytes{ .value = { to_bytes( "\x00\x01\x02\x03\x04"sv ) } } );
+        gpb_compatibility< Test::Scalar::gpb::RepBytes >( Test::Scalar::RepBytes{ .value = { to_bytes( "\x00\x01\x02"sv ), to_bytes( "hello" ) } } );
+        gpb_compatibility< Test::Scalar::gpb::RepBytes >( Test::Scalar::RepBytes{ .value = { to_bytes( "\x00\x01\x02\x03\x04"sv ), to_bytes( "\x00\x01\x02"sv ), to_bytes( "hello" ) } } );
+    }
+    SUBCASE( "fixed size" )
+    {
+
+        SUBCASE( "required" )
+        {
+            gpb_compatibility< Test::Array::gpb::ReqBytes >( Test::Array::ReqBytes{ .value = to_array( "12345678" ) } );
+        }
+        SUBCASE( "optional" )
+        {
+            gpb_compatibility< Test::Array::gpb::OptBytes >( Test::Array::OptBytes{ .value = to_array( "12345678" ) } );
+        }
+        SUBCASE( "repeated" )
+        {
+            gpb_compatibility< Test::Array::gpb::RepBytes >( Test::Array::RepBytes{ .value = { to_array( "12345678" ) } } );
+            gpb_compatibility< Test::Array::gpb::RepBytes >( Test::Array::RepBytes{ .value = { to_array( "12345678" ), to_array( "87654321" ) } } );
+        }
     }
 }
 TEST_CASE( "enum" )

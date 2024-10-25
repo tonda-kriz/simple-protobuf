@@ -1,4 +1,5 @@
 #include "spb/pb/wire-types.h"
+#include <array.pb.h>
 #include <cstdint>
 #include <memory>
 #include <name.pb.h>
@@ -9,7 +10,6 @@
 #include <spb/pb.hpp>
 #include <string>
 #include <string_view>
-#include <type_traits>
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
@@ -69,6 +69,14 @@ auto operator==( const Simple & lhs, const Simple & rhs ) noexcept -> bool
 
 namespace
 {
+template < size_t N >
+auto to_array( const char ( &string )[ N ] )
+{
+    auto result = std::array< std::byte, N - 1 >( );
+    memcpy( result.data( ), &string, result.size( ) );
+    return result;
+}
+
 auto to_bytes( std::string_view str ) -> std::vector< std::byte >
 {
     auto span = std::span< std::byte >( ( std::byte * ) str.data( ), str.size( ) );
@@ -882,8 +890,33 @@ TEST_CASE( "protobuf" )
         {
             pb_test( Test::Scalar::RepBytes{ }, "" );
             pb_test( Test::Scalar::RepBytes{ .value = { to_bytes( "hello" ) } }, "\x0a\x05hello"sv );
-            pb_test( Test::Scalar::RepBytes{ .value = { to_bytes( "\x00\x01\x02"sv ) } }, "\x0a\x03\x00\x01\x02"sv );
+            pb_test( Test::Scalar::RepBytes{ .value = { to_bytes( "\x00\x01\x02"sv ), to_bytes( "hello" ) } }, "\x0a\x03\x00\x01\x02\x0a\x05hello"sv );
             pb_test( Test::Scalar::RepBytes{ .value = { to_bytes( "\x00\x01\x02\x03\x04"sv ) } }, "\x0a\x05\x00\x01\x02\x03\x04"sv );
+        }
+        SUBCASE( "fixed" )
+        {
+            SUBCASE( "required" )
+            {
+                pb_test( Test::Array::ReqBytes{ }, "\x0a\x08\x00\x00\x00\x00\x00\x00\x00\x00"sv );
+                pb_test( Test::Array::ReqBytes{ .value = to_array( "hello123" ) }, "\x0a\x08hello123"sv );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Array::ReqBytes >( "\x0a\x05hello"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Array::ReqBytes >( "\x0a\x09hello1234"sv ) );
+            }
+            SUBCASE( "optional" )
+            {
+                pb_test( Test::Array::OptBytes{ }, "" );
+                pb_test( Test::Array::OptBytes{ .value = to_array( "hello123" ) }, "\x0a\x08hello123"sv );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Array::OptBytes >( "\x0a\x05hello"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Array::OptBytes >( "\x0a\x09hello1234"sv ) );
+            }
+            SUBCASE( "repeated" )
+            {
+                pb_test( Test::Array::RepBytes{ }, "" );
+                pb_test( Test::Array::RepBytes{ .value = { to_array( "hello123" ) } }, "\x0a\x08hello123"sv );
+                pb_test( Test::Array::RepBytes{ .value = { to_array( "hello123" ), to_array( "hello321" ) } }, "\x0a\x08hello123\x0a\x08hello321"sv );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Array::RepBytes >( "\x0a\x05hello"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Array::RepBytes >( "\x0a\x09hello1234"sv ) );
+            }
         }
     }
     SUBCASE( "variant" )

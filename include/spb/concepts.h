@@ -33,6 +33,16 @@ concept container = requires( T container ) {
 };
 
 template < class T >
+concept has_clear = requires( T obj ) {
+    { obj.clear( ) };
+};
+
+template < class T >
+concept has_resize = requires( T obj ) {
+    { obj.resize( 0 ) };
+};
+
+template < class T >
 concept proto_field_bytes = container< T > && std::is_same_v< typename T::value_type, std::byte >;
 
 template < class T >
