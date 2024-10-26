@@ -335,6 +335,7 @@ TEST_CASE( "string" )
     SUBCASE( "required" )
     {
         gpb_compatibility< Test::Scalar::gpb::ReqString >( Test::Scalar::ReqString{ .value = "hello" } );
+        gpb_compatibility< Test::Scalar::gpb::ReqString >( Test::Scalar::ReqString{ .value = "\"\\/\b\f\n\r\t" } );
     }
     SUBCASE( "optional" )
     {

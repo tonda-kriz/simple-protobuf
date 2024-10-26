@@ -77,6 +77,14 @@ auto to_array( const char ( &string )[ N ] )
     return result;
 }
 
+template < size_t N >
+auto to_string( const char ( &string )[ N ] )
+{
+    auto result = std::array< char, N - 1 >( );
+    memcpy( result.data( ), &string, result.size( ) );
+    return result;
+}
+
 auto to_bytes( std::string_view str ) -> std::vector< std::byte >
 {
     auto span = std::span< std::byte >( ( std::byte * ) str.data( ), str.size( ) );
@@ -227,6 +235,37 @@ TEST_CASE( "protobuf" )
             pb_json_test( Test::Scalar::RepString{ }, "", "{}" );
             pb_json_test( Test::Scalar::RepString{ .value = { "hello" } }, "\x0a\x05hello", R"({"value":["hello"]})" );
             pb_json_test( Test::Scalar::RepString{ .value = { "hello", "world" } }, "\x0a\x05hello\x0a\x05world", R"({"value":["hello","world"]})" );
+        }
+        SUBCASE( "fixed" )
+        {
+            SUBCASE( "required" )
+            {
+                // pb_json_test( Test::Array::ReqString{ }, "\x0a\x06\x00\x00\x00\x00\x00\x00"sv, R"({"value":"hello"})" );
+                pb_json_test( Test::Array::ReqString{ .value = to_string( "hello1" ) }, "\x0a\x06hello1", R"({"value":"hello1"})" );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Array::ReqString >( "\x0a\x05hello"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Array::ReqString >( "\x0a\x07hello12"sv ) );
+                SUBCASE( "escaped" )
+                {
+                    pb_json_test( Test::Array::ReqString{ .value = to_string( "\"\\/\n\r\t" ) }, "\x0a\x06\"\\/\n\r\t", R"({"value":"\"\\\/\n\r\t"})" );
+                    pb_json_test( Test::Array::ReqString{ .value = to_string( "hello\t" ) }, "\x0a\x06hello\t", R"({"value":"hello\t"})" );
+                }
+            }
+            SUBCASE( "optional" )
+            {
+                pb_json_test( Test::Array::OptString{ }, "", "{}" );
+                pb_json_test( Test::Array::OptString{ .value = to_string( "hello1" ) }, "\x0a\x06hello1", R"({"value":"hello1"})" );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Array::OptString >( "\x0a\x05hello"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Array::OptString >( "\x0a\x07hello12"sv ) );
+                CHECK_THROWS( ( void ) spb::json::deserialize< Test::Array::OptString >( R"({"value":"hello12"})" ) );
+            }
+            SUBCASE( "repeated" )
+            {
+                pb_json_test( Test::Array::RepString{ }, "", "{}" );
+                pb_json_test( Test::Array::RepString{ .value = { to_string( "hello1" ) } }, "\x0a\x06hello1", R"({"value":["hello1"]})" );
+                pb_json_test( Test::Array::RepString{ .value = { to_string( "hello1" ), to_string( "world1" ) } }, "\x0a\x06hello1\x0a\x06world1", R"({"value":["hello1","world1"]})" );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Array::RepString >( "\x0a\x06hello1\x0a\x05world"sv ) );
+                CHECK_THROWS( ( void ) spb::json::deserialize< Test::Array::RepString >( R"({"value":["hello1","world"]})" ) );
+            }
         }
     }
     SUBCASE( "bool" )
