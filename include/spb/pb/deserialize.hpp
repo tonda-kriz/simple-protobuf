@@ -443,7 +443,17 @@ static inline void deserialize_as( istream & stream, C & p_value, wire_type type
 static inline void deserialize( istream & stream, spb::detail::proto_field_string auto & value, wire_type type )
 {
     check_wire_type( type, wire_type::length_delimited );
-    value.resize( stream.size( ) );
+    if constexpr( spb::detail::proto_field_string_resizable< decltype( value ) > )
+    {
+        value.resize( stream.size( ) );
+    }
+    else
+    {
+        if( value.size( ) != stream.size( ) )
+        {
+            throw std::runtime_error( "invalid string size" );
+        }
+    }
     stream.read_exact( value.data( ), stream.size( ) );
 }
 

@@ -196,6 +196,8 @@ public:
      */
     [[nodiscard]] auto consume( std::string_view token ) -> bool
     {
+        assert( !token.empty( ) );
+
         if( current_char( ) != token[ 0 ] )
         {
             return false;
@@ -314,54 +316,29 @@ static inline auto deserialize_string_view( istream & stream, size_t min_size, s
     return { };
 }
 
-static inline void unescape( spb::detail::proto_field_string auto & str )
+static inline auto unescape( char c ) -> char
 {
-    auto value = std::string_view( str.data( ), str.size( ) );
-
-    if( value.find( escape ) == std::string_view::npos )
+    switch( c )
     {
-        return;
+    case '"':
+        return '"';
+    case '\\':
+        return '\\';
+    case '/':
+        return '/';
+    case 'b':
+        return '\b';
+    case 'f':
+        return '\f';
+    case 'n':
+        return '\n';
+    case 'r':
+        return '\r';
+    case 't':
+        return '\t';
+    default:
+        throw std::runtime_error( "invalid escape sequence" );
     }
-
-    auto result = str;
-    result.clear( );
-    for( auto esc_offset = value.find( escape ); esc_offset != std::string_view::npos; esc_offset = value.find( escape ) )
-    {
-        result.append( value.data( ), esc_offset );
-        value.remove_prefix( esc_offset + 1 );
-        switch( value.front( ) )
-        {
-        case '"':
-            result += '"';
-            break;
-        case '\\':
-            result += '\\';
-            break;
-        case '/':
-            result += '/';
-            break;
-        case 'b':
-            result += '\b';
-            break;
-        case 'f':
-            result += '\f';
-            break;
-        case 'n':
-            result += '\n';
-            break;
-        case 'r':
-            result += '\r';
-            break;
-        case 't':
-            result += '\t';
-            break;
-        default:
-            throw std::runtime_error( "invalid escape sequence" );
-        }
-        value.remove_prefix( 1 );
-    }
-    result.append( value.data( ), value.size( ) );
-    str = result;
 }
 
 static inline void deserialize( istream & stream, spb::detail::proto_field_string auto & value )
@@ -372,27 +349,61 @@ static inline void deserialize( istream & stream, spb::detail::proto_field_strin
     }
 
     stream.consume_current_char( false );
-    value.clear( );
 
-    auto last = '"';
+    if constexpr( spb::detail::proto_field_string_resizable< decltype( value ) > )
+    {
+        value.clear( );
+    }
+    auto index           = size_t( 0 );
+    auto append_to_value = [ & ]( const char * str, size_t size )
+    {
+        if constexpr( spb::detail::proto_field_string_resizable< decltype( value ) > )
+        {
+            value.append( str, size );
+        }
+        else
+        {
+            if( auto space_left = value.size( ) - index; size <= space_left ) [[likely]]
+            {
+                memcpy( value.data( ) + index, str, size );
+                index += size;
+            }
+            else
+            {
+                throw std::runtime_error( "invalid string size" );
+            }
+        }
+    };
+
     for( ;; )
     {
-        auto view   = stream.view( UINT32_MAX );
-        auto length = size_t( 0 );
-        for( auto current : view )
+        auto view  = stream.view( UINT32_MAX );
+        auto found = view.find_first_of( R"("\)" );
+        if( found == view.npos ) [[unlikely]]
         {
-            if( current == '"' && last != escape )
-            {
-                value.append( view.data( ), length );
-                unescape( value );
-                stream.skip( length + 1 );
-                return;
-            }
-            //- handle \\"
-            last = current != escape || last != escape ? current : ' ';
-            length += 1;
+            append_to_value( view.data( ), view.size( ) );
+            stream.skip( view.size( ) );
+            continue;
         }
-        stream.skip( view.size( ) );
+
+        append_to_value( view.data( ), found );
+        // +1 for '"' or '\'
+        stream.skip( found + 1 );
+        if( view[ found ] == '"' ) [[likely]]
+        {
+            if constexpr( spb::detail::proto_field_string_fixed< decltype( value ) > )
+            {
+                if( index != value.size( ) )
+                {
+                    throw std::runtime_error( "invalid string size" );
+                }
+            }
+            return;
+        }
+
+        auto c = unescape( stream.current_char( ) );
+        append_to_value( &c, 1 );
+        stream.consume_current_char( false );
     }
 }
 

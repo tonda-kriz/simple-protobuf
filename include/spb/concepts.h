@@ -43,10 +43,21 @@ concept has_resize = requires( T obj ) {
 };
 
 template < class T >
+concept proto_field_string_resizable = requires( T obj ) {
+    { obj.append( "1", 1 ) };
+    { obj.clear( ) };
+};
+
+template < class T >
+concept proto_field_string_fixed = !proto_field_string_resizable< T >;
+
+template < class T >
 concept proto_field_bytes = container< T > && std::is_same_v< typename T::value_type, std::byte >;
 
 template < class T >
-concept proto_field_string = container< T > && std::is_same_v< typename T::value_type, char >;
+concept proto_field_string = container< T > &&
+    std::is_same_v< typename T::value_type, char > &&
+    ( proto_field_string_resizable< T > || proto_field_string_fixed< T > );
 
 template < class T >
 concept proto_label_repeated = requires( T container ) {
