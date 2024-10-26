@@ -60,6 +60,28 @@ auto base64_decode( std::string_view value ) -> std::string
     return { std::string( reinterpret_cast< const char * >( result.data( ) ), reinterpret_cast< const char * >( result.data( ) + result.size( ) ) ) };
 }
 
+template < size_t N >
+auto base64_decode_fixed( std::string_view value ) -> std::string
+{
+    auto reader = [ ptr = value.data( ), end = value.data( ) + value.size( ) ]( void * data, size_t size ) mutable -> size_t
+    {
+        size_t bytes_left = end - ptr;
+
+        size = std::min( size, bytes_left );
+        memcpy( data, ptr, size );
+        ptr += size;
+        return size;
+    };
+
+    auto stream = spb::json::detail::istream( reader );
+    auto result = std::array< std::byte, N >( );
+
+    spb::json::detail::base64_decode_string( result, stream );
+    REQUIRE_THROWS( ( void ) stream.view( 1 ) );
+
+    return { std::string( reinterpret_cast< const char * >( result.data( ) ), reinterpret_cast< const char * >( result.data( ) + result.size( ) ) ) };
+}
+
 }// namespace
 
 TEST_CASE( "base64" )
@@ -80,11 +102,11 @@ TEST_CASE( "base64" )
     {
         SUBCASE( "invalid" )
         {
-            REQUIRE_THROWS( base64_decode( R"(")" ) );
-            REQUIRE_THROWS( base64_decode( R"("Zg=")" ) );
-            REQUIRE_THROWS( base64_decode( R"("Zg")" ) );
-            REQUIRE_THROWS( base64_decode( R"("Z")" ) );
-            REQUIRE_THROWS( base64_decode( R"("Zg==)" ) );
+            CHECK_THROWS( base64_decode( R"(")" ) );
+            CHECK_THROWS( base64_decode( R"("Zg=")" ) );
+            CHECK_THROWS( base64_decode( R"("Zg")" ) );
+            CHECK_THROWS( base64_decode( R"("Z")" ) );
+            CHECK_THROWS( base64_decode( R"("Zg==)" ) );
         }
 
         CHECK( base64_decode( R"("")" ) == "" );
@@ -94,14 +116,19 @@ TEST_CASE( "base64" )
         CHECK( base64_decode( R"("Zm9vYg==")" ) == "foob" );
         CHECK( base64_decode( R"("Zm9vYmE=")" ) == "fooba" );
         CHECK( base64_decode( R"("Zm9vYmFy")" ) == "foobar" );
-        REQUIRE_THROWS( base64_decode( R"("Zm9vY!Fy")" ) );
-        REQUIRE_THROWS( base64_decode( R"("Zm9vY^Fy")" ) );
-        REQUIRE_THROWS( base64_decode( R"("!m9vYmFy")" ) );
-        REQUIRE_THROWS( base64_decode( R"("&m9vYmFy")" ) );
+        CHECK( base64_decode_fixed< 6 >( R"("Zm9vYmFy")" ) == "foobar" );
+        CHECK_THROWS( base64_decode_fixed< 5 >( R"("Zm9vYmFy")" ) );
+        CHECK_THROWS( base64_decode_fixed< 7 >( R"("Zm9vYmFy")" ) );
+        CHECK_THROWS( base64_decode_fixed< 1 >( R"("Zm9vYmFy")" ) );
+        CHECK_THROWS( base64_decode( R"("Zm9vY!Fy")" ) );
+        CHECK_THROWS( base64_decode( R"("Zm9vY^Fy")" ) );
+        CHECK_THROWS( base64_decode( R"("!m9vYmFy")" ) );
+        CHECK_THROWS( base64_decode( R"("&m9vYmFy")" ) );
     }
     SUBCASE( "encode/decode" )
     {
-        for( auto i = 8U; i < SPB_READ_BUFFER_SIZE * 10; i++ )
+        const auto buffer_max_size = SPB_READ_BUFFER_SIZE * 10;
+        for( auto i = 8U; i <= buffer_max_size; i++ )
         {
             srand( i );
 
@@ -109,8 +136,20 @@ TEST_CASE( "base64" )
             auto encoded = base64_encode( bytes );
             CHECK( ( encoded.size( ) % 4 ) == 0 );
             CHECK( std::all_of( encoded.begin( ), encoded.end( ), isprint ) );
-            auto decoded = base64_decode( '"' + encoded + '"' );
-            CHECK( decoded == bytes );
+            {
+                auto decoded = base64_decode( '"' + encoded + '"' );
+                CHECK( decoded == bytes );
+            }
+            if( i == 8 )
+            {
+                auto decoded = base64_decode_fixed< 8 >( '"' + encoded + '"' );
+                CHECK( decoded == bytes );
+            }
+            if( i == buffer_max_size )
+            {
+                auto decoded = base64_decode_fixed< buffer_max_size >( '"' + encoded + '"' );
+                CHECK( decoded == bytes );
+            }
         }
     }
 }
