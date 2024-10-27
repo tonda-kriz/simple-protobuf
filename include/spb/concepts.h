@@ -29,24 +29,24 @@ concept container = requires( T container ) {
 };
 
 template < class T >
-concept proto_field_bytes_resizable = requires( T obj ) {
+concept proto_field_bytes = container< T > &&
+    std::is_same_v< typename T::value_type, std::byte >;
+
+template < class T >
+concept proto_field_bytes_resizable = proto_field_bytes< T > && requires( T obj ) {
     { obj.resize( 1 ) };
     { obj.clear( ) };
 };
 
 template < class T >
-concept proto_field_string_resizable = requires( T obj ) {
+concept proto_field_string = container< T > &&
+    std::is_same_v< typename T::value_type, char >;
+
+template < class T >
+concept proto_field_string_resizable = proto_field_string< T > && requires( T obj ) {
     { obj.append( "1", 1 ) };
     { obj.clear( ) };
 };
-
-template < class T >
-concept proto_field_bytes = container< T > &&
-    std::is_same_v< typename T::value_type, std::byte >;
-
-template < class T >
-concept proto_field_string = container< T > &&
-    std::is_same_v< typename T::value_type, char >;
 
 template < class T >
 concept proto_label_repeated = requires( T container ) {
