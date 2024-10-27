@@ -1,7 +1,5 @@
-#include <array.pb.h>
 #include <cstdint>
 #include <google/protobuf/util/json_util.h>
-#include <gpb-array.pb.h>
 #include <gpb-name.pb.h>
 #include <gpb-person.pb.h>
 #include <gpb-scalar.pb.h>
@@ -345,6 +343,23 @@ TEST_CASE( "string" )
     {
         gpb_compatibility< Test::Scalar::gpb::RepString >( Test::Scalar::RepString{ .value = { "hello" } } );
         gpb_compatibility< Test::Scalar::gpb::RepString >( Test::Scalar::RepString{ .value = { "hello", "world" } } );
+    }
+    SUBCASE( "fixed" )
+    {
+        SUBCASE( "required" )
+        {
+            gpb_compatibility< Test::Scalar::gpb::ReqStringFixed >( Test::Scalar::ReqStringFixed{ .value = "hello" } );
+            gpb_compatibility< Test::Scalar::gpb::ReqStringFixed >( Test::Scalar::ReqStringFixed{ .value = "\"\\/\b\f\n\r\t" } );
+        }
+        SUBCASE( "optional" )
+        {
+            gpb_compatibility< Test::Scalar::gpb::OptStringFixed >( Test::Scalar::OptStringFixed{ .value = "hello" } );
+        }
+        SUBCASE( "repeated" )
+        {
+            gpb_compatibility< Test::Scalar::gpb::RepStringFixed >( Test::Scalar::RepStringFixed{ .value = { "hello" } } );
+            gpb_compatibility< Test::Scalar::gpb::RepStringFixed >( Test::Scalar::RepStringFixed{ .value = { "hello", "world" } } );
+        }
     }
 }
 TEST_CASE( "bool" )
@@ -1076,21 +1091,20 @@ TEST_CASE( "bytes" )
         gpb_compatibility< Test::Scalar::gpb::RepBytes >( Test::Scalar::RepBytes{ .value = { to_bytes( "\x00\x01\x02"sv ), to_bytes( "hello" ) } } );
         gpb_compatibility< Test::Scalar::gpb::RepBytes >( Test::Scalar::RepBytes{ .value = { to_bytes( "\x00\x01\x02\x03\x04"sv ), to_bytes( "\x00\x01\x02"sv ), to_bytes( "hello" ) } } );
     }
-    SUBCASE( "fixed size" )
+    SUBCASE( "fixed" )
     {
-
         SUBCASE( "required" )
         {
-            gpb_compatibility< Test::Array::gpb::ReqBytes >( Test::Array::ReqBytes{ .value = to_array( "12345678" ) } );
+            gpb_compatibility< Test::Scalar::gpb::ReqBytesFixed >( Test::Scalar::ReqBytesFixed{ .value = to_array( "12345678" ) } );
         }
         SUBCASE( "optional" )
         {
-            gpb_compatibility< Test::Array::gpb::OptBytes >( Test::Array::OptBytes{ .value = to_array( "12345678" ) } );
+            gpb_compatibility< Test::Scalar::gpb::OptBytesFixed >( Test::Scalar::OptBytesFixed{ .value = to_array( "12345678" ) } );
         }
         SUBCASE( "repeated" )
         {
-            gpb_compatibility< Test::Array::gpb::RepBytes >( Test::Array::RepBytes{ .value = { to_array( "12345678" ) } } );
-            gpb_compatibility< Test::Array::gpb::RepBytes >( Test::Array::RepBytes{ .value = { to_array( "12345678" ), to_array( "87654321" ) } } );
+            gpb_compatibility< Test::Scalar::gpb::RepBytesFixed >( Test::Scalar::RepBytesFixed{ .value = { to_array( "12345678" ) } } );
+            gpb_compatibility< Test::Scalar::gpb::RepBytesFixed >( Test::Scalar::RepBytesFixed{ .value = { to_array( "12345678" ), to_array( "87654321" ) } } );
         }
     }
 }

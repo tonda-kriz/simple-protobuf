@@ -1,5 +1,4 @@
 #include "spb/pb/wire-types.h"
-#include <array.pb.h>
 #include <cstdint>
 #include <memory>
 #include <name.pb.h>
@@ -240,31 +239,31 @@ TEST_CASE( "protobuf" )
         {
             SUBCASE( "required" )
             {
-                // pb_json_test( Test::Array::ReqString{ }, "\x0a\x06\x00\x00\x00\x00\x00\x00"sv, R"({"value":"hello"})" );
-                pb_json_test( Test::Array::ReqString{ .value = to_string( "hello1" ) }, "\x0a\x06hello1", R"({"value":"hello1"})" );
-                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Array::ReqString >( "\x0a\x05hello"sv ) );
-                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Array::ReqString >( "\x0a\x07hello12"sv ) );
+                // pb_json_test( Test::Scalar::ReqString{ }, "\x0a\x06\x00\x00\x00\x00\x00\x00"sv, R"({"value":"hello"})" );
+                pb_json_test( Test::Scalar::ReqStringFixed{ .value = to_string( "hello1" ) }, "\x0a\x06hello1", R"({"value":"hello1"})" );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqStringFixed >( "\x0a\x05hello"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqStringFixed >( "\x0a\x07hello12"sv ) );
                 SUBCASE( "escaped" )
                 {
-                    pb_json_test( Test::Array::ReqString{ .value = to_string( "\"\\/\n\r\t" ) }, "\x0a\x06\"\\/\n\r\t", R"({"value":"\"\\\/\n\r\t"})" );
-                    pb_json_test( Test::Array::ReqString{ .value = to_string( "hello\t" ) }, "\x0a\x06hello\t", R"({"value":"hello\t"})" );
+                    pb_json_test( Test::Scalar::ReqStringFixed{ .value = to_string( "\"\\/\n\r\t" ) }, "\x0a\x06\"\\/\n\r\t", R"({"value":"\"\\\/\n\r\t"})" );
+                    pb_json_test( Test::Scalar::ReqStringFixed{ .value = to_string( "hello\t" ) }, "\x0a\x06hello\t", R"({"value":"hello\t"})" );
                 }
             }
             SUBCASE( "optional" )
             {
-                pb_json_test( Test::Array::OptString{ }, "", "{}" );
-                pb_json_test( Test::Array::OptString{ .value = to_string( "hello1" ) }, "\x0a\x06hello1", R"({"value":"hello1"})" );
-                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Array::OptString >( "\x0a\x05hello"sv ) );
-                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Array::OptString >( "\x0a\x07hello12"sv ) );
-                CHECK_THROWS( ( void ) spb::json::deserialize< Test::Array::OptString >( R"({"value":"hello12"})" ) );
+                pb_json_test( Test::Scalar::OptStringFixed{ }, "", "{}" );
+                pb_json_test( Test::Scalar::OptStringFixed{ .value = to_string( "hello1" ) }, "\x0a\x06hello1", R"({"value":"hello1"})" );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::OptStringFixed >( "\x0a\x05hello"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::OptStringFixed >( "\x0a\x07hello12"sv ) );
+                CHECK_THROWS( ( void ) spb::json::deserialize< Test::Scalar::OptStringFixed >( R"({"value":"hello12"})" ) );
             }
             SUBCASE( "repeated" )
             {
-                pb_json_test( Test::Array::RepString{ }, "", "{}" );
-                pb_json_test( Test::Array::RepString{ .value = { to_string( "hello1" ) } }, "\x0a\x06hello1", R"({"value":["hello1"]})" );
-                pb_json_test( Test::Array::RepString{ .value = { to_string( "hello1" ), to_string( "world1" ) } }, "\x0a\x06hello1\x0a\x06world1", R"({"value":["hello1","world1"]})" );
-                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Array::RepString >( "\x0a\x06hello1\x0a\x05world"sv ) );
-                CHECK_THROWS( ( void ) spb::json::deserialize< Test::Array::RepString >( R"({"value":["hello1","world"]})" ) );
+                pb_json_test( Test::Scalar::RepStringFixed{ }, "", "{}" );
+                pb_json_test( Test::Scalar::RepStringFixed{ .value = { to_string( "hello1" ) } }, "\x0a\x06hello1", R"({"value":["hello1"]})" );
+                pb_json_test( Test::Scalar::RepStringFixed{ .value = { to_string( "hello1" ), to_string( "world1" ) } }, "\x0a\x06hello1\x0a\x06world1", R"({"value":["hello1","world1"]})" );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::RepStringFixed >( "\x0a\x06hello1\x0a\x05world"sv ) );
+                CHECK_THROWS( ( void ) spb::json::deserialize< Test::Scalar::RepStringFixed >( R"({"value":["hello1","world"]})" ) );
             }
         }
     }
@@ -991,25 +990,25 @@ TEST_CASE( "protobuf" )
         {
             SUBCASE( "required" )
             {
-                pb_json_test( Test::Array::ReqBytes{ }, "\x0a\x08\x00\x00\x00\x00\x00\x00\x00\x00"sv, R"({"value":"AAAAAAAAAAA="})" );
-                pb_json_test( Test::Array::ReqBytes{ .value = to_array( "hello123" ) }, "\x0a\x08hello123"sv, R"({"value":"aGVsbG8xMjM="})" );
-                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Array::ReqBytes >( "\x0a\x05hello"sv ) );
-                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Array::ReqBytes >( "\x0a\x09hello1234"sv ) );
+                pb_json_test( Test::Scalar::ReqBytesFixed{ }, "\x0a\x08\x00\x00\x00\x00\x00\x00\x00\x00"sv, R"({"value":"AAAAAAAAAAA="})" );
+                pb_json_test( Test::Scalar::ReqBytesFixed{ .value = to_array( "hello123" ) }, "\x0a\x08hello123"sv, R"({"value":"aGVsbG8xMjM="})" );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqBytesFixed >( "\x0a\x05hello"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqBytesFixed >( "\x0a\x09hello1234"sv ) );
             }
             SUBCASE( "optional" )
             {
-                pb_json_test( Test::Array::OptBytes{ }, "", "{}" );
-                pb_json_test( Test::Array::OptBytes{ .value = to_array( "hello123" ) }, "\x0a\x08hello123"sv, R"({"value":"aGVsbG8xMjM="})" );
-                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Array::OptBytes >( "\x0a\x05hello"sv ) );
-                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Array::OptBytes >( "\x0a\x09hello1234"sv ) );
+                pb_json_test( Test::Scalar::OptBytesFixed{ }, "", "{}" );
+                pb_json_test( Test::Scalar::OptBytesFixed{ .value = to_array( "hello123" ) }, "\x0a\x08hello123"sv, R"({"value":"aGVsbG8xMjM="})" );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::OptBytesFixed >( "\x0a\x05hello"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::OptBytesFixed >( "\x0a\x09hello1234"sv ) );
             }
             SUBCASE( "repeated" )
             {
-                pb_json_test( Test::Array::RepBytes{ }, "", "{}" );
-                pb_json_test( Test::Array::RepBytes{ .value = { to_array( "hello123" ) } }, "\x0a\x08hello123"sv, R"({"value":["aGVsbG8xMjM="]})" );
-                pb_json_test( Test::Array::RepBytes{ .value = { to_array( "hello123" ), to_array( "hello321" ) } }, "\x0a\x08hello123\x0a\x08hello321"sv, R"({"value":["aGVsbG8xMjM=","aGVsbG8zMjE="]})" );
-                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Array::RepBytes >( "\x0a\x05hello"sv ) );
-                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Array::RepBytes >( "\x0a\x09hello1234"sv ) );
+                pb_json_test( Test::Scalar::RepBytesFixed{ }, "", "{}" );
+                pb_json_test( Test::Scalar::RepBytesFixed{ .value = { to_array( "hello123" ) } }, "\x0a\x08hello123"sv, R"({"value":["aGVsbG8xMjM="]})" );
+                pb_json_test( Test::Scalar::RepBytesFixed{ .value = { to_array( "hello123" ), to_array( "hello321" ) } }, "\x0a\x08hello123\x0a\x08hello321"sv, R"({"value":["aGVsbG8xMjM=","aGVsbG8zMjE="]})" );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::RepBytesFixed >( "\x0a\x05hello"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::RepBytesFixed >( "\x0a\x09hello1234"sv ) );
             }
         }
     }

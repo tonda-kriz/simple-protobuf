@@ -588,6 +588,38 @@ message RepStringView
     repeated string value = 1 [ctype = STRING_PIECE];
 }
 
+message OptStringFixed {
+    //[[ string.type = "std::array<$, 6>"]]
+    //[[ string.include = "<array>"]]
+    optional string value = 1;
+}
+
+message ReqStringFixed {
+    //[[ string.type = "std::array<$, 6>"]]
+    required string value = 1;
+}
+
+message RepStringFixed {
+    //[[ string.type = "std::array<$, 6>"]]
+    repeated string value = 1;
+}
+
+message OptBytesFixed {
+    //[[ bytes.type = "std::array<$, 8>"]]
+    //[[ bytes.include = "<array>"]]
+    optional bytes value = 1;
+}
+
+message ReqBytesFixed {
+    //[[ bytes.type = "std::array<$, 8>"]]
+    required bytes value = 1;
+}
+
+message RepBytesFixed {
+    //[[ bytes.type = "std::array<$, 8>"]]
+    repeated bytes value = 1;
+}
+
 message OptBytes
 {
     optional bytes value = 1;
