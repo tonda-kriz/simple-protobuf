@@ -66,7 +66,16 @@ The library lets you specify your own types for containers (`repeated`, `string`
 
 Containers types are specified in the comments, so they are ignored by the gpb protoc.
 Each container has 2 attributes `.type` (user type) and `.include` (include header for the type).
-If you need to develop your own container it needs to satisfy a [concept](../include/spb/concepts.h).
+Container needs to satisfy a [concept](../include/spb/concepts.h).
+
+| container  | [concept](../include/spb/concepts.h)     | Notes       |
+|------------|------------------------------|-------------|
+| `optional` | `proto_label_optional`       | `optional` field label |
+| `repeated` | `proto_label_repeated`       | `repeated` field label |
+| `string` | `proto_field_string`           | fixed size `string` field type |
+| `string` | `proto_field_string_resizable` | resizable `string` field type |
+| `bytes`  | `proto_field_bytes`            | fixed size `bytes` field type |
+| `string` | `proto_field_bytes_resizable`  | resizable `bytes` field type |
 
 Defaults are set to:
 
