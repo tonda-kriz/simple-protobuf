@@ -24,6 +24,16 @@ auto operator==( span< byte > lhs, span< byte > rhs ) noexcept -> bool
     return lhs.size( ) == rhs.size( ) && ( memcmp( lhs.data( ), rhs.data( ), lhs.size( ) ) == 0 );
 }
 
+auto operator==( span< char > lhs, span< char > rhs ) noexcept -> bool
+{
+    return lhs.size( ) == rhs.size( ) && ( memcmp( lhs.data( ), rhs.data( ), lhs.size( ) ) == 0 );
+}
+
+auto operator==( const array< char, 6 > & lhs, const string & rhs ) noexcept -> bool
+{
+    return lhs.size( ) == rhs.size( ) && ( memcmp( lhs.data( ), rhs.data( ), lhs.size( ) ) == 0 );
+}
+
 auto operator==( const string & lhs, const vector< byte > & rhs ) noexcept -> bool
 {
     return lhs.size( ) == rhs.size( ) && ( memcmp( lhs.data( ), rhs.data( ), lhs.size( ) ) == 0 );
@@ -82,6 +92,14 @@ auto operator==( const Person & lhs, const Person & rhs ) noexcept -> bool
 
 namespace
 {
+template < size_t N >
+auto to_string( const char ( &string )[ N ] )
+{
+    auto result = std::array< char, N - 1 >( );
+    memcpy( result.data( ), &string, result.size( ) );
+    return result;
+}
+
 auto to_bytes( std::string_view str ) -> std::vector< std::byte >
 {
     auto span = std::span< std::byte >( ( std::byte * ) str.data( ), str.size( ) );
@@ -348,17 +366,17 @@ TEST_CASE( "string" )
     {
         SUBCASE( "required" )
         {
-            gpb_compatibility< Test::Scalar::gpb::ReqStringFixed >( Test::Scalar::ReqStringFixed{ .value = "hello" } );
-            gpb_compatibility< Test::Scalar::gpb::ReqStringFixed >( Test::Scalar::ReqStringFixed{ .value = "\"\\/\b\f\n\r\t" } );
+            gpb_compatibility< Test::Scalar::gpb::ReqStringFixed >( Test::Scalar::ReqStringFixed{ .value = to_string( "hello1" ) } );
+            gpb_compatibility< Test::Scalar::gpb::ReqStringFixed >( Test::Scalar::ReqStringFixed{ .value = to_string( "\"\\/\n\r\t" ) } );
         }
         SUBCASE( "optional" )
         {
-            gpb_compatibility< Test::Scalar::gpb::OptStringFixed >( Test::Scalar::OptStringFixed{ .value = "hello" } );
+            gpb_compatibility< Test::Scalar::gpb::OptStringFixed >( Test::Scalar::OptStringFixed{ .value = to_string( "hello1" ) } );
         }
         SUBCASE( "repeated" )
         {
-            gpb_compatibility< Test::Scalar::gpb::RepStringFixed >( Test::Scalar::RepStringFixed{ .value = { "hello" } } );
-            gpb_compatibility< Test::Scalar::gpb::RepStringFixed >( Test::Scalar::RepStringFixed{ .value = { "hello", "world" } } );
+            gpb_compatibility< Test::Scalar::gpb::RepStringFixed >( Test::Scalar::RepStringFixed{ .value = { to_string( "hello1" ) } } );
+            gpb_compatibility< Test::Scalar::gpb::RepStringFixed >( Test::Scalar::RepStringFixed{ .value = { to_string( "hello1" ), to_string( "world1" ) } } );
         }
     }
 }

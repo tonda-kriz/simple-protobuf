@@ -84,10 +84,10 @@ static constexpr inline auto fnv1a_hash( std::string_view str ) noexcept -> uint
     return hash;
 }
 
-template < spb::detail::container T >
+template < spb::detail::proto_field_bytes T >
 void clear( T & container )
 {
-    if constexpr( spb::detail::has_clear< T > )
+    if constexpr( spb::detail::proto_field_bytes_resizable< T > )
     {
         container.clear( );
     }
@@ -391,7 +391,7 @@ static inline void deserialize( istream & stream, spb::detail::proto_field_strin
         stream.skip( found + 1 );
         if( view[ found ] == '"' ) [[likely]]
         {
-            if constexpr( spb::detail::proto_field_string_fixed< decltype( value ) > )
+            if constexpr( !spb::detail::proto_field_string_resizable< decltype( value ) > )
             {
                 if( index != value.size( ) )
                 {

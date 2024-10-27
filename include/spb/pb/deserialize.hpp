@@ -467,7 +467,7 @@ static inline void deserialize( istream & stream, std::unique_ptr< T > & value, 
 static inline void deserialize( istream & stream, spb::detail::proto_field_bytes auto & value, wire_type type )
 {
     check_wire_type( type, wire_type::length_delimited );
-    if constexpr( spb::detail::has_resize< decltype( value ) > )
+    if constexpr( spb::detail::proto_field_bytes_resizable< decltype( value ) > )
     {
         value.resize( stream.size( ) );
     }

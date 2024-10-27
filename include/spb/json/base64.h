@@ -81,7 +81,7 @@ static inline void base64_decode_string( spb::detail::proto_field_bytes auto & o
         128, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51
     };*/
 
-    if constexpr( spb::detail::has_clear< decltype( output ) > )
+    if constexpr( spb::detail::proto_field_bytes_resizable< decltype( output ) > )
     {
         output.clear( );
     }
@@ -116,7 +116,7 @@ static inline void base64_decode_string( spb::detail::proto_field_bytes auto & o
             auto out_length = ( ( aligned_length - 4 ) / 4 ) * 3;
             view            = view.substr( 0, aligned_length );
 
-            if constexpr( spb::detail::has_resize< decltype( output ) > )
+            if constexpr( spb::detail::proto_field_bytes_resizable< decltype( output ) > )
             {
                 output.resize( output.size( ) + out_length );
             }
@@ -173,7 +173,7 @@ static inline void base64_decode_string( spb::detail::proto_field_bytes auto & o
             auto consumed_bytes = 3 - padding_size;
             //- +1 is for "
             stream.skip( 5 );
-            if constexpr( spb::detail::has_resize< decltype( output ) > )
+            if constexpr( spb::detail::proto_field_bytes_resizable< decltype( output ) > )
             {
                 output.resize( output.size( ) + consumed_bytes );
             }
