@@ -119,7 +119,7 @@ TEST_CASE( "base64" )
         CHECK( base64_decode_fixed< 6 >( R"("Zm9vYmFy")" ) == "foobar" );
         CHECK_THROWS( base64_decode_fixed< 5 >( R"("Zm9vYmFy")" ) );
         CHECK_THROWS( base64_decode_fixed< 7 >( R"("Zm9vYmFy")" ) );
-        CHECK_THROWS( base64_decode_fixed< 1 >( R"("Zm9vYmFy")" ) );
+        CHECK_THROWS( base64_decode_fixed< 3 >( R"("Zm9vYmFy")" ) );
         CHECK_THROWS( base64_decode( R"("Zm9vY!Fy")" ) );
         CHECK_THROWS( base64_decode( R"("Zm9vY^Fy")" ) );
         CHECK_THROWS( base64_decode( R"("!m9vYmFy")" ) );

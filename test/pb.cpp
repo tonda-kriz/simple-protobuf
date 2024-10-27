@@ -1,6 +1,7 @@
+#include "spb/concepts.h"
 #include "spb/pb/wire-types.h"
+#include <array>
 #include <cstdint>
-#include <memory>
 #include <name.pb.h>
 #include <optional>
 #include <person.pb.h>
@@ -23,6 +24,11 @@ concept HasValueMember = requires( T t ) {
 };
 
 }// namespace
+
+static_assert( spb::detail::proto_field_bytes_resizable< std::vector< std::byte > > );
+static_assert( spb::detail::proto_field_string_resizable< std::string > );
+static_assert( !spb::detail::proto_field_bytes_resizable< std::array< std::byte, 4 > > );
+static_assert( !spb::detail::proto_field_string_resizable< std::array< char, 4 > > );
 
 namespace std
 {

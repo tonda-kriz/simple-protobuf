@@ -19,7 +19,7 @@ add_subdirectory(src)
 
 option(SPB_PROTO_BUILD_TESTS "Build tests" OFF)
 option(SPB_PROTO_BUILD_COMPATIBILITY_TESTS "Build gpb compatibility tests" OFF)
-option(SPB_PROTO_BUILD_ETL_TESTS "Build etl compatibility tests")
+option(SPB_PROTO_BUILD_ETL_TESTS "Build etl compatibility tests" OFF)
 option(SPB_PROTO_BUILD_FUZZER_TESTS "Build fuzzers for spb-protoc, json-parser, gpb-parser" OFF)
 option(SPB_PROTO_BUILD_EXAMPLES "Build examples" OFF)
 option(SPB_PROTO_USE_CLANG_FORMAT "Enable clang format for generated code" ON)

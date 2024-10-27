@@ -21,16 +21,16 @@ concept proto_field_int_or_float = std::is_integral_v< T > || std::is_floating_p
 
 template < class T >
 concept container = requires( T container ) {
-    { container.data( ) } -> std::same_as< typename T::value_type * >;
+    { container.data( ) } -> std::same_as< typename std::decay_t< T >::value_type * >;
     { container.size( ) } -> std::convertible_to< std::size_t >;
     { container.begin( ) };
     { container.end( ) };
-    typename T::value_type;
+    typename std::decay_t< T >::value_type;
 };
 
 template < class T >
 concept proto_field_bytes = container< T > &&
-    std::is_same_v< typename T::value_type, std::byte >;
+    std::is_same_v< typename std::decay_t< T >::value_type, std::byte >;
 
 template < class T >
 concept proto_field_bytes_resizable = proto_field_bytes< T > && requires( T obj ) {
@@ -40,7 +40,7 @@ concept proto_field_bytes_resizable = proto_field_bytes< T > && requires( T obj 
 
 template < class T >
 concept proto_field_string = container< T > &&
-    std::is_same_v< typename T::value_type, char >;
+    std::is_same_v< typename std::decay_t< T >::value_type, char >;
 
 template < class T >
 concept proto_field_string_resizable = proto_field_string< T > && requires( T obj ) {
