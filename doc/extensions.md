@@ -1,34 +1,61 @@
 # extensions
 
-All extensions to the .proto files are compatible with gpb.
+All extensions to the .proto files are specified in the comments, so they are ignored by the GPB protoc and therefore compatible with GPB. Extensions are using GPB [options](https://protobuf.dev/programming-guides/proto2/#options) syntax inside of C++ [attribute](https://en.cppreference.com/w/cpp/language/attributes).
 
-## small int types
-
-The library lets you specify also 8 and 16 bit ints (`int8`, `uint8`, `int16`, `uint16`) for scalars and for enums. Warning: due to compatibility with gpb, always use scalar types with the same sign, like `int32` and `int8`, combinations like `int32` and `uint8` are invalid.
-
-### how to use small ints for scalars
-
-Small int types are specified in the comments, so they are ignored by the gpb protoc.
-Each field has an attribute `.type`. Example:
-
-```proto
-//[[ field.type = "int16" ]]
-optional int32 id = 2;
-```
-
-### how to use small ints for enums
-
-Small int enum types are specified in the comments, so they are ignored by the gpb protoc.
-Each enum has an attribute `.type`. Valid values are (`int8`, `uint8`, `int16`, `uint16`, `int32`)
 Example:
 
 ```proto
-//[[ enum.type = "int16" ]]
+//[[ field.type = "int16" ]]
+```
+
+## int types
+
+You can use also **8** and **16** bit ints (`int8`, `uint8`, `int16`, `uint16`) for fields and for enums. Warning: due to compatibility with GPB, always use types with the same sign, like `int32` and `int8`, combinations like `int32` and `uint8` are invalid.
+
+### how to use int types
+
+Each field has an attribute `.type`.
+
+```proto
+message Person{
+    //[[ field.type = "int16" ]]
+    required int32 id = 2;
+}
+```
+
+will be translated into...
+
+```CPP
+struct Person{
+    int16_t id;
+}
+```
+
+## enum types
+
+You can specify type of an enum (`int8`, `uint8`, `int16`, `uint16`, `int32`, `uint32`, `int64` and `uint64`)
+
+### how to use enums types
+
+Each enum has an attribute `.type`.
+
+```proto
+//[[ enum.type = "uint8" ]]
 enum PhoneType {
     MOBILE = 0;
     HOME = 1;
     WORK = 2;
 }
+```
+
+will be translated into...
+
+```CPP
+enum class PhoneType : uint8_t {
+    MOBILE = 0,
+    HOME   = 1,
+    WORK   = 2,
+};
 ```
 
 Default is set to:
@@ -47,35 +74,47 @@ you can combine them as you want, the more specific ones will be preferred.
 
 ## bit-fields
 
-The library lets you specify bit fields (`int8:1`, `uint8:2` ...) for [small ints](#small-int-types)
+You can use bit fields (`int8:1`, `uint8:2` ...) for [ints](#int-types)
 
 ### how to use bit-fields
 
-Bit fields are used similar as in C with [small ints](#small-int-types)
+Bit fields are used similar as in C with [ints](#int-types). *Remember: always use types with the same sign*
 
 ```proto
-//[[ field.type = "int16:4" ]]
-optional int32 id = 2;
+message Device{
+    //[[ field.type = "uint8:4" ]]
+    required uint8 id_major = 2;
+    //[[ field.type = "uint8:4" ]]
+    required uint8 id_minor = 2;
+}
+```
+
+will be translated into...
+
+```CPP
+struct Device{
+    uint8_t id_major : 4;
+    uint8_t id_minor : 4;
+}
 ```
 
 ## container types
 
-The library lets you specify your own types for containers (`repeated`, `string`, `bytes`, `optionals`).
+You can specify your own types for containers (`optionals`, `repeated`, `string`, `bytes`).
 
 ### how to use user container types
 
-Containers types are specified in the comments, so they are ignored by the gpb protoc.
 Each container has 2 attributes `.type` (user type) and `.include` (include header for the type).
 Container needs to satisfy a [concept](../include/spb/concepts.h).
 
 | container  | [concept](../include/spb/concepts.h)     | Notes       |
 |------------|------------------------------|-------------|
-| `optional` | `proto_label_optional`       | `optional` field label |
-| `repeated` | `proto_label_repeated`       | `repeated` field label |
-| `string` | `proto_field_string`           | fixed size `string` field type |
-| `string` | `proto_field_string_resizable` | resizable `string` field type |
-| `bytes`  | `proto_field_bytes`            | fixed size `bytes` field type |
-| `string` | `proto_field_bytes_resizable`  | resizable `bytes` field type |
+| `optional` | `proto_label_optional`       | [`optional`](https://protobuf.dev/programming-guides/proto2/#field-labels) field label |
+| `repeated` | `proto_label_repeated`       | [`repeated`](https://protobuf.dev/programming-guides/proto2/#field-labels) field label |
+| `string` | `proto_field_string`           | fixed size [`string`](https://protobuf.dev/programming-guides/proto2/#scalar) field type |
+| `string` | `proto_field_string_resizable` | resizable [`string`](https://protobuf.dev/programming-guides/proto2/#scalar) field type |
+| `bytes`  | `proto_field_bytes`            | fixed size [`bytes`](https://protobuf.dev/programming-guides/proto2/#scalar) field type |
+| `bytes`  | `proto_field_bytes_resizable`  | resizable [`bytes`](https://protobuf.dev/programming-guides/proto2/#scalar) field type |
 
 Defaults are set to:
 
@@ -106,6 +145,26 @@ You can use those attributes ...
 - before `field`, means its set for one **field only**
 
 you can combine them as you want, the more specific ones will be preferred.
+
+#### fixed size bytes, string
+
+You can use **fixed size** containers for `bytes` and `string`. They needs to satisfy concept [proto_field_bytes](../include/spb/concepts.h) or [proto_field_string](../include/spb/concepts.h)
+
+```proto
+message Person{
+    //[[ string.type = "std::array<$,4>" ]]
+    //[[ string.include = "<array>" ]]
+    optional string id = 1;
+}
+```
+
+will be translated into...
+
+```CPP
+struct Person{
+    std::optional< std::array< char, 4 > > id;
+}
+```
 
 ### integration with [etl library](https://github.com/ETLCPP/etl)
 
