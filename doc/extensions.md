@@ -35,7 +35,7 @@ struct Person{
 
 You can specify type of an enum (`int8`, `uint8`, `int16`, `uint16`, `int32`, `uint32`, `int64` and `uint64`)
 
-### how to use enums types
+### how to use enum types
 
 Each enum has an attribute `.type`.
 
@@ -107,7 +107,7 @@ You can specify your own types for containers (`optionals`, `repeated`, `string`
 Each container has 2 attributes `.type` (user type) and `.include` (include header for the type).
 Container needs to satisfy a [concept](../include/spb/concepts.h).
 
-| container  | [concept](../include/spb/concepts.h)     | Notes       |
+| container  | [concept](../include/spb/concepts.h)     | notes       |
 |------------|------------------------------|-------------|
 | `optional` | `proto_label_optional`       | [`optional`](https://protobuf.dev/programming-guides/proto2/#field-labels) field label |
 | `repeated` | `proto_label_repeated`       | [`repeated`](https://protobuf.dev/programming-guides/proto2/#field-labels) field label |
