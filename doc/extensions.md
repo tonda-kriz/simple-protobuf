@@ -100,7 +100,7 @@ struct Device{
 
 ## container types
 
-You can specify your own types for containers (`optionals`, `repeated`, `string`, `bytes`).
+You can use your own types for containers (`optionals`, `repeated`, `string`, `bytes`).
 
 ### how to use user container types
 
