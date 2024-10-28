@@ -6,10 +6,12 @@
 
 extern "C" int LLVMFuzzerTestOneInput( const uint8_t * Data, size_t Size )
 {
-    auto file = proto_file{ };
+    auto file = proto_file{
+        .content = std::string( reinterpret_cast< const char * >( Data ), Size ),
+    };
     try
     {
-        parse_proto_file_content( std::string_view{ reinterpret_cast< const char * >( Data ), Size }, file );
+        parse_proto_file_content( file );
     }
     catch( ... )
     {

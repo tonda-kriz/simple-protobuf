@@ -62,7 +62,7 @@ static inline void base64_encode( ostream & output, std::span< const std::byte >
 }
 
 template < typename istream >
-static inline void base64_decode_string( spb::detail::bytes_container auto & output, istream & stream )
+static inline void base64_decode_string( spb::detail::proto_field_bytes auto & output, istream & stream )
 {
     static constexpr uint8_t decode_table[ 256 ] = {
         128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
@@ -81,7 +81,10 @@ static inline void base64_decode_string( spb::detail::bytes_container auto & out
         128, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51
     };*/
 
-    output.clear( );
+    if constexpr( spb::detail::proto_field_bytes_resizable< decltype( output ) > )
+    {
+        output.clear( );
+    }
     if( stream.current_char( ) != '"' ) [[unlikely]]
     {
         throw std::runtime_error( "expecting '\"'" );
@@ -94,7 +97,7 @@ static inline void base64_decode_string( spb::detail::bytes_container auto & out
     }
     auto mask = uint8_t( 0 );
 
-    for( ;; )
+    for( auto out_index = size_t( 0 );; )
     {
         auto view      = stream.view( UINT32_MAX );
         auto length    = view.find( '"' );
@@ -113,9 +116,19 @@ static inline void base64_decode_string( spb::detail::bytes_container auto & out
             auto out_length = ( ( aligned_length - 4 ) / 4 ) * 3;
             view            = view.substr( 0, aligned_length );
 
-            output.resize( output.size( ) + out_length );
+            if constexpr( spb::detail::proto_field_bytes_resizable< decltype( output ) > )
+            {
+                output.resize( output.size( ) + out_length );
+            }
+            else
+            {
+                if( out_length > ( output.size( ) - out_index ) )
+                {
+                    throw std::runtime_error( "too large base64" );
+                }
+            }
 
-            auto * p_out       = output.data( ) + output.size( ) - out_length;
+            auto * p_out       = output.data( ) + out_index;
             const auto * p_in  = reinterpret_cast< const uint8_t * >( view.data( ) );
             const auto * p_end = p_in + aligned_length - 4;//- exclude the last 4 chars (possible padding)
 
@@ -130,6 +143,8 @@ static inline void base64_decode_string( spb::detail::bytes_container auto & out
                 *p_out++ = std::byte( ( v0 << 2 ) | ( v1 >> 4 ) );
                 *p_out++ = std::byte( ( v1 << 4 ) | ( v2 >> 2 ) );
                 *p_out++ = std::byte( ( v2 << 6 ) | ( v3 ) );
+
+                out_index += 3;
             }
             auto consumed_bytes = p_in - reinterpret_cast< const uint8_t * >( view.data( ) );
             view.remove_prefix( consumed_bytes );
@@ -158,8 +173,18 @@ static inline void base64_decode_string( spb::detail::bytes_container auto & out
             auto consumed_bytes = 3 - padding_size;
             //- +1 is for "
             stream.skip( 5 );
-            output.resize( output.size( ) + consumed_bytes );
-            auto * p_out = output.data( ) + output.size( ) - consumed_bytes;
+            if constexpr( spb::detail::proto_field_bytes_resizable< decltype( output ) > )
+            {
+                output.resize( output.size( ) + consumed_bytes );
+            }
+            else
+            {
+                if( output.size( ) != out_index + consumed_bytes )
+                {
+                    throw std::runtime_error( "too large base64" );
+                }
+            }
+            auto * p_out = output.data( ) + out_index;
             if( padding_size == 0 )
             {
                 *p_out++ = std::byte( ( v0 << 2 ) | ( v1 >> 4 ) );

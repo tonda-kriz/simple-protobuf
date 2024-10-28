@@ -17,57 +17,69 @@ namespace spb::detail
 {
 
 template < class T >
-concept is_enum = ::std::is_enum_v< T >;
+concept proto_field_int_or_float = std::is_integral_v< T > || std::is_floating_point_v< T >;
 
 template < class T >
-concept is_int_or_float = ::std::is_integral_v< T > || ::std::is_floating_point_v< T >;
+concept container = requires( T container ) {
+    { container.data( ) } -> std::same_as< typename std::decay_t< T >::value_type * >;
+    { container.size( ) } -> std::convertible_to< std::size_t >;
+    { container.begin( ) };
+    { container.end( ) };
+    typename std::decay_t< T >::value_type;
+};
 
 template < class T >
-concept bytes_container = requires( T container ) {
+concept proto_field_bytes = container< T > &&
+    std::is_same_v< typename std::decay_t< T >::value_type, std::byte >;
+
+template < class T >
+concept proto_field_bytes_resizable = proto_field_bytes< T > && requires( T obj ) {
+    { obj.resize( 1 ) };
+    { obj.clear( ) };
+};
+
+template < class T >
+concept proto_field_string = container< T > &&
+    std::is_same_v< typename std::decay_t< T >::value_type, char >;
+
+template < class T >
+concept proto_field_string_resizable = proto_field_string< T > && requires( T obj ) {
+    { obj.append( "1", 1 ) };
+    { obj.clear( ) };
+};
+
+template < class T >
+concept proto_label_repeated = requires( T container ) {
     { container.emplace_back( ) };
-    { container.empty( ) };
     { container.begin( ) };
     { container.end( ) };
     { container.clear( ) };
     typename T::value_type;
-} && std::is_same_v< typename T::value_type, std::byte >;
+} && !proto_field_string< T > && !proto_field_bytes< T >;
 
 template < class T >
-concept string_container = requires( T container ) {
-    { container.data( ) };
-    { container.empty( ) };
-    { container.size( ) };
-    { container.resize( 0 ) };
-    { container.begin( ) };
-    { container.end( ) };
-    { container.clear( ) };
-    { container.append( "", 0 ) };
-    typename T::value_type;
-} && std::is_same_v< typename T::value_type, char >;
-
-template < class T >
-concept repeated_container = requires( T container ) {
-    { container.emplace_back( ) };
-    { container.begin( ) };
-    { container.end( ) };
-    { container.clear( ) };
-    typename T::value_type;
-} && !string_container< T > && !bytes_container< T >;
-
-template < class T >
-concept optional_container = requires( T container ) {
-    { container.has_value( ) };
+concept proto_label_optional = requires( T container ) {
+    { container.has_value( ) } -> std::convertible_to< bool >;
     { container.reset( ) };
     { *container } -> std::same_as< typename T::value_type & >;
     { container.emplace( typename T::value_type( ) ) } -> std::same_as< typename T::value_type & >;
     typename T::value_type;
 };
 
+/**
+ * @brief proto `enum` converted to C++ enum
+ */
 template < class T >
-concept is_struct = ::std::is_class_v< T > &&
-    !string_container< T > &&
-    !bytes_container< T > &&
-    !repeated_container< T > &&
-    !optional_container< T >;
+concept proto_enum = std::is_enum_v< T >;
+
+/**
+ * @brief proto `message` converted to C++ struct
+ */
+template < class T >
+concept proto_message = std::is_class_v< T > &&
+    !proto_field_string< T > &&
+    !proto_field_bytes< T > &&
+    !proto_label_repeated< T > &&
+    !proto_label_optional< T >;
 
 }// namespace spb::detail

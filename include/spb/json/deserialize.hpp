@@ -84,6 +84,19 @@ static constexpr inline auto fnv1a_hash( std::string_view str ) noexcept -> uint
     return hash;
 }
 
+template < spb::detail::proto_field_bytes T >
+void clear( T & container )
+{
+    if constexpr( spb::detail::proto_field_bytes_resizable< T > )
+    {
+        container.clear( );
+    }
+    else
+    {
+        std::fill( container.begin( ), container.end( ), typename T::value_type( ) );
+    }
+}
+
 struct istream
 {
 private:
@@ -183,6 +196,8 @@ public:
      */
     [[nodiscard]] auto consume( std::string_view token ) -> bool
     {
+        assert( !token.empty( ) );
+
         if( current_char( ) != token[ 0 ] )
         {
             return false;
@@ -234,7 +249,7 @@ static inline auto is_escape( char c ) -> bool
     return escape_chars.find( c ) != std::string_view::npos;
 }
 
-static inline void deserialize( istream & stream, spb::detail::is_enum auto & value )
+static inline void deserialize( istream & stream, spb::detail::proto_enum auto & value )
 {
     deserialize_value( stream, value );
 }
@@ -301,57 +316,32 @@ static inline auto deserialize_string_view( istream & stream, size_t min_size, s
     return { };
 }
 
-static inline void unescape( spb::detail::string_container auto & str )
+static inline auto unescape( char c ) -> char
 {
-    auto value = std::string_view( str.data( ), str.size( ) );
-
-    if( value.find( escape ) == std::string_view::npos )
+    switch( c )
     {
-        return;
+    case '"':
+        return '"';
+    case '\\':
+        return '\\';
+    case '/':
+        return '/';
+    case 'b':
+        return '\b';
+    case 'f':
+        return '\f';
+    case 'n':
+        return '\n';
+    case 'r':
+        return '\r';
+    case 't':
+        return '\t';
+    default:
+        throw std::runtime_error( "invalid escape sequence" );
     }
-
-    auto result = str;
-    result.clear( );
-    for( auto esc_offset = value.find( escape ); esc_offset != std::string_view::npos; esc_offset = value.find( escape ) )
-    {
-        result.append( value.data( ), esc_offset );
-        value.remove_prefix( esc_offset + 1 );
-        switch( value.front( ) )
-        {
-        case '"':
-            result += '"';
-            break;
-        case '\\':
-            result += '\\';
-            break;
-        case '/':
-            result += '/';
-            break;
-        case 'b':
-            result += '\b';
-            break;
-        case 'f':
-            result += '\f';
-            break;
-        case 'n':
-            result += '\n';
-            break;
-        case 'r':
-            result += '\r';
-            break;
-        case 't':
-            result += '\t';
-            break;
-        default:
-            throw std::runtime_error( "invalid escape sequence" );
-        }
-        value.remove_prefix( 1 );
-    }
-    result.append( value.data( ), value.size( ) );
-    str = result;
 }
 
-static inline void deserialize( istream & stream, spb::detail::string_container auto & value )
+static inline void deserialize( istream & stream, spb::detail::proto_field_string auto & value )
 {
     if( stream.current_char( ) != '"' )
     {
@@ -359,31 +349,65 @@ static inline void deserialize( istream & stream, spb::detail::string_container 
     }
 
     stream.consume_current_char( false );
-    value.clear( );
 
-    auto last = '"';
+    if constexpr( spb::detail::proto_field_string_resizable< decltype( value ) > )
+    {
+        value.clear( );
+    }
+    auto index           = size_t( 0 );
+    auto append_to_value = [ & ]( const char * str, size_t size )
+    {
+        if constexpr( spb::detail::proto_field_string_resizable< decltype( value ) > )
+        {
+            value.append( str, size );
+        }
+        else
+        {
+            if( auto space_left = value.size( ) - index; size <= space_left ) [[likely]]
+            {
+                memcpy( value.data( ) + index, str, size );
+                index += size;
+            }
+            else
+            {
+                throw std::runtime_error( "invalid string size" );
+            }
+        }
+    };
+
     for( ;; )
     {
-        auto view   = stream.view( UINT32_MAX );
-        auto length = size_t( 0 );
-        for( auto current : view )
+        auto view  = stream.view( UINT32_MAX );
+        auto found = view.find_first_of( R"("\)" );
+        if( found == view.npos ) [[unlikely]]
         {
-            if( current == '"' && last != escape )
-            {
-                value.append( view.data( ), length );
-                unescape( value );
-                stream.skip( length + 1 );
-                return;
-            }
-            //- handle \\"
-            last = current != escape || last != escape ? current : ' ';
-            length += 1;
+            append_to_value( view.data( ), view.size( ) );
+            stream.skip( view.size( ) );
+            continue;
         }
-        stream.skip( view.size( ) );
+
+        append_to_value( view.data( ), found );
+        // +1 for '"' or '\'
+        stream.skip( found + 1 );
+        if( view[ found ] == '"' ) [[likely]]
+        {
+            if constexpr( !spb::detail::proto_field_string_resizable< decltype( value ) > )
+            {
+                if( index != value.size( ) )
+                {
+                    throw std::runtime_error( "invalid string size" );
+                }
+            }
+            return;
+        }
+
+        auto c = unescape( stream.current_char( ) );
+        append_to_value( &c, 1 );
+        stream.consume_current_char( false );
     }
 }
 
-static inline void deserialize( istream & stream, spb::detail::is_int_or_float auto & value )
+static inline void deserialize( istream & stream, spb::detail::proto_field_int_or_float auto & value )
 {
     if( stream.current_char( ) == '"' ) [[unlikely]]
     {
@@ -427,9 +451,9 @@ static inline void deserialize( istream & stream, auto & value );
 template < typename keyT, typename valueT >
 static inline void deserialize( istream & stream, std::map< keyT, valueT > & value );
 
-static inline void deserialize( istream & stream, spb::detail::optional_container auto & value );
+static inline void deserialize( istream & stream, spb::detail::proto_label_optional auto & value );
 
-template < spb::detail::repeated_container C >
+template < spb::detail::proto_label_repeated C >
 static inline void deserialize( istream & stream, C & value )
 {
     if( stream.consume( "null"sv ) )
@@ -468,11 +492,11 @@ static inline void deserialize( istream & stream, C & value )
     }
 }
 
-static inline void deserialize( istream & stream, spb::detail::bytes_container auto & value )
+static inline void deserialize( istream & stream, spb::detail::proto_field_bytes auto & value )
 {
     if( stream.consume( "null"sv ) )
     {
-        value.clear( );
+        clear( value );
         return;
     }
 
@@ -536,7 +560,7 @@ static inline void deserialize( istream & stream, std::map< keyT, valueT > & val
     }
 }
 
-static inline void deserialize( istream & stream, spb::detail::optional_container auto & p_value )
+static inline void deserialize( istream & stream, spb::detail::proto_label_optional auto & p_value )
 {
     if( stream.consume( "null"sv ) )
     {

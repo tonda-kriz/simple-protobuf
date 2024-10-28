@@ -231,23 +231,23 @@ template < typename T >
     }
 }
 
-static inline void deserialize( istream & stream, spb::detail::is_struct auto & value, wire_type type );
+static inline void deserialize( istream & stream, spb::detail::proto_message auto & value, wire_type type );
 
 template < scalar_encoder encoder >
-static inline void deserialize_as( istream & stream, spb::detail::is_int_or_float auto & value, wire_type type );
-static inline void deserialize( istream & stream, spb::detail::bytes_container auto & value, wire_type type );
-static inline void deserialize( istream & stream, spb::detail::repeated_container auto & value, wire_type type );
-static inline void deserialize( istream & stream, spb::detail::string_container auto & value, wire_type type );
+static inline void deserialize_as( istream & stream, spb::detail::proto_field_int_or_float auto & value, wire_type type );
+static inline void deserialize( istream & stream, spb::detail::proto_field_bytes auto & value, wire_type type );
+static inline void deserialize( istream & stream, spb::detail::proto_label_repeated auto & value, wire_type type );
+static inline void deserialize( istream & stream, spb::detail::proto_field_string auto & value, wire_type type );
 
-template < scalar_encoder encoder, spb::detail::repeated_container C >
+template < scalar_encoder encoder, spb::detail::proto_label_repeated C >
 static inline void deserialize_as( istream & stream, C & value, wire_type type );
 
 template < scalar_encoder encoder, typename keyT, typename valueT >
 static inline void deserialize_as( istream & stream, std::map< keyT, valueT > & value, wire_type type );
 
-static inline void deserialize( istream & stream, spb::detail::optional_container auto & p_value, wire_type type );
+static inline void deserialize( istream & stream, spb::detail::proto_label_optional auto & p_value, wire_type type );
 
-template < scalar_encoder encoder, spb::detail::optional_container C >
+template < scalar_encoder encoder, spb::detail::proto_label_optional C >
 static inline void deserialize_as( istream & stream, C & p_value, wire_type type );
 
 template < typename T >
@@ -322,7 +322,7 @@ static inline auto deserialize_bitfield_as( istream & stream, uint32_t bits, wir
 }
 
 template < scalar_encoder encoder >
-static inline void deserialize_as( istream & stream, spb::detail::is_int_or_float auto & value, wire_type type )
+static inline void deserialize_as( istream & stream, spb::detail::proto_field_int_or_float auto & value, wire_type type )
 {
     using T = std::remove_cvref_t< decltype( value ) >;
 
@@ -418,7 +418,7 @@ static inline void deserialize_as( istream & stream, spb::detail::is_int_or_floa
     }
 }
 
-static inline void deserialize( istream & stream, spb::detail::is_enum auto & value, wire_type type )
+static inline void deserialize( istream & stream, spb::detail::proto_enum auto & value, wire_type type )
 {
     using T        = std::remove_cvref_t< decltype( value ) >;
     using int_type = std::underlying_type_t< T >;
@@ -427,23 +427,33 @@ static inline void deserialize( istream & stream, spb::detail::is_enum auto & va
     value = T( read_varint< int_type >( stream ) );
 }
 
-static inline void deserialize( istream & stream, spb::detail::optional_container auto & p_value, wire_type type )
+static inline void deserialize( istream & stream, spb::detail::proto_label_optional auto & p_value, wire_type type )
 {
     auto & value = p_value.emplace( typename std::decay_t< decltype( p_value ) >::value_type( ) );
     deserialize( stream, value, type );
 }
 
-template < scalar_encoder encoder, spb::detail::optional_container C >
+template < scalar_encoder encoder, spb::detail::proto_label_optional C >
 static inline void deserialize_as( istream & stream, C & p_value, wire_type type )
 {
     auto & value = p_value.emplace( typename C::value_type( ) );
     deserialize_as< encoder >( stream, value, type );
 }
 
-static inline void deserialize( istream & stream, spb::detail::string_container auto & value, wire_type type )
+static inline void deserialize( istream & stream, spb::detail::proto_field_string auto & value, wire_type type )
 {
     check_wire_type( type, wire_type::length_delimited );
-    value.resize( stream.size( ) );
+    if constexpr( spb::detail::proto_field_string_resizable< decltype( value ) > )
+    {
+        value.resize( stream.size( ) );
+    }
+    else
+    {
+        if( value.size( ) != stream.size( ) )
+        {
+            throw std::runtime_error( "invalid string size" );
+        }
+    }
     stream.read_exact( value.data( ), stream.size( ) );
 }
 
@@ -454,19 +464,29 @@ static inline void deserialize( istream & stream, std::unique_ptr< T > & value, 
     deserialize( stream, *value, type );
 }
 
-static inline void deserialize( istream & stream, spb::detail::bytes_container auto & value, wire_type type )
+static inline void deserialize( istream & stream, spb::detail::proto_field_bytes auto & value, wire_type type )
 {
     check_wire_type( type, wire_type::length_delimited );
-    value.resize( stream.size( ) );
+    if constexpr( spb::detail::proto_field_bytes_resizable< decltype( value ) > )
+    {
+        value.resize( stream.size( ) );
+    }
+    else
+    {
+        if( stream.size( ) != value.size( ) )
+        {
+            throw std::runtime_error( "invalid bytes size" );
+        }
+    }
     stream.read_exact( value.data( ), stream.size( ) );
 }
 
-static inline void deserialize( istream & stream, spb::detail::repeated_container auto & value, wire_type type )
+static inline void deserialize( istream & stream, spb::detail::proto_label_repeated auto & value, wire_type type )
 {
     deserialize( stream, value.emplace_back( ), type );
 }
 
-template < scalar_encoder encoder, spb::detail::repeated_container C >
+template < scalar_encoder encoder, spb::detail::proto_label_repeated C >
 static inline void deserialize_packed_as( istream & stream, C & value, wire_type type )
 {
     while( !stream.empty( ) )
@@ -482,7 +502,7 @@ static inline void deserialize_packed_as( istream & stream, C & value, wire_type
     }
 }
 
-template < scalar_encoder encoder, spb::detail::repeated_container C >
+template < scalar_encoder encoder, spb::detail::proto_label_repeated C >
 static inline void deserialize_as( istream & stream, C & value, wire_type type )
 {
     if constexpr( is_packed( encoder ) )
@@ -543,7 +563,7 @@ static inline void deserialize_as( istream & stream, std::map< keyT, valueT > & 
             key_defined = true;
             break;
         case 2:
-            if constexpr( spb::detail::is_int_or_float< valueT > )
+            if constexpr( spb::detail::proto_field_int_or_float< valueT > )
             {
                 deserialize_as< value_encoder >( stream, pair.second, field_type );
             }
@@ -589,7 +609,7 @@ static inline void deserialize_variant_as( istream & stream, T & variant, wire_t
     deserialize_as< encoder >( stream, variant.template emplace< ordinal >( ), type );
 }
 
-static inline void deserialize_main( istream & stream, spb::detail::is_struct auto & value )
+static inline void deserialize_main( istream & stream, spb::detail::proto_message auto & value )
 {
     for( ;; )
     {
@@ -614,7 +634,7 @@ static inline void deserialize_main( istream & stream, spb::detail::is_struct au
     }
 }
 
-static inline void deserialize( istream & stream, spb::detail::is_struct auto & value, wire_type type )
+static inline void deserialize( istream & stream, spb::detail::proto_message auto & value, wire_type type )
 {
     check_wire_type( type, wire_type::length_delimited );
 
@@ -697,7 +717,7 @@ inline auto istream::deserialize_bitfield_as( uint32_t bits, uint32_t tag ) -> T
 static inline void deserialize( auto & value, spb::io::reader on_read )
 {
     using T = std::remove_cvref_t< decltype( value ) >;
-    static_assert( spb::detail::is_struct< T > );
+    static_assert( spb::detail::proto_message< T > );
 
     auto stream = istream( on_read );
     deserialize_main( stream, value );

@@ -1,34 +1,61 @@
 # extensions
 
-All extensions to the .proto files are compatible with gpb.
+All extensions to the .proto files are specified in the comments, so they are ignored by the GPB protoc and therefore compatible with GPB. Extensions are using GPB [options](https://protobuf.dev/programming-guides/proto2/#options) syntax inside of C++ [attribute](https://en.cppreference.com/w/cpp/language/attributes).
 
-## small int types
-
-The library lets you specify also 8 and 16 bit ints (`int8`, `uint8`, `int16`, `uint16`) for scalars and for enums. Warning: due to compatibility with gpb, always use scalar types with the same sign, like `int32` and `int8`, combinations like `int32` and `uint8` are invalid.
-
-### how to use small ints for scalars
-
-Small int types are specified in the comments, so they are ignored by the gpb protoc.
-Each field has an attribute `.type`. Example:
-
-```proto
-//[[ field.type = "int16" ]]
-optional int32 id = 2;
-```
-
-### how to use small ints for enums
-
-Small int enum types are specified in the comments, so they are ignored by the gpb protoc.
-Each enum has an attribute `.type`. Valid values are (`int8`, `uint8`, `int16`, `uint16`, `int32`)
 Example:
 
 ```proto
-//[[ enum.type = "int16" ]]
+//[[ field.type = "int16" ]]
+```
+
+## int types
+
+You can use also **8** and **16** bit ints (`int8`, `uint8`, `int16`, `uint16`) for fields and for enums. Warning: due to compatibility with GPB, always use types with the same sign, like `int32` and `int8`, combinations like `int32` and `uint8` are invalid.
+
+### how to use int types
+
+Each field has an attribute `.type`.
+
+```proto
+message Person{
+    //[[ field.type = "int16" ]]
+    required int32 id = 2;
+}
+```
+
+will be translated into...
+
+```CPP
+struct Person{
+    int16_t id;
+}
+```
+
+## enum types
+
+You can specify type of an enum (`int8`, `uint8`, `int16`, `uint16`, `int32`, `uint32`, `int64` and `uint64`)
+
+### how to use enum types
+
+Each enum has an attribute `.type`.
+
+```proto
+//[[ enum.type = "uint8" ]]
 enum PhoneType {
     MOBILE = 0;
     HOME = 1;
     WORK = 2;
 }
+```
+
+will be translated into...
+
+```CPP
+enum class PhoneType : uint8_t {
+    MOBILE = 0,
+    HOME   = 1,
+    WORK   = 2,
+};
 ```
 
 Default is set to:
@@ -47,26 +74,47 @@ you can combine them as you want, the more specific ones will be preferred.
 
 ## bit-fields
 
-The library lets you specify bit fields (`int8:1`, `uint8:2` ...) for [small ints](#small-int-types)
+You can use bit fields (`int8:1`, `uint8:2` ...) for [ints](#int-types)
 
 ### how to use bit-fields
 
-Bit fields are used similar as in C with [small ints](#small-int-types)
+Bit fields are used similar as in C with [ints](#int-types). *Remember: always use types with the same sign*
 
 ```proto
-//[[ field.type = "int16:4" ]]
-optional int32 id = 2;
+message Device{
+    //[[ field.type = "uint8:4" ]]
+    required uint8 id_major = 2;
+    //[[ field.type = "uint8:4" ]]
+    required uint8 id_minor = 2;
+}
+```
+
+will be translated into...
+
+```CPP
+struct Device{
+    uint8_t id_major : 4;
+    uint8_t id_minor : 4;
+}
 ```
 
 ## container types
 
-The library lets you specify your own types for containers (`repeated`, `string`, `bytes`, `optionals`).
+You can use your own types for containers (`optionals`, `repeated`, `string`, `bytes`).
 
 ### how to use user container types
 
-Containers types are specified in the comments, so they are ignored by the gpb protoc.
 Each container has 2 attributes `.type` (user type) and `.include` (include header for the type).
-If you need to develop your own container it needs to satisfy a [concept](../include/spb/concepts.h).
+Container needs to satisfy a [concept](../include/spb/concepts.h).
+
+| container  | [concept](../include/spb/concepts.h)     | notes       |
+|------------|------------------------------|-------------|
+| `optional` | `proto_label_optional`       | [`optional`](https://protobuf.dev/programming-guides/proto2/#field-labels) field label |
+| `repeated` | `proto_label_repeated`       | [`repeated`](https://protobuf.dev/programming-guides/proto2/#field-labels) field label |
+| `string` | `proto_field_string`           | fixed size [`string`](https://protobuf.dev/programming-guides/proto2/#scalar) field type |
+| `string` | `proto_field_string_resizable` | resizable [`string`](https://protobuf.dev/programming-guides/proto2/#scalar) field type |
+| `bytes`  | `proto_field_bytes`            | fixed size [`bytes`](https://protobuf.dev/programming-guides/proto2/#scalar) field type |
+| `bytes`  | `proto_field_bytes_resizable`  | resizable [`bytes`](https://protobuf.dev/programming-guides/proto2/#scalar) field type |
 
 Defaults are set to:
 
@@ -98,88 +146,139 @@ You can use those attributes ...
 
 you can combine them as you want, the more specific ones will be preferred.
 
-### integration with [etl library](https://github.com/ETLCPP/etl)
+#### fixed size bytes, string
 
-1. define a schema for you data in a `person.proto` file
+You can use **fixed size** containers for `bytes` and `string`. They needs to satisfy concept [proto_field_bytes](../include/spb/concepts.h) or [proto_field_string](../include/spb/concepts.h)
 
 ```proto
-//[[ repeated.type = "etl::vector<$,60>" ]]
-//[[ repeated.include = "<etl/vector.h>" ]]
-
-//[[ string.type = "etl::string<32>" ]]
-//[[ string.include = "<etl/string.h>" ]]
-
-package PhoneBook.Etl;
-
-message Person {
-    //[[ string.type = "std::string" ]]
-    optional string name = 1;
-    //[[ field.type = "int16"]]
-    optional int32 id = 2;
-    //[[ string.type = "etl::string<64>" ]]
-    optional string email = 3;
-    //[[ enum.type = "uint8"]]
-    enum PhoneType {
-        MOBILE = 0;
-        HOME = 1;
-        WORK = 2;
-    }
-
-    //[[ string.type = "etl::string<16>" ]]
-    message PhoneNumber {
-        required string number = 1;
-        optional PhoneType type = 2;
-    }
-    repeated PhoneNumber phones = 4;
+message Person{
+    //[[ string.type = "std::array<$,4>" ]]
+    //[[ string.include = "<array>" ]]
+    optional string id = 1;
 }
 ```
 
-2. compile `person.proto` with `spb-protoc` into `person.pb.h` and `person.pb.cc`
-
-```cmake
-spb_protobuf_generate(PROTO_SRCS PROTO_HDRS ${CMAKE_SOURCE_DIR}/proto/person.proto)
-```
-
-You can combine different types for each container in a single .proto file. In the following example the `string` is represented by `etl::string< 16 >`, `std::string` and `etl::string< 64 >`.
-
-```C++
-namespace PhoneBook::Etl
-{
-struct Person
-{
-    enum class PhoneType : uint8_t
-    {
-        MOBILE = 0,
-        HOME   = 1,
-        WORK   = 2,
-    };
-    struct PhoneNumber
-    {
-        etl::string< 16 > number;
-        std::optional< PhoneType > type;
-    };
-    std::optional< std::string > name;
-    std::optional< int16_t > id;
-    std::optional< etl::string< 64 > > email;
-    etl::vector< PhoneNumber, 60 > phones;
-};
-}// namespace PhoneBook::Etl
-```
-
-3. use `Person` struct natively and de/serialize to/from json/pb
+will be translated into...
 
 ```CPP
-#include <person.pb.h>
+struct Person{
+    std::optional< std::array< char, 4 > > id;
+}
+```
 
-auto john = PhoneBook::Etl::Person{
-        .name  = "John Doe",
-        .id    = 1234,
-        .email = "jdoe@example.com",
+### integration with [etl library](https://github.com/ETLCPP/etl)
+
+*the whole code is in [examples](../example/)*
+
+1. define a schema for you data in a `etl.proto` file
+
+```proto
+
+syntax = "proto2";
+
+package ETL.Example;
+
+message DeviceStatus {
+    //[[ field.type = "uint32:31"]]
+    required uint32 device_id = 1;
+    //[[ field.type = "uint32:1"]]
+    required uint32 is_online = 2;
+    required uint64 last_heartbeat = 3;
+    //[[ string.type = "std::array<$,8>" ]]
+    //[[ string.include = "<array>" ]]
+    required string firmware_version = 4;
+    //[[ string.type = "etl::string<16>" ]]
+    //[[ string.include = "<etl/string.h>" ]]
+    required string name = 5;
+}
+
+message Command {
+    //[[ enum.type = "uint8"]]
+    enum CMD {
+        CMD_RST = 1;
+        CMD_READ = 2;
+        CMD_WRITE = 3;
+        CMD_TST = 4;
+    }
+    //[[ field.type = "uint8:4"]]
+    required uint32 command_id = 1; // CMD
+    //[[ field.type = "uint8:2"]]
+    required uint32 arg = 2; // argument for the command
+    //[[ field.type = "uint8:1"]]
+    required uint32 in_flag = 3; // input flag
+    //[[ field.type = "uint8:1"]]
+    required uint32 out_flag = 4; // output flag
+}
+
+//[[ repeated.type = "etl::vector<$,16>" ]]
+//[[ repeated.include = "<etl/vector.h>" ]]
+message CommandQueue {
+    repeated Command commands = 1;
+    repeated DeviceStatus statuses = 2;
+}
+```
+
+2. compile `etl.proto` with `spb-protoc` into `etl.pb.h` and `etl.pb.cc`
+
+```cmake
+spb_protobuf_generate(PROTO_SRCS PROTO_HDRS ${CMAKE_SOURCE_DIR}/proto/etl.proto)
+```
+
+You can combine different types for each container in a single .proto file. *In this example the `string` is represented as `etl::string< 16 >` and `std::array< char, 8 >`.*
+
+```C++
+namespace ETL::Example
+{
+struct DeviceStatus
+{
+    uint32_t device_id : 31;
+    uint32_t is_online : 1;
+    uint64_t last_heartbeat;
+    std::array< char, 8 > firmware_version;
+    etl::string< 16 > name;
+};
+struct Command
+{
+    enum class CMD : uint8_t
+    {
+        CMD_RST   = 1,
+        CMD_READ  = 2,
+        CMD_WRITE = 3,
+        CMD_TST   = 4,
+    };
+    // CMD
+    uint8_t command_id : 4;
+    // argument for the command
+    uint8_t arg : 2;
+    // input flag
+    uint8_t in_flag : 1;
+    // output flag
+    uint8_t out_flag : 1;
+};
+struct CommandQueue
+{
+    etl::vector< Command, 16 > commands;
+    etl::vector< DeviceStatus, 16 > statuses;
+};
+}// namespace ETL::Example
+```
+
+3. use generated structs natively and de/serialize to/from json/pb
+
+```CPP
+#include <etl.pb.h>
+
+auto command = ETL::Example::Command{
+        .command_id = uint8_t( ETL::Example::Command::CMD::CMD_READ ),
+        .arg        = 2,
+        .in_flag    = 1,
+        .out_flag   = 0,
     };
 
-auto json    = spb::json::serialize( john );
-auto person  = spb::json::deserialize< PhoneBook::Etl::Person >( json );
-auto pb      = spb::pb::serialize( john );
-auto person2 = spb::pb::deserialize< PhoneBook::Etl::Person >( pb );
-//- john == person == person2
+auto json = spb::json::serialize( command );
+auto pb   = spb::pb::serialize( command );
+
+auto cmd  = spb::json::deserialize< ETL::Example::Command >( json );
+auto cmd2 = spb::pb::deserialize< ETL::Example::Command >( pb );
+//- command == cmd == cmd2
 ```

@@ -19,10 +19,32 @@
 
 namespace std
 {
+auto operator==( span< byte > lhs, span< byte > rhs ) noexcept -> bool
+{
+    return lhs.size( ) == rhs.size( ) && ( memcmp( lhs.data( ), rhs.data( ), lhs.size( ) ) == 0 );
+}
+
+auto operator==( span< char > lhs, span< char > rhs ) noexcept -> bool
+{
+    return lhs.size( ) == rhs.size( ) && ( memcmp( lhs.data( ), rhs.data( ), lhs.size( ) ) == 0 );
+}
+
+auto operator==( const array< char, 6 > & lhs, const string & rhs ) noexcept -> bool
+{
+    return lhs.size( ) == rhs.size( ) && ( memcmp( lhs.data( ), rhs.data( ), lhs.size( ) ) == 0 );
+}
+
 auto operator==( const string & lhs, const vector< byte > & rhs ) noexcept -> bool
 {
     return lhs.size( ) == rhs.size( ) && ( memcmp( lhs.data( ), rhs.data( ), lhs.size( ) ) == 0 );
 }
+
+template < size_t N >
+auto operator==( const string & lhs, const array< byte, N > & rhs ) noexcept -> bool
+{
+    return lhs.size( ) == rhs.size( ) && ( memcmp( lhs.data( ), rhs.data( ), lhs.size( ) ) == 0 );
+}
+
 }// namespace std
 
 namespace Test
@@ -70,10 +92,26 @@ auto operator==( const Person & lhs, const Person & rhs ) noexcept -> bool
 
 namespace
 {
+template < size_t N >
+auto to_string( const char ( &string )[ N ] )
+{
+    auto result = std::array< char, N - 1 >( );
+    memcpy( result.data( ), &string, result.size( ) );
+    return result;
+}
+
 auto to_bytes( std::string_view str ) -> std::vector< std::byte >
 {
     auto span = std::span< std::byte >( ( std::byte * ) str.data( ), str.size( ) );
     return { span.data( ), span.data( ) + span.size( ) };
+}
+
+template < size_t N >
+auto to_array( const char ( &string )[ N ] )
+{
+    auto result = std::array< std::byte, N - 1 >( );
+    memcpy( result.data( ), &string, result.size( ) );
+    return result;
 }
 
 template < typename T >
@@ -158,7 +196,7 @@ void gpb_test( const SPB & spb )
     }
     auto gpb_serialized = std::string( );
     REQUIRE( gpb.SerializeToString( &gpb_serialized ) );
-    REQUIRE( spb::pb::deserialize< SPB >( gpb_serialized ) == spb );
+    REQUIRE( spb::pb::deserialize< SPB >( gpb_serialized ).value == spb.value );
     REQUIRE( gpb_serialized == spb_serialized );
 }
 
@@ -202,12 +240,12 @@ void gpb_json( const SPB & spb )
     print_options.preserve_proto_field_names = true;
 
     ( void ) MessageToJsonString( gpb, &json_string, print_options );
-    REQUIRE( spb::json::deserialize< SPB >( json_string ) == spb );
+    REQUIRE( spb::json::deserialize< SPB >( json_string ).value == spb.value );
 
     print_options.preserve_proto_field_names = false;
     json_string.clear( );
     ( void ) MessageToJsonString( gpb, &json_string, print_options );
-    REQUIRE( spb::json::deserialize< SPB >( json_string ) == spb );
+    REQUIRE( spb::json::deserialize< SPB >( json_string ).value == spb.value );
 }
 
 template < typename GPB, typename SPB >
@@ -313,6 +351,7 @@ TEST_CASE( "string" )
     SUBCASE( "required" )
     {
         gpb_compatibility< Test::Scalar::gpb::ReqString >( Test::Scalar::ReqString{ .value = "hello" } );
+        gpb_compatibility< Test::Scalar::gpb::ReqString >( Test::Scalar::ReqString{ .value = "\"\\/\b\f\n\r\t" } );
     }
     SUBCASE( "optional" )
     {
@@ -322,6 +361,23 @@ TEST_CASE( "string" )
     {
         gpb_compatibility< Test::Scalar::gpb::RepString >( Test::Scalar::RepString{ .value = { "hello" } } );
         gpb_compatibility< Test::Scalar::gpb::RepString >( Test::Scalar::RepString{ .value = { "hello", "world" } } );
+    }
+    SUBCASE( "fixed" )
+    {
+        SUBCASE( "required" )
+        {
+            gpb_compatibility< Test::Scalar::gpb::ReqStringFixed >( Test::Scalar::ReqStringFixed{ .value = to_string( "hello1" ) } );
+            gpb_compatibility< Test::Scalar::gpb::ReqStringFixed >( Test::Scalar::ReqStringFixed{ .value = to_string( "\"\\/\n\r\t" ) } );
+        }
+        SUBCASE( "optional" )
+        {
+            gpb_compatibility< Test::Scalar::gpb::OptStringFixed >( Test::Scalar::OptStringFixed{ .value = to_string( "hello1" ) } );
+        }
+        SUBCASE( "repeated" )
+        {
+            gpb_compatibility< Test::Scalar::gpb::RepStringFixed >( Test::Scalar::RepStringFixed{ .value = { to_string( "hello1" ) } } );
+            gpb_compatibility< Test::Scalar::gpb::RepStringFixed >( Test::Scalar::RepStringFixed{ .value = { to_string( "hello1" ), to_string( "world1" ) } } );
+        }
     }
 }
 TEST_CASE( "bool" )
@@ -1050,8 +1106,24 @@ TEST_CASE( "bytes" )
     SUBCASE( "repeated" )
     {
         gpb_compatibility< Test::Scalar::gpb::RepBytes >( Test::Scalar::RepBytes{ .value = { to_bytes( "hello" ) } } );
-        gpb_compatibility< Test::Scalar::gpb::RepBytes >( Test::Scalar::RepBytes{ .value = { to_bytes( "\x00\x01\x02"sv ) } } );
-        gpb_compatibility< Test::Scalar::gpb::RepBytes >( Test::Scalar::RepBytes{ .value = { to_bytes( "\x00\x01\x02\x03\x04"sv ) } } );
+        gpb_compatibility< Test::Scalar::gpb::RepBytes >( Test::Scalar::RepBytes{ .value = { to_bytes( "\x00\x01\x02"sv ), to_bytes( "hello" ) } } );
+        gpb_compatibility< Test::Scalar::gpb::RepBytes >( Test::Scalar::RepBytes{ .value = { to_bytes( "\x00\x01\x02\x03\x04"sv ), to_bytes( "\x00\x01\x02"sv ), to_bytes( "hello" ) } } );
+    }
+    SUBCASE( "fixed" )
+    {
+        SUBCASE( "required" )
+        {
+            gpb_compatibility< Test::Scalar::gpb::ReqBytesFixed >( Test::Scalar::ReqBytesFixed{ .value = to_array( "12345678" ) } );
+        }
+        SUBCASE( "optional" )
+        {
+            gpb_compatibility< Test::Scalar::gpb::OptBytesFixed >( Test::Scalar::OptBytesFixed{ .value = to_array( "12345678" ) } );
+        }
+        SUBCASE( "repeated" )
+        {
+            gpb_compatibility< Test::Scalar::gpb::RepBytesFixed >( Test::Scalar::RepBytesFixed{ .value = { to_array( "12345678" ) } } );
+            gpb_compatibility< Test::Scalar::gpb::RepBytesFixed >( Test::Scalar::RepBytesFixed{ .value = { to_array( "12345678" ), to_array( "87654321" ) } } );
+        }
     }
 }
 TEST_CASE( "enum" )
