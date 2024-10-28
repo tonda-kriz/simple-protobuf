@@ -168,86 +168,117 @@ struct Person{
 
 ### integration with [etl library](https://github.com/ETLCPP/etl)
 
-1. define a schema for you data in a `person.proto` file
+*the whole code is in [examples](../example/)*
+
+1. define a schema for you data in a `etl.proto` file
 
 ```proto
-//[[ repeated.type = "etl::vector<$,60>" ]]
-//[[ repeated.include = "<etl/vector.h>" ]]
 
-//[[ string.type = "etl::string<32>" ]]
-//[[ string.include = "<etl/string.h>" ]]
+syntax = "proto2";
 
-package PhoneBook.Etl;
+package ETL.Example;
 
-message Person {
-    //[[ string.type = "std::string" ]]
-    optional string name = 1;
-    //[[ field.type = "int16"]]
-    optional int32 id = 2;
-    //[[ string.type = "etl::string<64>" ]]
-    optional string email = 3;
-    //[[ enum.type = "uint8"]]
-    enum PhoneType {
-        MOBILE = 0;
-        HOME = 1;
-        WORK = 2;
-    }
-
+message DeviceStatus {
+    //[[ field.type = "uint32:31"]]
+    required uint32 device_id = 1;
+    //[[ field.type = "uint32:1"]]
+    required uint32 is_online = 2;
+    required uint64 last_heartbeat = 3;
+    //[[ string.type = "std::array<$,8>" ]]
+    //[[ string.include = "<array>" ]]
+    required string firmware_version = 4;
     //[[ string.type = "etl::string<16>" ]]
-    message PhoneNumber {
-        required string number = 1;
-        optional PhoneType type = 2;
+    //[[ string.include = "<etl/string.h>" ]]
+    required string name = 5;
+}
+
+message Command {
+    //[[ enum.type = "uint8"]]
+    enum CMD {
+        CMD_RST = 1;
+        CMD_READ = 2;
+        CMD_WRITE = 3;
+        CMD_TST = 4;
     }
-    repeated PhoneNumber phones = 4;
+    //[[ field.type = "uint8:4"]]
+    required uint32 command_id = 1; // CMD
+    //[[ field.type = "uint8:2"]]
+    required uint32 arg = 2; // argument for the command
+    //[[ field.type = "uint8:1"]]
+    required uint32 in_flag = 3; // input flag
+    //[[ field.type = "uint8:1"]]
+    required uint32 out_flag = 4; // output flag
+}
+
+//[[ repeated.type = "etl::vector<$,16>" ]]
+//[[ repeated.include = "<etl/vector.h>" ]]
+message CommandQueue {
+    repeated Command commands = 1;
+    repeated DeviceStatus statuses = 2;
 }
 ```
 
-2. compile `person.proto` with `spb-protoc` into `person.pb.h` and `person.pb.cc`
+2. compile `etl.proto` with `spb-protoc` into `etl.pb.h` and `etl.pb.cc`
 
 ```cmake
-spb_protobuf_generate(PROTO_SRCS PROTO_HDRS ${CMAKE_SOURCE_DIR}/proto/person.proto)
+spb_protobuf_generate(PROTO_SRCS PROTO_HDRS ${CMAKE_SOURCE_DIR}/proto/etl.proto)
 ```
 
-You can combine different types for each container in a single .proto file. In the following example the `string` is represented by `etl::string< 16 >`, `std::string` and `etl::string< 64 >`.
+You can combine different types for each container in a single .proto file. *In this example the `string` is represented as `etl::string< 16 >` and `std::array< char, 8 >`.*
 
 ```C++
-namespace PhoneBook::Etl
+namespace ETL::Example
 {
-struct Person
+struct DeviceStatus
 {
-    enum class PhoneType : uint8_t
-    {
-        MOBILE = 0,
-        HOME   = 1,
-        WORK   = 2,
-    };
-    struct PhoneNumber
-    {
-        etl::string< 16 > number;
-        std::optional< PhoneType > type;
-    };
-    std::optional< std::string > name;
-    std::optional< int16_t > id;
-    std::optional< etl::string< 64 > > email;
-    etl::vector< PhoneNumber, 60 > phones;
+    uint32_t device_id : 31;
+    uint32_t is_online : 1;
+    uint64_t last_heartbeat;
+    std::array< char, 8 > firmware_version;
+    etl::string< 16 > name;
 };
-}// namespace PhoneBook::Etl
+struct Command
+{
+    enum class CMD : uint8_t
+    {
+        CMD_RST   = 1,
+        CMD_READ  = 2,
+        CMD_WRITE = 3,
+        CMD_TST   = 4,
+    };
+    // CMD
+    uint8_t command_id : 4;
+    // argument for the command
+    uint8_t arg : 2;
+    // input flag
+    uint8_t in_flag : 1;
+    // output flag
+    uint8_t out_flag : 1;
+};
+struct CommandQueue
+{
+    etl::vector< Command, 16 > commands;
+    etl::vector< DeviceStatus, 16 > statuses;
+};
+}// namespace ETL::Example
 ```
 
-3. use `Person` struct natively and de/serialize to/from json/pb
+3. use generated structs natively and de/serialize to/from json/pb
 
 ```CPP
-#include <person.pb.h>
+#include <etl.pb.h>
 
-auto john = PhoneBook::Etl::Person{
-        .name  = "John Doe",
-        .id    = 1234,
-        .email = "jdoe@example.com",
+auto command = ETL::Example::Command{
+        .command_id = uint8_t( ETL::Example::Command::CMD::CMD_READ ),
+        .arg        = 2,
+        .in_flag    = 1,
+        .out_flag   = 0,
     };
 
-auto json    = spb::json::serialize( john );
-auto person  = spb::json::deserialize< PhoneBook::Etl::Person >( json );
-auto pb      = spb::pb::serialize( john );
-auto person2 = spb::pb::deserialize< PhoneBook::Etl::Person >( pb );
-//- john == person == person2
+auto json = spb::json::serialize( command );
+auto pb   = spb::pb::serialize( command );
+
+auto cmd  = spb::json::deserialize< ETL::Example::Command >( json );
+auto cmd2 = spb::pb::deserialize< ETL::Example::Command >( pb );
+//- command == cmd == cmd2
 ```
