@@ -520,13 +520,13 @@ TEST_CASE( "json" )
             {
                 CHECK( spb::json::serialize< std::string >( "\"" ) == R"("\"")" );
                 CHECK( spb::json::serialize< std::string >( "\\" ) == R"("\\")" );
-                CHECK( spb::json::serialize< std::string >( "/" ) == R"("\/")" );
+                CHECK( spb::json::serialize< std::string >( "/" ) == R"("/")" );
                 CHECK( spb::json::serialize< std::string >( "\b" ) == R"("\b")" );
                 CHECK( spb::json::serialize< std::string >( "\f" ) == R"("\f")" );
                 CHECK( spb::json::serialize< std::string >( "\n" ) == R"("\n")" );
                 CHECK( spb::json::serialize< std::string >( "\r" ) == R"("\r")" );
                 CHECK( spb::json::serialize< std::string >( "\t" ) == R"("\t")" );
-                CHECK( spb::json::serialize< std::string >( "\"\\/\b\f\n\r\t" ) == R"("\"\\\/\b\f\n\r\t")" );
+                CHECK( spb::json::serialize< std::string >( "\"\\/\b\f\n\r\t" ) == R"("\"\\/\b\f\n\r\t")" );
                 CHECK( spb::json::serialize< std::string >( "\"hello\t" ) == R"("\"hello\t")" );
             }
             SUBCASE( "optional" )

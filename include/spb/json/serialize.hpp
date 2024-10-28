@@ -88,9 +88,6 @@ public:
                 case '\\':
                     write( R"(\\)"sv );
                     break;
-                case '/':
-                    write( R"(\/)"sv );
-                    break;
                 case '\b':
                     write( R"(\b)"sv );
                     break;
@@ -128,7 +125,8 @@ public:
 private:
     static auto is_escape( char c ) -> bool
     {
-        return c == '\\' || c == '"' || c == '/' || c == '\b' || c == '\f' || c == '\n' || c == '\r' || c == '\t';
+        static constexpr std::string_view escape_chars = "\\\"\b\f\n\r\t";
+        return escape_chars.find( c ) != std::string_view::npos;
     }
 
     static auto has_escape_chars( std::string_view str ) -> bool
