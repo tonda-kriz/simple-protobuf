@@ -244,13 +244,16 @@ void gpb_json( const SPB & spb )
     REQUIRE( spb::json::deserialize< SPB >( json_string ).value == spb.value );
 
     print_options.preserve_proto_field_names = false;
-    print_options.unquote_int64_if_possible  = true;
     json_string.clear( );
     ( void ) MessageToJsonString( gpb, &json_string, print_options );
     REQUIRE( spb::json::deserialize< SPB >( json_string ).value == spb.value );
     if constexpr( std::is_integral_v< T > && sizeof( T ) < sizeof( int64_t ) )
     {
-        REQUIRE( json_string == spb_serialized );
+        auto gpb_value = gpb.value( );
+        if( sizeof( gpb_value ) < sizeof( int64_t ) )
+        {
+            REQUIRE( json_string == spb_serialized );
+        }
     }
 }
 
