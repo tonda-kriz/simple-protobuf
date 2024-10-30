@@ -452,7 +452,6 @@ TEST_CASE( "json" )
                 {
                     const auto esc = c == '"' || c == '\\' || c == '/' || c == 'b' || c == 'f' || c == 'n' || c == 'r' || c == 't';
 
-                    CHECK( spb::json::detail::is_escape( char( c ) ) == esc );
                     char buffer[] = { '"', '\\', char( c ), '"', 0 };
                     if( !esc )
                     {

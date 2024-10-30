@@ -225,7 +225,7 @@ TEST_CASE( "protobuf" )
             CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqString >( "\x0a\x05hell"sv ) );
             SUBCASE( "escaped" )
             {
-                pb_json_test( Test::Scalar::ReqString{ .value = "\"\\/\b\f\n\r\t" }, "\x0a\x08\"\\/\b\f\n\r\t", R"({"value":"\"\\\/\b\f\n\r\t"})" );
+                pb_json_test( Test::Scalar::ReqString{ .value = "\"\\/\b\f\n\r\t" }, "\x0a\x08\"\\/\b\f\n\r\t", R"({"value":"\"\\/\b\f\n\r\t"})" );
                 pb_json_test( Test::Scalar::ReqString{ .value = "\"hello\t" }, "\x0a\x07\"hello\t", R"({"value":"\"hello\t"})" );
             }
         }
@@ -251,7 +251,7 @@ TEST_CASE( "protobuf" )
                 CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqStringFixed >( "\x0a\x07hello12"sv ) );
                 SUBCASE( "escaped" )
                 {
-                    pb_json_test( Test::Scalar::ReqStringFixed{ .value = to_string( "\"\\/\n\r\t" ) }, "\x0a\x06\"\\/\n\r\t", R"({"value":"\"\\\/\n\r\t"})" );
+                    pb_json_test( Test::Scalar::ReqStringFixed{ .value = to_string( "\"\\/\n\r\t" ) }, "\x0a\x06\"\\/\n\r\t", R"({"value":"\"\\/\n\r\t"})" );
                     pb_json_test( Test::Scalar::ReqStringFixed{ .value = to_string( "hello\t" ) }, "\x0a\x06hello\t", R"({"value":"hello\t"})" );
                 }
             }

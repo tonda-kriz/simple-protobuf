@@ -243,12 +243,6 @@ public:
     void skip_value( );
 };
 
-static inline auto is_escape( char c ) -> bool
-{
-    static constexpr std::string_view escape_chars = R"("\/bfnrt)";
-    return escape_chars.find( c ) != std::string_view::npos;
-}
-
 static inline void deserialize( istream & stream, spb::detail::proto_enum auto & value )
 {
     deserialize_value( stream, value );
@@ -316,8 +310,10 @@ static inline auto deserialize_string_view( istream & stream, size_t min_size, s
     return { };
 }
 
-static inline auto unescape( char c ) -> char
+static inline auto unescape( istream & stream ) -> char
 {
+    auto c = stream.current_char( );
+    stream.consume_current_char( false );
     switch( c )
     {
     case '"':
@@ -336,6 +332,24 @@ static inline auto unescape( char c ) -> char
         return '\r';
     case 't':
         return '\t';
+    case 'u':
+    {
+        const auto esc_size = 4U;
+        auto unicode_view   = stream.view( esc_size );
+        if( unicode_view.size( ) < esc_size )
+        {
+            throw std::runtime_error( "invalid escape sequence" );
+        }
+        auto value  = uint32_t( 0 );
+        auto result = spb_std_emu::from_chars( unicode_view.data( ), unicode_view.data( ) + esc_size, value, 16 );
+        if( result.ec != std::errc{ } ||
+            value > 0xff )
+        {
+            throw std::runtime_error( "invalid escape sequence" );
+        }
+        stream.skip( esc_size );
+        return char( value );
+    }
     default:
         throw std::runtime_error( "invalid escape sequence" );
     }
@@ -401,9 +415,8 @@ static inline void deserialize( istream & stream, spb::detail::proto_field_strin
             return;
         }
 
-        auto c = unescape( stream.current_char( ) );
+        auto c = unescape( stream );
         append_to_value( &c, 1 );
-        stream.consume_current_char( false );
     }
 }
 

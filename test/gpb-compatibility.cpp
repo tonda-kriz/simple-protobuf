@@ -233,7 +233,8 @@ void gpb_json( const SPB & spb )
     }
     else
     {
-        REQUIRE( spb.value == gpb.value( ) );
+        auto gpb_value = gpb.value( );
+        REQUIRE( spb.value == gpb_value );
     }
     auto json_string                         = std::string( );
     auto print_options                       = google::protobuf::util::JsonPrintOptions( );
@@ -243,9 +244,14 @@ void gpb_json( const SPB & spb )
     REQUIRE( spb::json::deserialize< SPB >( json_string ).value == spb.value );
 
     print_options.preserve_proto_field_names = false;
+    print_options.unquote_int64_if_possible  = true;
     json_string.clear( );
     ( void ) MessageToJsonString( gpb, &json_string, print_options );
     REQUIRE( spb::json::deserialize< SPB >( json_string ).value == spb.value );
+    if constexpr( std::is_integral_v< T > && sizeof( T ) < sizeof( int64_t ) )
+    {
+        REQUIRE( json_string == spb_serialized );
+    }
 }
 
 template < typename GPB, typename SPB >
@@ -352,6 +358,10 @@ TEST_CASE( "string" )
     {
         gpb_compatibility< Test::Scalar::gpb::ReqString >( Test::Scalar::ReqString{ .value = "hello" } );
         gpb_compatibility< Test::Scalar::gpb::ReqString >( Test::Scalar::ReqString{ .value = "\"\\/\b\f\n\r\t" } );
+        for( auto i = 0U; i <= 0x7f; i++ )
+        {
+            gpb_compatibility< Test::Scalar::gpb::ReqString >( Test::Scalar::ReqString{ .value = { char( i ) } } );
+        }
     }
     SUBCASE( "optional" )
     {

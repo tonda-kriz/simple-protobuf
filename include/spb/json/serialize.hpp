@@ -12,6 +12,7 @@
 
 #include "../concepts.h"
 #include "base64.h"
+#include "spb/json/deserialize.hpp"
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -62,7 +63,15 @@ public:
         bytes_written += 1;
     }
 
-    void write( std::string_view str ) noexcept
+    void write_unicode( uint8_t c )
+    {
+        auto buffer    = std::array< char, 6 >{ '\\', 'u', '0', '0', '0', '0' };
+        auto hex_chars = c >= 0x10 ? 2 : 1;
+        std::to_chars( buffer.data( ) + buffer.size( ) - hex_chars, buffer.data( ) + buffer.size( ), c, 16 );
+        write( std::string_view( buffer.data( ), buffer.size( ) ) );
+    }
+
+    void write( std::string_view str )
     {
         if( on_write )
         {
@@ -74,11 +83,17 @@ public:
 
     void write_escaped( std::string_view str ) noexcept
     {
-        if( has_escape_chars( str ) )
+        if( !has_escape_chars( str ) )
         {
-            using namespace std::literals;
+            write( str );
+            return;
+        }
 
-            for( auto c : str )
+        using namespace std::literals;
+
+        for( auto c : str )
+        {
+            if( is_escape( c ) )
             {
                 switch( c )
                 {
@@ -104,13 +119,13 @@ public:
                     write( R"(\t)"sv );
                     break;
                 default:
-                    write( c );
+                    write_unicode( c );
                 }
             }
-        }
-        else
-        {
-            write( str );
+            else
+            {
+                write( c );
+            }
         }
     }
 
@@ -123,10 +138,10 @@ public:
     }
 
 private:
-    static auto is_escape( char c ) -> bool
+    static auto is_escape( uint8_t c ) -> bool
     {
-        static constexpr std::string_view escape_chars = "\\\"\b\f\n\r\t";
-        return escape_chars.find( c ) != std::string_view::npos;
+        static constexpr std::string_view escape_chars = "\\\"\b\f\n\r\t<>";
+        return c <= 0x1f || c >= 0x7f || escape_chars.find( c ) != std::string_view::npos;
     }
 
     static auto has_escape_chars( std::string_view str ) -> bool
