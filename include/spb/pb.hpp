@@ -36,7 +36,7 @@ static inline auto serialize( const auto & message, spb::io::writer on_write ) -
  * @param[in] message to be serialized
  * @return serialized size in bytes
  */
-[[nodiscard]] static inline auto serialize_size( const auto & message ) noexcept -> size_t
+[[nodiscard]] static inline auto serialize_size( const auto & message ) -> size_t
 {
     return serialize( message, spb::io::writer( nullptr ) );
 }

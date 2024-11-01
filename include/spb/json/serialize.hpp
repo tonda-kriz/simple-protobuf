@@ -13,6 +13,7 @@
 #include "../concepts.h"
 #include "base64.h"
 #include "spb/json/deserialize.hpp"
+#include "spb/utf8.h"
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -63,10 +64,12 @@ public:
         bytes_written += 1;
     }
 
-    void write_unicode( uint8_t c )
+    void write_unicode( uint32_t c )
     {
         auto buffer    = std::array< char, 6 >{ '\\', 'u', '0', '0', '0', '0' };
-        auto hex_chars = c >= 0x10 ? 2 : 1;
+        auto hex_chars = c >= 0x1000 ? 4 : c >= 0x0100 ? 3
+            : c >= 0x0010                              ? 2
+                                                       : 1;
         std::to_chars( buffer.data( ) + buffer.size( ) - hex_chars, buffer.data( ) + buffer.size( ), c, 16 );
         write( std::string_view( buffer.data( ), buffer.size( ) ) );
     }
@@ -81,7 +84,7 @@ public:
         bytes_written += str.size( );
     }
 
-    void write_escaped( std::string_view str ) noexcept
+    void write_escaped( std::string_view str )
     {
         if( !has_escape_chars( str ) )
         {
@@ -90,9 +93,20 @@ public:
         }
 
         using namespace std::literals;
-
-        for( auto c : str )
+        uint32_t codepoint = 0;
+        uint32_t state     = spb::detail::utf8::ok;
+        bool decoding_utf8 = false;
+        for( uint8_t c : str )
         {
+            if( decoding_utf8 )
+            {
+                if( spb::detail::utf8::decode_point( &state, &codepoint, c ) == spb::detail::utf8::ok )
+                {
+                    write_unicode( codepoint );
+                    decoding_utf8 = false;
+                }
+                continue;
+            }
             if( is_escape( c ) )
             {
                 switch( c )
@@ -119,13 +133,22 @@ public:
                     write( R"(\t)"sv );
                     break;
                 default:
-                    write_unicode( c );
+                    decoding_utf8 = true;
+                    if( spb::detail::utf8::decode_point( &state, &codepoint, c ) == spb::detail::utf8::ok )
+                    {
+                        write_unicode( codepoint );
+                        decoding_utf8 = false;
+                    }
                 }
             }
             else
             {
                 write( c );
             }
+        }
+        if( state != spb::detail::utf8::ok )
+        {
+            throw std::runtime_error( "invalid utf8" );
         }
     }
 
@@ -223,6 +246,7 @@ static inline void serialize( ostream & stream, std::string_view key, const spb:
 {
     if( !value.empty( ) )
     {
+        spb::detail::utf8::validate( std::string_view( value.data( ), value.size( ) ) );
         serialize_key( stream, key );
         serialize( stream, value );
     }
