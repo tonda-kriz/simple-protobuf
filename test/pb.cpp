@@ -228,6 +228,21 @@ TEST_CASE( "protobuf" )
                 pb_json_test( Test::Scalar::ReqString{ .value = "\"\\/\b\f\n\r\t" }, "\x0a\x08\"\\/\b\f\n\r\t", R"({"value":"\"\\/\b\f\n\r\t"})" );
                 pb_json_test( Test::Scalar::ReqString{ .value = "\"hello\t" }, "\x0a\x07\"hello\t", R"({"value":"\"hello\t"})" );
             }
+            SUBCASE( "utf8" )
+            {
+                pb_json_test( Test::Scalar::ReqString{ .value = "h\x16\xc3\x8c\xE3\x9B\x8B\xF0\x90\x87\xB3o" }, "\x0a\x0ch\x16\xc3\x8c\xE3\x9B\x8B\xF0\x90\x87\xB3o", R"({"value":"h\u0016\u00cc\u36cb\ud800\uddf3o"})" );
+                SUBCASE( "invalid" )
+                {
+                    CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqString >( "\x0a\x02h\x80"sv ) );
+                    CHECK_THROWS( ( void ) spb::json::serialize< std::string >( "h\x80" ) );
+                    CHECK_THROWS( ( void ) spb::json::deserialize< std::string >( R"("h\u02w1")" ) );
+                    CHECK_THROWS( ( void ) spb::json::deserialize< std::string >( R"("h\u02")" ) );
+                    CHECK_THROWS( ( void ) spb::json::deserialize< std::string >( R"("h\ud800\u")" ) );
+                    CHECK_THROWS( ( void ) spb::json::deserialize< std::string >( R"("h\ud800\u1")" ) );
+                    CHECK_THROWS( ( void ) spb::json::deserialize< std::string >( R"("h\ud800\udbff")" ) );
+                    CHECK_THROWS( ( void ) spb::json::deserialize< std::string >( R"("h\ud800\ue000")" ) );
+                }
+            }
         }
         SUBCASE( "optional" )
         {

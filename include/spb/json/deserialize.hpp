@@ -321,7 +321,8 @@ static inline auto unicode_from_hex( istream & stream ) -> uint16_t
     }
     auto value  = uint16_t( 0 );
     auto result = spb_std_emu::from_chars( unicode_view.data( ), unicode_view.data( ) + esc_size, value, 16 );
-    if( result.ec != std::errc{ } )
+    if( result.ec != std::errc{ } ||
+        result.ptr != unicode_view.data( ) + esc_size )
     {
         throw std::runtime_error( "invalid escape sequence" );
     }
