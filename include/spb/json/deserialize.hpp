@@ -311,6 +311,45 @@ static inline auto deserialize_string_view( istream & stream, size_t min_size, s
     return { };
 }
 
+static inline auto unicode_from_hex( istream & stream ) -> uint16_t
+{
+    const auto esc_size = 4U;
+    auto unicode_view   = stream.view( esc_size );
+    if( unicode_view.size( ) < esc_size )
+    {
+        throw std::runtime_error( "invalid escape sequence" );
+    }
+    auto value  = uint16_t( 0 );
+    auto result = spb_std_emu::from_chars( unicode_view.data( ), unicode_view.data( ) + esc_size, value, 16 );
+    if( result.ec != std::errc{ } )
+    {
+        throw std::runtime_error( "invalid escape sequence" );
+    }
+    stream.skip( esc_size );
+    return value;
+}
+
+static inline auto unescape_unicode( istream & stream, char utf8[ 4 ] ) -> uint32_t
+{
+    auto value = uint32_t( unicode_from_hex( stream ) );
+    if( value >= 0xD800 && value <= 0xDBFF &&
+        stream.view( 2 ).starts_with( "\\u"sv ) )
+    {
+        stream.skip( 2 );
+        auto low = unicode_from_hex( stream );
+
+        if( low < 0xDC00 || low > 0xDFFF )
+        {
+            throw std::invalid_argument( "invalid escape sequence" );
+        }
+        value = ( ( value - 0xD800 ) << 10 ) + ( low - 0xDC00 ) + 0x10000;
+    }
+    if( auto result = spb::detail::utf8::encode_point( value, utf8 ); result != 0 )
+    {
+        return result;
+    }
+    throw std::runtime_error( "invalid escape sequence" );
+}
 static inline auto unescape( istream & stream, char utf8[ 4 ] ) -> uint32_t
 {
     auto c = stream.current_char( );
@@ -341,31 +380,8 @@ static inline auto unescape( istream & stream, char utf8[ 4 ] ) -> uint32_t
     case 't':
         utf8[ 0 ] = '\t';
         return 1;
-    case 'U':
     case 'u':
-    {
-        const auto esc_size = 4U;
-        auto unicode_view   = stream.view( esc_size );
-        if( unicode_view.size( ) < esc_size )
-        {
-            throw std::runtime_error( "invalid escape sequence" );
-        }
-        auto value  = uint32_t( 0 );
-        auto result = spb_std_emu::from_chars( unicode_view.data( ), unicode_view.data( ) + esc_size, value, 16 );
-        if( result.ec != std::errc{ } )
-        {
-            throw std::runtime_error( "invalid escape sequence" );
-        }
-        stream.skip( esc_size );
-        if( auto result = spb::detail::utf8::encode_point( value, utf8 ); result != 0 )
-        {
-            return result;
-        }
-        else
-        {
-            throw std::runtime_error( "invalid escape sequence" );
-        }
-    }
+        return unescape_unicode( stream, utf8 );
     default:
         throw std::runtime_error( "invalid escape sequence" );
     }

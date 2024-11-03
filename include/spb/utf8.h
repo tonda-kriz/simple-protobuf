@@ -64,7 +64,10 @@ static inline auto encode_point( uint32_t unicode, char utf8[ 4 ] ) -> uint32_t
         utf8[ 1 ] = ( char ) ( ( unicode & 0x3F ) | 0x80 );
         return 2;
     }
-
+    if( unicode >= 0xD800 && unicode < 0xE000 )
+    {
+        return 0;
+    }
     if( unicode <= 0xFFFF )
     {
         utf8[ 0 ] = ( char ) ( ( unicode >> 12 ) | 0xE0 );

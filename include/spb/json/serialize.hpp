@@ -58,20 +58,34 @@ public:
     {
         if( on_write )
         {
-            on_write( &c, 1 );
+            on_write( &c, sizeof( c ) );
         }
 
-        bytes_written += 1;
+        bytes_written += sizeof( c );
     }
 
-    void write_unicode( uint32_t c )
+    void write_unicode( uint32_t codepoint )
     {
-        auto buffer    = std::array< char, 6 >{ '\\', 'u', '0', '0', '0', '0' };
-        auto hex_chars = c >= 0x1000 ? 4 : c >= 0x0100 ? 3
-            : c >= 0x0010                              ? 2
-                                                       : 1;
-        std::to_chars( buffer.data( ) + buffer.size( ) - hex_chars, buffer.data( ) + buffer.size( ), c, 16 );
-        write( std::string_view( buffer.data( ), buffer.size( ) ) );
+        if( codepoint <= 0xffff )
+        {
+            char buffer[ 8 ] = { };
+            auto size        = snprintf( buffer, sizeof( buffer ), "\\u%04x", codepoint );
+            write( std::string_view( buffer, size ) );
+        }
+        else if( codepoint <= 0x10FFFF )
+        {
+            codepoint -= 0x10000;
+
+            auto high         = static_cast< uint16_t >( ( codepoint >> 10 ) + 0xD800 );
+            auto low          = static_cast< uint16_t >( ( codepoint & 0x3FF ) + 0xDC00 );
+            char buffer[ 16 ] = { };
+            auto size         = snprintf( buffer, sizeof( buffer ), "\\u%04x\\u%04x", high, low );
+            write( std::string_view( buffer, size ) );
+        }
+        else
+        {
+            throw std::invalid_argument( "invalid utf8" );
+        }
     }
 
     void write( std::string_view str )

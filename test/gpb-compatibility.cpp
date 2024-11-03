@@ -363,17 +363,25 @@ TEST_CASE( "string" )
 {
     SUBCASE( "utf8" )
     {
-        for( auto i = 0U; i < 0xD800; i++ )
+        for( auto i = 0U; i < 0x10ffff; i++ )
         {
-            char buffer[ 32 ];
-            auto gpb           = Test::Scalar::gpb::ReqString( );
-            auto parse_options = google::protobuf::util::JsonParseOptions{ };
+            char buffer[ 4 ];
+            auto value = std::string( buffer, spb::detail::utf8::encode_point( i, buffer ) );
+            if( value.empty( ) )
+            {
+                continue;
+            }
 
-            snprintf( buffer, sizeof( buffer ) - 1, "{\"value\":\"\\U%.2x%.2x\"}", i >> CHAR_BIT, i & 0xff );
-            REQUIRE( JsonStringToMessage( buffer, &gpb, parse_options ).ok( ) );
-            auto gpb_value = gpb.value( );
-            auto spb       = spb::json::deserialize< Test::Scalar::ReqString >( std::string_view( &buffer[ 0 ] ) );
-            REQUIRE( spb.value == gpb_value );
+            auto gpb         = Test::Scalar::gpb::ReqString( );
+            auto json_string = std::string( );
+            gpb.set_value( value );
+
+            auto print_options                       = google::protobuf::util::JsonPrintOptions( );
+            print_options.preserve_proto_field_names = true;
+            REQUIRE( MessageToJsonString( gpb, &json_string, print_options ).ok( ) );
+
+            auto spb = spb::json::deserialize< Test::Scalar::ReqString >( json_string );
+            REQUIRE( spb.value == gpb.value( ) );
             gpb_compatibility< Test::Scalar::gpb::ReqString >( spb );
         }
 
