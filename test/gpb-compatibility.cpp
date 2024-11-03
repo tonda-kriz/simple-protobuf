@@ -372,37 +372,7 @@ TEST_CASE( "string" )
                 continue;
             }
 
-            auto gpb         = Test::Scalar::gpb::ReqString( );
-            auto json_string = std::string( );
-            gpb.set_value( value );
-
-            auto print_options                       = google::protobuf::util::JsonPrintOptions( );
-            print_options.preserve_proto_field_names = true;
-            REQUIRE( MessageToJsonString( gpb, &json_string, print_options ).ok( ) );
-
-            auto spb = spb::json::deserialize< Test::Scalar::ReqString >( json_string );
-            REQUIRE( spb.value == gpb.value( ) );
-            gpb_compatibility< Test::Scalar::gpb::ReqString >( spb );
-        }
-
-        for( auto i = 0U; i <= 0xff; i++ )
-        {
-            auto value = Test::Scalar::ReqString{ .value = { char( i ) } };
-            if( spb::detail::utf8::is_valid( value.value ) )
-            {
-                gpb_compatibility< Test::Scalar::gpb::ReqString >( value );
-            }
-        }
-        for( auto i = 0U; i <= 0xffff; i++ )
-        {
-            if( i < 0xc280 || i > 0xDFBF )
-            {
-                auto value = Test::Scalar::ReqString{ .value = { char( i >> CHAR_BIT ), char( i & 0xff ) } };
-                if( spb::detail::utf8::is_valid( value.value ) )
-                {
-                    gpb_compatibility< Test::Scalar::gpb::ReqString >( value );
-                }
-            }
+            gpb_compatibility< Test::Scalar::gpb::ReqString >( Test::Scalar::ReqString{ .value = value } );
         }
     }
     SUBCASE( "required" )

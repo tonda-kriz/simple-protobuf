@@ -70,9 +70,9 @@ public:
         {
             char buffer[ 8 ] = { };
             auto size        = snprintf( buffer, sizeof( buffer ), "\\u%04x", codepoint );
-            write( std::string_view( buffer, size ) );
+            return write( std::string_view( buffer, size ) );
         }
-        else if( codepoint <= 0x10FFFF )
+        if( codepoint <= 0x10FFFF )
         {
             codepoint -= 0x10000;
 
@@ -80,12 +80,9 @@ public:
             auto low          = static_cast< uint16_t >( ( codepoint & 0x3FF ) + 0xDC00 );
             char buffer[ 16 ] = { };
             auto size         = snprintf( buffer, sizeof( buffer ), "\\u%04x\\u%04x", high, low );
-            write( std::string_view( buffer, size ) );
+            return write( std::string_view( buffer, size ) );
         }
-        else
-        {
-            throw std::invalid_argument( "invalid utf8" );
-        }
+        throw std::invalid_argument( "invalid utf8" );
     }
 
     void write( std::string_view str )

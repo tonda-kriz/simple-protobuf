@@ -51,6 +51,13 @@ static auto inline decode_point( uint32_t * state, uint32_t * codep, uint32_t by
     return *state;
 }
 
+/**
+ * @brief encode codepoint to utf8
+ *
+ * @param unicode codepoint
+ * @param utf8 output
+ * @return size of output in bytes, 0 on error
+ */
 static inline auto encode_point( uint32_t unicode, char utf8[ 4 ] ) -> uint32_t
 {
     if( unicode <= 0x7F )
