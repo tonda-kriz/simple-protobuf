@@ -257,7 +257,6 @@ static inline void serialize( ostream & stream, std::string_view key, const spb:
 {
     if( !value.empty( ) )
     {
-        spb::detail::utf8::validate( std::string_view( value.data( ), value.size( ) ) );
         serialize_key( stream, key );
         serialize( stream, value );
     }

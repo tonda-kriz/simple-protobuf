@@ -24,7 +24,7 @@ namespace spb::detail::utf8
 
 constexpr uint8_t ok = 0;
 
-static auto inline decode_point( uint32_t * state, uint32_t * codep, uint32_t byte ) -> uint32_t
+static auto inline decode_point( uint32_t * state, uint32_t * codep, uint8_t byte ) -> uint32_t
 {
     static const uint8_t utf8d[] = {
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,// 00..1f
