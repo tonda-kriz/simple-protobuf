@@ -193,30 +193,30 @@ API is prefixed with `spb::json::` for **json** and `spb::pb::` for **protobuf**
 
 ## type mapping
 
-| proto type | CPP type    | Notes       |
+| proto type | CPP type    | GPB encoding |
 |------------|-------------|-------------|
-| `bool`     | `bool`      |             |
-| `float`    | `float`     |             |
-| `double`   | `double`    |             |
-| `int32`    | `int32_t`   |             |
-| `sint32`   | `int32_t`   | zig-zag encoded in pb |
-| `uint32`   | `uint32_t`  |             |
-| `int64`    | `int64_t`   |             |
-| `sint64`   | `int64_t`   | zig-zag encoded in pb |
-| `uint64`   | `uint64_t`  |             |
-| `int32`    | `int32_t`   |             |
-| `fixed32`  | `uint32_t`  | always encoded as 4 bytes in pb |
-| `sfixed32` | `int32_t`   | always encoded as 4 bytes in pb |
-| `fixed64`  | `uint64_t`  | always encoded as 8 bytes in pb |
-| `sfixed64` | `int64_t`   | always encoded as 8 bytes in pb |
-| `string`   | `std::string` |             |
+| `bool`     | `bool`      | varint      |
+| `float`    | `float`     | 4 bytes     |
+| `double`   | `double`    | 8 bytes     |
+| `int32`    | `int32_t`   | varint      |
+| `sint32`   | `int32_t`   | zig-zag varint |
+| `uint32`   | `uint32_t`  | varint      |
+| `int64`    | `int64_t`   | varint      |
+| `sint64`   | `int64_t`   | zig-zag varint |
+| `uint64`   | `uint64_t`  | varint      |
+| `int32`    | `int32_t`   | varint      |
+| `fixed32`  | `uint32_t`  | 4 bytes     |
+| `sfixed32` | `int32_t`   | 4 bytes     |
+| `fixed64`  | `uint64_t`  | 8 bytes     |
+| `sfixed64` | `int64_t`   | 8 bytes     |
+| `string`   | `std::string` | utf8 string |
 | `bytes`    | `std::vector< std::byte >` | base64 encoded in json            |
 
 | proto type modifier | CPP type modifier   | Notes       |
 |---------------------|-------------|-------------|
-| `optional`          | `std::optional` |             |
-| `optional`          | `std::unique_ptr` | if there is cyclic dependency between messages ( A -> B, B -> A )|
-| `repeated`          | `std::vector`  |             |
+| `optional`          | `std::optional<Message>` |             |
+| `optional`          | `std::unique_ptr<Message>` | if there is cyclic dependency between messages ( A -> B, B -> A )|
+| `repeated`          | `std::vector<Message>`  |             |
 
 See also [extensions](doc/extensions.md) for user specific types and advanced usage.
 
