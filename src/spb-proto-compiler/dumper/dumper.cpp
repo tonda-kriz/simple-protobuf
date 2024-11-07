@@ -15,23 +15,15 @@
 #include "json/dumper.h"
 #include <sstream>
 
-void dump_cpp_header( const proto_file & file, const std::filesystem::path & file_path )
+void dump_cpp_header( const proto_file & file, std::ostream & stream )
 {
-    auto stream = std::stringstream( );
-
-    dump_cpp_header( file, stream );
+    dump_cpp_definitions( file, stream );
     dump_json_header( file, stream );
     dump_pb_header( file, stream );
-
-    save_file( file_path, stream.str( ) );
 }
 
-void dump_cpp( const proto_file & file, const std::filesystem::path & header_file, const std::filesystem::path & file_path )
+void dump_cpp( const proto_file & file, const std::filesystem::path & header_file, std::ostream & file_stream )
 {
-    auto stream = std::stringstream( );
-
-    dump_json_cpp( file, header_file.string( ), stream );
-    dump_pb_cpp( file, header_file.string( ), stream );
-
-    save_file( file_path, stream.str( ) );
+    dump_json_cpp( file, header_file, file_stream );
+    dump_pb_cpp( file, header_file, file_stream );
 }

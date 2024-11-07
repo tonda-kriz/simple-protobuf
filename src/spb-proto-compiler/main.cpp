@@ -14,6 +14,7 @@
 #include <cstring>
 #include <exception>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <vector>
 
@@ -51,8 +52,11 @@ void process_file( const std::filesystem::path & input_file,
     const auto output_cpp_header = cpp_file_name_from_proto( input_file, ".pb.h" );
     const auto output_cpp        = cpp_file_name_from_proto( input_file, ".pb.cc" );
 
-    dump_cpp_header( parsed_file, output_dir / output_cpp_header );
-    dump_cpp( parsed_file, output_cpp_header, output_dir / output_cpp );
+    auto cpp_header_stream = std::ofstream( output_dir / output_cpp_header );
+    dump_cpp_header( parsed_file, cpp_header_stream );
+
+    auto cpp_stream = std::ofstream( output_dir / output_cpp );
+    dump_cpp( parsed_file, output_cpp_header, cpp_stream );
 }
 
 }// namespace
@@ -124,7 +128,6 @@ auto main( int argc, char * argv[] ) -> int
 
     try
     {
-
         for( const auto & input_file : input_files )
         {
             process_file( input_file, import_paths, output_dir );

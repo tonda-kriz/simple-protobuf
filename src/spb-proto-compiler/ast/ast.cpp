@@ -9,6 +9,7 @@
 \***************************************************************************/
 
 #include "ast.h"
+#include "dumper/header.h"
 #include "io/file.h"
 #include "proto-field.h"
 #include "proto-file.h"
@@ -71,6 +72,7 @@ struct search_state
     resolve_mode mode        = dependencies_only;
     size_t resolved_messages = 0;
     const proto_files & imports;
+    const proto_file & file;
 };
 
 /**
@@ -105,7 +107,7 @@ struct search_ctx
         switch( field.label )
         {
         case proto_field::Label::LABEL_NONE:
-            throw std::runtime_error( "Field '" + std::string( field.name ) + "' cannot be self-referencing (make it optional)" );
+            throw_parse_error( ctx.state.file, field.name, "Field '" + std::string( field.name ) + "' cannot be self-referencing (make it optional)" );
         case proto_field::Label::LABEL_OPTIONAL:
             field.label = proto_field::Label::LABEL_PTR;
             return true;
@@ -185,7 +187,7 @@ struct search_ctx
         switch( field.label )
         {
         case proto_field::Label::LABEL_NONE:
-            throw std::runtime_error( "Field '" + std::string( field.name ) + "' cannot reference parent (make it optional)" );
+            throw_parse_error( ctx.state.file, field.name, "Field '" + std::string( field.name ) + "' cannot reference parent (make it optional)" );
         case proto_field::Label::LABEL_OPTIONAL:
             field.label = proto_field::Label::LABEL_PTR;
             return true;
@@ -317,17 +319,16 @@ void resolve_message_dependencies( search_ctx & ctx )
     resolve_message_fields( ctx );
 }
 
-void dump_unresolved_messages( const proto_messages & messages, std::string_view parent )
+[[noreturn]] void dump_unresolved_message( const proto_messages & messages, const proto_file & file )
 {
     for( const auto & message : messages )
     {
         if( message.resolved == 0 )
         {
-            const auto full_name = std::string( parent ) + "." + std::string( message.name );
-            std::cout << "unresolved message " << full_name << '\n';
-            dump_unresolved_messages( message.messages, full_name );
+            throw_parse_error( file, message.name, "type dependency can't be resolved" );
         }
     }
+    throw_parse_error( file, file.content, "type dependency can't be resolved" );
 }
 
 void sort_messages( proto_messages & messages )
@@ -372,6 +373,7 @@ void resolve_messages( proto_file & file )
         .mode              = search_state::dependencies_only,
         .resolved_messages = 0,
         .imports           = file.file_imports,
+        .file              = file,
     };
 
     while( !all_types_are_resolved( file.package.messages ) )
@@ -396,8 +398,7 @@ void resolve_messages( proto_file & file )
                 continue;
             }
 
-            dump_unresolved_messages( file.package.messages, "" );
-            throw std::runtime_error( "type dependency can't be resolved" );
+            dump_unresolved_message( file.package.messages, file );
         }
     }
 

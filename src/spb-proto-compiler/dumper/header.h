@@ -20,7 +20,7 @@
  * @param file parsed proto
  * @param stream output stream
  */
-void dump_cpp_header( const proto_file & file, std::ostream & stream );
+void dump_cpp_definitions( const proto_file & file, std::ostream & stream );
 
 /**
  * Replaces all occurrences of a substring in a given string with another substring.
@@ -32,3 +32,12 @@ void dump_cpp_header( const proto_file & file, std::ostream & stream );
  * @return the modified string after replacements
  */
 auto replace( std::string_view input, std::string_view what, std::string_view with ) -> std::string;
+
+/**
+ * @brief throw parse error 'at' offset
+ *
+ * @param file parsed file
+ * @param at error offset
+ * @param message message to the user
+ */
+[[noreturn]] void throw_parse_error( const proto_file & file, std::string_view at, std::string_view message );

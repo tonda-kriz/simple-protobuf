@@ -110,6 +110,9 @@ endif()
 
 add_executable(spb-protoc-test parser.cpp 
     ../../src/spb-proto-compiler/parser/parser.cpp 
+    ../../src/spb-proto-compiler/dumper/pb/dumper.cpp
+    ../../src/spb-proto-compiler/dumper/json/dumper.cpp
+    ../../src/spb-proto-compiler/dumper/dumper.cpp
     ../../src/spb-proto-compiler/dumper/header.cpp
     ../../src/spb-proto-compiler/io/file.cpp
     ../../src/spb-proto-compiler/ast/ast.cpp

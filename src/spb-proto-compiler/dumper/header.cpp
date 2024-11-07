@@ -35,13 +35,6 @@ using namespace std::literals;
 namespace
 {
 
-[[noreturn]] void throw_parse_error( const proto_file & file, std::string_view at, std::string_view message )
-{
-    auto stream = spb::char_stream( file.content );
-    stream.skip_to( at.data( ) );
-    stream.throw_parse_error( message );
-}
-
 using cpp_includes = std::set< std::string >;
 
 void dump_comment( std::ostream & stream, const proto_comment & comment )
@@ -622,7 +615,14 @@ void dump_package_end( std::ostream & stream, const proto_file & file )
 }
 }// namespace
 
-void dump_cpp_header( const proto_file & file, std::ostream & stream )
+void throw_parse_error( const proto_file & file, std::string_view at, std::string_view message )
+{
+    auto stream = spb::char_stream( file.content );
+    stream.skip_to( at.data( ) );
+    stream.throw_parse_error( message );
+}
+
+void dump_cpp_definitions( const proto_file & file, std::ostream & stream )
 {
     auto includes = cpp_includes( );
     dump_pragma( stream, file );

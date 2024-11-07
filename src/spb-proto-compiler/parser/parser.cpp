@@ -886,7 +886,6 @@ void set_default_options( proto_file & file )
             .content = load_file( file_path ),
         };
 
-        set_default_options( result );
         parse_proto_file_content( result );
         already_parsed.insert( file.string( ) );
         result.file_imports = parse_all_imports( result.imports, already_parsed, import_paths );
@@ -903,6 +902,8 @@ void set_default_options( proto_file & file )
 
 void parse_proto_file_content( proto_file & file )
 {
+    set_default_options( file );
+
     auto stream = spb::char_stream( file.content );
 
     while( !stream.empty( ) )
