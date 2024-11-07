@@ -89,9 +89,9 @@ target_link_libraries(myapp PUBLIC spb-proto)
 package PhoneBook;
 
 message Person {
-  string name = 1;
-  int32 id = 2;  // Unique ID number for this person.
-  string email = 3;
+  optional string name = 1;
+  optional int32 id = 2;  // Unique ID number for this person.
+  optional string email = 3;
 
   enum PhoneType {
     MOBILE = 0;
@@ -101,7 +101,7 @@ message Person {
 
   message PhoneNumber {
     required string number = 1; // phone number is always required
-    PhoneType type = 2;
+    optional PhoneType type = 2;
   }
   // all registered phones
   repeated PhoneNumber phones = 4;
