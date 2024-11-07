@@ -167,7 +167,7 @@ All generated messages (and enums) are using the following API [`include/spb/jso
 auto serialize( const auto & message, spb::io::writer on_write ) -> size_t;
 
 //- return size in bytes of serialized message
-auto serialize_size( const auto & message ) noexcept -> size_t;
+auto serialize_size( const auto & message ) -> size_t;
 
 //- serialize message into string
 auto serialize( const auto & message ) -> std::string
