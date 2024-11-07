@@ -1,4 +1,8 @@
+#include "spb/json.hpp"
+#include "spb/utf8.h"
+#include <climits>
 #include <cstdint>
+#include <cstdio>
 #include <google/protobuf/util/json_util.h>
 #include <gpb-name.pb.h>
 #include <gpb-person.pb.h>
@@ -209,7 +213,7 @@ void gpb_json( const SPB & spb )
     auto spb_serialized = spb::json::serialize( spb );
 
     auto parse_options = google::protobuf::util::JsonParseOptions{ };
-    ( void ) JsonStringToMessage( spb_serialized, &gpb, parse_options );
+    REQUIRE( JsonStringToMessage( spb_serialized, &gpb, parse_options ).ok( ) );
 
     if constexpr( is_gpb_repeated< GPB > )
     {
@@ -233,19 +237,28 @@ void gpb_json( const SPB & spb )
     }
     else
     {
-        REQUIRE( spb.value == gpb.value( ) );
+        auto gpb_value = gpb.value( );
+        REQUIRE( spb.value == gpb_value );
     }
     auto json_string                         = std::string( );
     auto print_options                       = google::protobuf::util::JsonPrintOptions( );
     print_options.preserve_proto_field_names = true;
 
-    ( void ) MessageToJsonString( gpb, &json_string, print_options );
+    REQUIRE( MessageToJsonString( gpb, &json_string, print_options ).ok( ) );
     REQUIRE( spb::json::deserialize< SPB >( json_string ).value == spb.value );
 
     print_options.preserve_proto_field_names = false;
     json_string.clear( );
-    ( void ) MessageToJsonString( gpb, &json_string, print_options );
+    REQUIRE( MessageToJsonString( gpb, &json_string, print_options ).ok( ) );
     REQUIRE( spb::json::deserialize< SPB >( json_string ).value == spb.value );
+    if constexpr( std::is_integral_v< T > && sizeof( T ) < sizeof( int64_t ) )
+    {
+        auto gpb_value = gpb.value( );
+        if( sizeof( gpb_value ) < sizeof( int64_t ) )
+        {
+            REQUIRE( json_string == spb_serialized );
+        }
+    }
 }
 
 template < typename GPB, typename SPB >
@@ -348,6 +361,20 @@ using namespace std::literals;
 
 TEST_CASE( "string" )
 {
+    SUBCASE( "utf8" )
+    {
+        for( auto i = 0U; i < 0x10ffff; i++ )
+        {
+            char buffer[ 4 ];
+            auto value = std::string( buffer, spb::detail::utf8::encode_point( i, buffer ) );
+            if( value.empty( ) )
+            {
+                continue;
+            }
+
+            gpb_compatibility< Test::Scalar::gpb::ReqString >( Test::Scalar::ReqString{ .value = value } );
+        }
+    }
     SUBCASE( "required" )
     {
         gpb_compatibility< Test::Scalar::gpb::ReqString >( Test::Scalar::ReqString{ .value = "hello" } );
@@ -1333,7 +1360,7 @@ TEST_CASE( "person" )
         auto spb_json = spb::json::serialize( spb );
 
         auto parse_options = google::protobuf::util::JsonParseOptions{ };
-        ( void ) JsonStringToMessage( spb_json, &gpb, parse_options );
+        REQUIRE( JsonStringToMessage( spb_json, &gpb, parse_options ).ok( ) );
 
         REQUIRE( gpb.name( ) == spb.name );
         REQUIRE( gpb.id( ) == spb.id );
@@ -1349,12 +1376,12 @@ TEST_CASE( "person" )
         auto print_options                       = google::protobuf::util::JsonPrintOptions( );
         print_options.preserve_proto_field_names = true;
 
-        ( void ) MessageToJsonString( gpb, &json_string, print_options );
+        REQUIRE( MessageToJsonString( gpb, &json_string, print_options ).ok( ) );
         REQUIRE( spb::json::deserialize< PhoneBook::Person >( json_string ) == spb );
 
         print_options.preserve_proto_field_names = false;
         json_string.clear( );
-        ( void ) MessageToJsonString( gpb, &json_string, print_options );
+        REQUIRE( MessageToJsonString( gpb, &json_string, print_options ).ok( ) );
         REQUIRE( spb::json::deserialize< PhoneBook::Person >( json_string ) == spb );
         REQUIRE( json_string == spb_json );
     }

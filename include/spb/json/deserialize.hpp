@@ -13,6 +13,7 @@
 #include "../bits.h"
 #include "../concepts.h"
 #include "../from_chars.h"
+#include "../utf8.h"
 #include "base64.h"
 #include <algorithm>
 #include <cctype>
@@ -243,12 +244,6 @@ public:
     void skip_value( );
 };
 
-static inline auto is_escape( char c ) -> bool
-{
-    static constexpr std::string_view escape_chars = R"("\/bfnrt)";
-    return escape_chars.find( c ) != std::string_view::npos;
-}
-
 static inline void deserialize( istream & stream, spb::detail::proto_enum auto & value )
 {
     deserialize_value( stream, value );
@@ -316,26 +311,78 @@ static inline auto deserialize_string_view( istream & stream, size_t min_size, s
     return { };
 }
 
-static inline auto unescape( char c ) -> char
+static inline auto unicode_from_hex( istream & stream ) -> uint16_t
 {
+    const auto esc_size = 4U;
+    auto unicode_view   = stream.view( esc_size );
+    if( unicode_view.size( ) < esc_size )
+    {
+        throw std::runtime_error( "invalid escape sequence" );
+    }
+    auto value  = uint16_t( 0 );
+    auto result = spb_std_emu::from_chars( unicode_view.data( ), unicode_view.data( ) + esc_size, value, 16 );
+    if( result.ec != std::errc{ } ||
+        result.ptr != unicode_view.data( ) + esc_size )
+    {
+        throw std::runtime_error( "invalid escape sequence" );
+    }
+    stream.skip( esc_size );
+    return value;
+}
+
+static inline auto unescape_unicode( istream & stream, char utf8[ 4 ] ) -> uint32_t
+{
+    auto value = uint32_t( unicode_from_hex( stream ) );
+    if( value >= 0xD800 && value <= 0xDBFF &&
+        stream.view( 2 ).starts_with( "\\u"sv ) )
+    {
+        stream.skip( 2 );
+        auto low = unicode_from_hex( stream );
+
+        if( low < 0xDC00 || low > 0xDFFF )
+        {
+            throw std::invalid_argument( "invalid escape sequence" );
+        }
+        value = ( ( value - 0xD800 ) << 10 ) + ( low - 0xDC00 ) + 0x10000;
+    }
+    if( auto result = spb::detail::utf8::encode_point( value, utf8 ); result != 0 )
+    {
+        return result;
+    }
+    throw std::runtime_error( "invalid escape sequence" );
+}
+static inline auto unescape( istream & stream, char utf8[ 4 ] ) -> uint32_t
+{
+    auto c = stream.current_char( );
+    stream.consume_current_char( false );
     switch( c )
     {
     case '"':
-        return '"';
+        utf8[ 0 ] = '"';
+        return 1;
     case '\\':
-        return '\\';
+        utf8[ 0 ] = '\\';
+        return 1;
     case '/':
-        return '/';
+        utf8[ 0 ] = '/';
+        return 1;
     case 'b':
-        return '\b';
+        utf8[ 0 ] = '\b';
+        return 1;
     case 'f':
-        return '\f';
+        utf8[ 0 ] = '\f';
+        return 1;
     case 'n':
-        return '\n';
+        utf8[ 0 ] = '\n';
+        return 1;
     case 'r':
-        return '\r';
+        utf8[ 0 ] = '\r';
+        return 1;
     case 't':
-        return '\t';
+        utf8[ 0 ] = '\t';
+        return 1;
+    case 'u':
+        return unescape_unicode( stream, utf8 );
     default:
         throw std::runtime_error( "invalid escape sequence" );
     }
@@ -400,11 +447,11 @@ static inline void deserialize( istream & stream, spb::detail::proto_field_strin
             }
             return;
         }
-
-        auto c = unescape( stream.current_char( ) );
-        append_to_value( &c, 1 );
-        stream.consume_current_char( false );
+        char utf8_buffer[ 4 ];
+        auto utf8_size = unescape( stream, utf8_buffer );
+        append_to_value( utf8_buffer, utf8_size );
     }
+    spb::detail::utf8::validate( std::string_view( value.data( ), value.size( ) ) );
 }
 
 static inline void deserialize( istream & stream, spb::detail::proto_field_int_or_float auto & value )

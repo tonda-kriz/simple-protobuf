@@ -12,6 +12,7 @@
 
 #include "../bits.h"
 #include "../concepts.h"
+#include "../utf8.h"
 #include "wire-types.h"
 #include <climits>
 #include <cstddef>
@@ -22,6 +23,7 @@
 #include <memory>
 #include <spb/io/io.hpp>
 #include <stdexcept>
+#include <string_view>
 #include <type_traits>
 
 namespace spb::pb::detail
@@ -455,6 +457,7 @@ static inline void deserialize( istream & stream, spb::detail::proto_field_strin
         }
     }
     stream.read_exact( value.data( ), stream.size( ) );
+    spb::detail::utf8::validate( std::string_view( value.data( ), value.size( ) ) );
 }
 
 template < typename T >

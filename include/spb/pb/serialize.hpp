@@ -11,6 +11,7 @@
 #pragma once
 
 #include "../concepts.h"
+#include "../utf8.h"
 #include "wire-types.h"
 #include <cctype>
 #include <cstddef>
@@ -62,7 +63,7 @@ public:
     void serialize_as( uint32_t field_number, const auto & value );
 };
 
-static inline auto serialize_size( const auto & value ) noexcept -> size_t;
+static inline auto serialize_size( const auto & value ) -> size_t;
 
 using namespace std::literals;
 
@@ -174,6 +175,7 @@ static inline void serialize( ostream & stream, uint32_t field_number, const spb
 {
     if( !value.empty( ) )
     {
+        spb::detail::utf8::validate( std::string_view( value.data( ), value.size( ) ) );
         serialize_tag( stream, field_number, wire_type::length_delimited );
         serialize_varint( stream, value.size( ) );
         stream.write( value.data( ), value.size( ) );
@@ -346,7 +348,7 @@ static inline auto serialize( const auto & value, spb::io::writer on_write ) -> 
     return stream.size( );
 }
 
-static inline auto serialize_size( const auto & value ) noexcept -> size_t
+static inline auto serialize_size( const auto & value ) -> size_t
 {
     auto stream = ostream( nullptr );
 

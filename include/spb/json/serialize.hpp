@@ -12,6 +12,8 @@
 
 #include "../concepts.h"
 #include "base64.h"
+#include "spb/json/deserialize.hpp"
+#include "spb/utf8.h"
 #include <algorithm>
 #include <array>
 #include <cctype>
@@ -56,13 +58,34 @@ public:
     {
         if( on_write )
         {
-            on_write( &c, 1 );
+            on_write( &c, sizeof( c ) );
         }
 
-        bytes_written += 1;
+        bytes_written += sizeof( c );
     }
 
-    void write( std::string_view str ) noexcept
+    void write_unicode( uint32_t codepoint )
+    {
+        if( codepoint <= 0xffff )
+        {
+            char buffer[ 8 ] = { };
+            auto size        = snprintf( buffer, sizeof( buffer ), "\\u%04x", codepoint );
+            return write( std::string_view( buffer, size ) );
+        }
+        if( codepoint <= 0x10FFFF )
+        {
+            codepoint -= 0x10000;
+
+            auto high         = static_cast< uint16_t >( ( codepoint >> 10 ) + 0xD800 );
+            auto low          = static_cast< uint16_t >( ( codepoint & 0x3FF ) + 0xDC00 );
+            char buffer[ 16 ] = { };
+            auto size         = snprintf( buffer, sizeof( buffer ), "\\u%04x\\u%04x", high, low );
+            return write( std::string_view( buffer, size ) );
+        }
+        throw std::invalid_argument( "invalid utf8" );
+    }
+
+    void write( std::string_view str )
     {
         if( on_write )
         {
@@ -72,13 +95,30 @@ public:
         bytes_written += str.size( );
     }
 
-    void write_escaped( std::string_view str ) noexcept
+    void write_escaped( std::string_view str )
     {
-        if( has_escape_chars( str ) )
+        if( !has_escape_chars( str ) )
         {
-            using namespace std::literals;
+            write( str );
+            return;
+        }
 
-            for( auto c : str )
+        using namespace std::literals;
+        uint32_t codepoint = 0;
+        uint32_t state     = spb::detail::utf8::ok;
+        bool decoding_utf8 = false;
+        for( uint8_t c : str )
+        {
+            if( decoding_utf8 )
+            {
+                if( spb::detail::utf8::decode_point( &state, &codepoint, c ) == spb::detail::utf8::ok )
+                {
+                    write_unicode( codepoint );
+                    decoding_utf8 = false;
+                }
+                continue;
+            }
+            if( is_escape( c ) )
             {
                 switch( c )
                 {
@@ -87,9 +127,6 @@ public:
                     break;
                 case '\\':
                     write( R"(\\)"sv );
-                    break;
-                case '/':
-                    write( R"(\/)"sv );
                     break;
                 case '\b':
                     write( R"(\b)"sv );
@@ -107,13 +144,22 @@ public:
                     write( R"(\t)"sv );
                     break;
                 default:
-                    write( c );
+                    decoding_utf8 = true;
+                    if( spb::detail::utf8::decode_point( &state, &codepoint, c ) == spb::detail::utf8::ok )
+                    {
+                        write_unicode( codepoint );
+                        decoding_utf8 = false;
+                    }
                 }
             }
+            else
+            {
+                write( c );
+            }
         }
-        else
+        if( state != spb::detail::utf8::ok )
         {
-            write( str );
+            throw std::runtime_error( "invalid utf8" );
         }
     }
 
@@ -126,9 +172,10 @@ public:
     }
 
 private:
-    static auto is_escape( char c ) -> bool
+    static auto is_escape( uint8_t c ) -> bool
     {
-        return c == '\\' || c == '"' || c == '/' || c == '\b' || c == '\f' || c == '\n' || c == '\r' || c == '\t';
+        static constexpr std::string_view escape_chars = "\\\"\b\f\n\r\t<>";
+        return c <= 0x1f || c >= 0x7f || escape_chars.find( c ) != std::string_view::npos;
     }
 
     static auto has_escape_chars( std::string_view str ) -> bool
