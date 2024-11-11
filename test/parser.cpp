@@ -168,6 +168,42 @@ TEST_CASE( "protoc-parser" )
                 })"sv,
               0 },
             { R"(message Message{
+                repeated bool b = 1;
+                repeated float f = 2;
+                repeated double d = 3;
+                repeated int32 i32 = 4;
+                repeated sint32 si32 = 5;
+                repeated uint32 u32 = 6;
+                repeated int64 i64 = 7;
+                repeated sint64 si64 = 8;
+                repeated uint64 u64 = 9;
+                repeated fixed32 f32 = 10;
+                repeated sfixed32 sf32 = 11;
+                repeated fixed64 f64 = 12;
+                repeated sfixed64 sf64 = 13;
+                repeated string s = 14;
+                repeated bytes by = 15;
+                })"sv,
+              0 },
+            { R"(message Message{
+                repeated bool b = 1 [packed = true];
+                repeated float f = 2 [packed = true];
+                repeated double d = 3 [packed = true];
+                repeated int32 i32 = 4 [packed = true];
+                repeated sint32 si32 = 5 [packed = true];
+                repeated uint32 u32 = 6 [packed = true];
+                repeated int64 i64 = 7 [packed = true];
+                repeated sint64 si64 = 8 [packed = true];
+                repeated uint64 u64 = 9 [packed = true];
+                repeated fixed32 f32 = 10 [packed = true];
+                repeated sfixed32 sf32 = 11 [packed = true];
+                repeated fixed64 f64 = 12 [packed = true];
+                repeated sfixed64 sf64 = 13 [packed = true];
+                repeated string s = 14 [packed = true];
+                repeated bytes by = 15 [packed = true];
+                })"sv,
+              0 },
+            { R"(message Message{
                 bool b = 1 [default = true];
                 float f = 2 [default = 0.4];
                 double d = 3 [default = 0.];
@@ -234,12 +270,30 @@ TEST_CASE( "protoc-parser" )
                 message ReqUint8_1{
                     //[[ field.type = "uint8:1" ]]
                     required uint32 value = 1;
+                    //[[ field.type = "int8:1" ]]
+                    required sint32 value2 = 2;
+                    //[[ field.type = "int8:1" ]]
+                    required sint64 value3 = 3;
+                    //[[ field.type = "uint8:1" ]]
+                    required fixed32 value4 = 4;
+                    //[[ field.type = "int8:1" ]]
+                    required sfixed32 value5 = 5;
+                    //[[ field.type = "int8:1" ]]
+                    required sfixed64 value6 = 6;
+                    //[[ field.type = "uint8:1" ]]
+                    required fixed64 value7 = 7;
                 })"sv,
                   0 },
                 { R"(syntax = "proto2";
                 message OptUint8_1{
                     //[[ field.type = "uint8:1" ]]
                     optional uint32 value = 1;
+                })",
+                  3 },
+                { R"(syntax = "proto2";
+                message OptUint8_1{
+                    //[[ field.type = "uint8:1" ]]
+                    required bool value = 1;
                 })",
                   3 },
 
