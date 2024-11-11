@@ -296,6 +296,18 @@ TEST_CASE( "protoc-parser" )
                     required bool value = 1;
                 })",
                   3 },
+                { R"(syntax = "proto2";
+                message OptUint8_1{
+                    //[[ field.type = "uint8:1" ]]
+                    required float value = 1;
+                })",
+                  3 },
+                { R"(syntax = "proto2";
+                message OptUint8_1{
+                    //[[ field.type = "uint8:1" ]]
+                    required double value = 1;
+                })",
+                  3 },
 
             };
             test_files( tests );
@@ -462,6 +474,49 @@ TEST_CASE( "protoc-parser" )
                 }
             })",
               0 },
+
+        };
+        test_files( tests );
+    }
+    SUBCASE( "map" )
+    {
+        constexpr proto_file_test tests[] = {
+            { R"(package UnitTest;
+            message A {
+                map<int32, int32> m_int32 = 1;
+                map<int64, int64> m_int64 = 2;
+                map<uint32, uint32> m_uint32 = 3;
+                map<uint64, uint64> m_uint64 = 4;
+                map<sint32, sint32> m_sint32 = 5;
+                map<sint64, sint64> m_sint64 = 6;
+                map<fixed32, fixed32> m_fixed32 = 7;
+                map<fixed64, fixed64> m_fixed64 = 8;
+                map<sfixed32, sfixed32> m_sfixed32 = 9;
+                map<sfixed64, sfixed64> m_sfixed64 = 10;
+                map<bool, bool> m_bool = 11;
+                map<string, bool> m_string = 12;
+            })",
+              0 },
+            { R"(package UnitTest;
+            message A {
+                map<float, int32> m_int32 = 1;
+            })",
+              3 },
+            { R"(package UnitTest;
+            message A {
+                map<double, int32> m_int32 = 1;
+            })",
+              3 },
+            { R"(package UnitTest;
+            message A {
+                map<bytes, int32> m_int32 = 1;
+            })",
+              3 },
+            { R"(package UnitTest;
+            message A {
+                map<X, int32> m_int32 = 1;
+            })",
+              3 },
 
         };
         test_files( tests );

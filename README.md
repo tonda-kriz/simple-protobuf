@@ -204,7 +204,6 @@ API is prefixed with `spb::json::` for **json** and `spb::pb::` for **protobuf**
 | `int64`    | `int64_t`   | varint      |
 | `sint64`   | `int64_t`   | zig-zag varint |
 | `uint64`   | `uint64_t`  | varint      |
-| `int32`    | `int32_t`   | varint      |
 | `fixed32`  | `uint32_t`  | 4 bytes     |
 | `sfixed32` | `int32_t`   | 4 bytes     |
 | `fixed64`  | `uint64_t`  | 8 bytes     |
