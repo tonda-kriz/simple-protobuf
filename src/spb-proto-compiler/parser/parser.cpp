@@ -10,6 +10,7 @@
 
 #include "parser.h"
 #include "ast/proto-file.h"
+#include "dumper/header.h"
 #include "options.h"
 #include <array>
 #include <ast/ast.h>
@@ -31,17 +32,25 @@ namespace
 {
 
 using parsed_files = std::set< std::string >;
+
 [[nodiscard]] auto parse_proto_file( const std::filesystem::path & file, parsed_files &, std::span< const std::filesystem::path > import_paths ) -> proto_file;
 
-[[nodiscard]] auto parse_all_imports( const std::vector< proto_import > & imports, parsed_files & already_parsed, std::span< const std::filesystem::path > import_paths ) -> proto_files
+[[nodiscard]] auto parse_all_imports( const proto_file & file, parsed_files & already_parsed, std::span< const std::filesystem::path > import_paths ) -> proto_files
 {
     proto_files result;
-    result.reserve( imports.size( ) );
-    for( const auto & import : imports )
+    result.reserve( file.imports.size( ) );
+    for( const auto & import : file.imports )
     {
         if( !already_parsed.contains( std::string( import.file_name ) ) )
         {
-            result.emplace_back( parse_proto_file( import.file_name, already_parsed, import_paths ) );
+            try
+            {
+                result.emplace_back( parse_proto_file( import.file_name, already_parsed, import_paths ) );
+            }
+            catch( const std::runtime_error & error )
+            {
+                throw_parse_error( file, import.file_name, error.what( ) );
+            }
         }
     }
     return result;
@@ -49,6 +58,11 @@ using parsed_files = std::set< std::string >;
 
 auto find_file_in_paths( const std::filesystem::path & file_name, std::span< const std::filesystem::path > import_paths ) -> std::filesystem::path
 {
+    if( std::filesystem::exists( file_name ) )
+    {
+        return file_name;
+    }
+
     for( const auto & import_path : import_paths )
     {
         auto file_path = import_path / file_name;
@@ -57,7 +71,7 @@ auto find_file_in_paths( const std::filesystem::path & file_name, std::span< con
             return file_path;
         }
     }
-    throw std::runtime_error( std::string( " " ) + strerror( ENOENT ) );
+    throw std::runtime_error( strerror( ENOENT ) );
 }
 
 void parse_or_throw( bool parsed, spb::char_stream & stream, std::string_view message )
@@ -438,7 +452,7 @@ void parse_option_body( spb::char_stream & stream, proto_options & options )
     options[ option_name ] = parse_constant( stream );
 }
 
-void parse_option_from_comment( proto_options & options, std::string_view comment )
+void parse_option_from_comment( const spb::char_stream & stream, proto_options & options, std::string_view comment )
 {
     for( ;; )
     {
@@ -452,25 +466,19 @@ void parse_option_from_comment( proto_options & options, std::string_view commen
         {
             return;
         }
-        try
-        {
-            auto option = comment.substr( start + 2, end - start - 2 );
-            comment.remove_prefix( end + 2 );
-            auto stream = spb::char_stream( option );
-            parse_option_body( stream, options );
-        }
-        catch( const std::exception & e )
-        {
-            fprintf( stderr, "warning: %s\n", e.what( ) );
-        }
+        auto option = comment.substr( start + 2, end - start - 2 );
+        comment.remove_prefix( end + 2 );
+        auto option_stream = stream;
+        option_stream.skip_to( option.data( ) );
+        parse_option_body( option_stream, options );
     }
 }
 
-void parse_options_from_comments( proto_options & options, const proto_comment & comment )
+void parse_options_from_comments( const spb::char_stream & stream, proto_options & options, const proto_comment & comment )
 {
     for( auto & c : comment.comments )
     {
-        parse_option_from_comment( options, c );
+        parse_option_from_comment( stream, options, c );
     }
 }
 
@@ -483,7 +491,7 @@ void parse_options_from_comments( proto_options & options, const proto_comment &
     }
     parse_option_body( stream, options );
     consume_statement_end( stream, comment );
-    parse_options_from_comments( options, comment );
+    parse_options_from_comments( stream, options, comment );
     return true;
 }
 
@@ -604,7 +612,7 @@ void parse_enum_field( spb::char_stream & stream, proto_enum & new_enum, proto_c
     };
     consume_or_fail( stream, '{' );
 
-    parse_options_from_comments( new_enum.options, new_enum.comment );
+    parse_options_from_comments( stream, new_enum.options, new_enum.comment );
 
     while( !stream.consume( '}' ) )
     {
@@ -668,7 +676,7 @@ void parse_field( spb::char_stream & stream, proto_fields & fields, proto_commen
     new_field.options = parse_field_options( stream );
     new_field.comment = std::move( comment );
     consume_statement_end( stream, new_field.comment );
-    parse_options_from_comments( new_field.options, new_field.comment );
+    parse_options_from_comments( stream, new_field.options, new_field.comment );
     fields.push_back( new_field );
 }
 
@@ -776,7 +784,7 @@ void parse_message_body( spb::char_stream & stream, proto_messages & messages, p
     } };
 
     consume_or_fail( stream, '{' );
-    parse_options_from_comments( new_message.options, new_message.comment );
+    parse_options_from_comments( stream, new_message.options, new_message.comment );
 
     while( !stream.consume( '}' ) )
     {
@@ -888,7 +896,7 @@ void set_default_options( proto_file & file )
 
         parse_proto_file_content( result );
         already_parsed.insert( file.string( ) );
-        result.file_imports = parse_all_imports( result.imports, already_parsed, import_paths );
+        result.file_imports = parse_all_imports( result, already_parsed, import_paths );
         resolve_messages( result );
         return result;
     }
@@ -909,7 +917,7 @@ void parse_proto_file_content( proto_file & file )
     while( !stream.empty( ) )
     {
         auto comment = parse_comment( stream );
-        parse_options_from_comments( file.options, comment );
+        parse_options_from_comments( stream, file.options, comment );
         parse_top_level( stream, file, std::move( comment ) );
     }
 }

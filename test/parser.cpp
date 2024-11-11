@@ -26,7 +26,7 @@ void test_proto_file( const proto_file_test & test )
     REQUIRE_NOTHROW( save_file( "tmp_test.proto", test.file_content ) );
     try
     {
-        auto file   = parse_proto_file( "tmp_test.proto", { { "." } } );
+        auto file   = parse_proto_file( "tmp_test.proto", { } );
         auto stream = std::stringstream( );
         dump_cpp_header( file, stream );
         dump_cpp( file, "header.pb.h", stream );
@@ -71,7 +71,7 @@ TEST_CASE( "protoc-parser" )
             { R"(package UnitTest;
             import "empty_not_found.proto";
             )",
-              0 },// TODO: fix proper line error for not found imports
+              2 },
             { R"(package UnitTest;
             importX "message.proto";
             )",

@@ -1,6 +1,6 @@
 /***************************************************************************\
 * Name        : input stream                                                *
-* Description : char stream used for parsing json and proto files           *
+* Description : char stream used for parsing proto files                    *
 * Author      : antonin.kriz@gmail.com                                      *
 * ------------------------------------------------------------------------- *
 * This is free software; you can redistribute it and/or modify it under the *
@@ -140,7 +140,7 @@ public:
 
     void skip_to( const char * ptr ) noexcept
     {
-        assert( ptr >= begin( ) && ptr <= end( ) );
+        assert( ptr >= p_start && ptr <= end( ) );
         p_begin = ptr;
         update_current( true );
     }
