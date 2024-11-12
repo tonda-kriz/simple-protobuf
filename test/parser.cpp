@@ -112,7 +112,7 @@ TEST_CASE( "protoc-parser" )
 
         test_files( tests2, "tmp_test.proto", { { "level2", "level1" } } );
         test_files( tests2, "tmp_test.proto", { { std::filesystem::current_path( ) / "level1" } } );
-        test_files( tests2, std::filesystem::current_path( ) / "tmp_test.proto",
+        test_files( tests2, ( std::filesystem::current_path( ) / "tmp_test.proto" ).string( ),
                     { { "level2", "level1" } } );
 
         REQUIRE_NOTHROW( std::filesystem::remove( "empty.proto" ) );
