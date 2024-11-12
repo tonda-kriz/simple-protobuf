@@ -29,4 +29,5 @@ void dump_pb_header( const proto_file & file, std::ostream & stream );
  * @param header_file generated C++ header file (ex: my.pb.h)
  * @param stream output stream
  */
-void dump_pb_cpp( const proto_file & file, const std::filesystem::path & header_file, std::ostream & stream );
+void dump_pb_cpp( const proto_file & file, const std::filesystem::path & header_file,
+                  std::ostream & stream );

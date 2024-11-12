@@ -82,7 +82,8 @@ static inline void deserialize( auto & message, spb::io::reader reader )
  */
 static inline void deserialize( auto & message, std::string_view protobuf )
 {
-    auto reader = [ ptr = protobuf.data( ), end = protobuf.data( ) + protobuf.size( ) ]( void * data, size_t size ) mutable -> size_t
+    auto reader = [ ptr = protobuf.data( ), end = protobuf.data( ) + protobuf.size( ) ](
+                      void * data, size_t size ) mutable -> size_t
     {
         size_t bytes_left = end - ptr;
 

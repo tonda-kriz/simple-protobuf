@@ -113,7 +113,8 @@ auto main( int argc, char * argv[] ) -> int
 
     try
     {
-        auto address_book = spb::json::deserialize< tutorial::AddressBook >( load_file( argv[ 1 ] ) );
+        auto address_book =
+            spb::json::deserialize< tutorial::AddressBook >( load_file( argv[ 1 ] ) );
 
         // Add an address.
         PromptForAddress( address_book.people.emplace_back( ) );

@@ -46,7 +46,8 @@ namespace
                                 { return type == message.name; } );
 }
 
-[[nodiscard]] auto is_resolved_sub_message( std::string_view type, const proto_messages & messages ) -> bool
+[[nodiscard]] auto is_resolved_sub_message( std::string_view type,
+                                            const proto_messages & messages ) -> bool
 {
     return std::ranges::any_of( messages, [ = ]( const auto & message ) -> bool
                                 { return type == message.name && message.resolved > 0; } );
@@ -79,9 +80,9 @@ struct search_state
  * @brief search ctx to hold relation 'message -> parent_message'
  *        the relation is not stored in proto_message because its not needed until now
  *        and the messages get sorted (moved) later so the parent pointers will be invalid anyways
- *        the parent relation is used for type dependency check and for proper order of structs definition
- *        in the generated *.pb.h header file, because C++ needs proper order of type dependencies.
- *        The proper order is defined by the value of `.resolved` for every message
+ *        the parent relation is used for type dependency check and for proper order of structs
+ * definition in the generated *.pb.h header file, because C++ needs proper order of type
+ * dependencies. The proper order is defined by the value of `.resolved` for every message
  *
  */
 struct search_ctx
@@ -107,7 +108,9 @@ struct search_ctx
         switch( field.label )
         {
         case proto_field::Label::LABEL_NONE:
-            throw_parse_error( ctx.state.file, field.name, "Field '" + std::string( field.name ) + "' cannot be self-referencing (make it optional)" );
+            throw_parse_error( ctx.state.file, field.name,
+                               "Field '" + std::string( field.name ) +
+                                   "' cannot be self-referencing (make it optional)" );
         case proto_field::Label::LABEL_OPTIONAL:
             field.label = proto_field::Label::LABEL_PTR;
             return true;
@@ -187,7 +190,9 @@ struct search_ctx
         switch( field.label )
         {
         case proto_field::Label::LABEL_NONE:
-            throw_parse_error( ctx.state.file, field.name, "Field '" + std::string( field.name ) + "' cannot reference parent (make it optional)" );
+            throw_parse_error( ctx.state.file, field.name,
+                               "Field '" + std::string( field.name ) +
+                                   "' cannot reference parent (make it optional)" );
         case proto_field::Label::LABEL_OPTIONAL:
             field.label = proto_field::Label::LABEL_PTR;
             return true;
@@ -207,8 +212,7 @@ struct search_ctx
     }
 
     const auto & message = ctx.p_parent->message;
-    if( is_enum( type, message.enums ) ||
-        is_resolved_sub_message( type, message.messages ) ||
+    if( is_enum( type, message.enums ) || is_resolved_sub_message( type, message.messages ) ||
         is_sub_oneof( type, message.oneofs ) )
     {
         return true;
@@ -219,8 +223,8 @@ struct search_ctx
 
 [[nodiscard]] auto all_types_are_resolved( const proto_messages & messages ) -> bool
 {
-    return std::ranges::all_of( messages, []( const auto & message )
-                                { return message.resolved > 0; } );
+    return std::ranges::all_of( messages,
+                                []( const auto & message ) { return message.resolved > 0; } );
 }
 
 void mark_message_as_resolved( search_ctx & ctx )
@@ -243,14 +247,11 @@ void resolve_message_fields( search_ctx & ctx )
         //- TODO: check full type name
         const auto type = field.type.substr( 0, field.type.find( '.' ) );
 
-        if( is_scalar_type( field.type ) ||
-            is_self( field, ctx ) ||
+        if( is_scalar_type( field.type ) || is_self( field, ctx ) ||
             is_enum( field.type, ctx.message.enums ) ||
             is_sub_message( type, ctx.message.messages ) ||
-            is_sub_oneof( type, ctx.message.oneofs ) ||
-            is_parent( field, ctx ) ||
-            is_defined_in_parents( type, ctx ) ||
-            is_imported( type, ctx.state.imports ) ||
+            is_sub_oneof( type, ctx.message.oneofs ) || is_parent( field, ctx ) ||
+            is_defined_in_parents( type, ctx ) || is_imported( type, ctx.state.imports ) ||
             is_forwarded( field, ctx ) )
         {
             continue;
@@ -264,10 +265,8 @@ void resolve_message_fields( search_ctx & ctx )
     {
         //- check only the first type (before .) and leave the rest for the C++ compiler to check
         const auto type = map.value_type.substr( 0, map.value_type.find( '.' ) );
-        if( !is_scalar_type( map.value_type ) &&
-            !is_enum( map.value_type, ctx.message.enums ) &&
-            !is_sub_message( type, ctx.message.messages ) &&
-            !is_defined_in_parents( type, ctx ) &&
+        if( !is_scalar_type( map.value_type ) && !is_enum( map.value_type, ctx.message.enums ) &&
+            !is_sub_message( type, ctx.message.messages ) && !is_defined_in_parents( type, ctx ) &&
             !is_imported( type, ctx.state.imports ) )
         {
             // std::cout << "map" << map.name << " type: " << type << " unknown\n";
@@ -279,13 +278,12 @@ void resolve_message_fields( search_ctx & ctx )
     {
         for( const auto & field : oneof.fields )
         {
-            //- check only the first type (before .) and leave the rest for the C++ compiler to check
+            //- check only the first type (before .) and leave the rest for the C++ compiler to
+            //check
             const auto type = field.type.substr( 0, field.type.find( '.' ) );
-            if( !is_scalar_type( field.type ) &&
-                !is_enum( field.type, ctx.message.enums ) &&
+            if( !is_scalar_type( field.type ) && !is_enum( field.type, ctx.message.enums ) &&
                 !is_sub_message( type, ctx.message.messages ) &&
-                !is_defined_in_parents( type, ctx ) &&
-                !is_imported( type, ctx.state.imports ) )
+                !is_defined_in_parents( type, ctx ) && !is_imported( type, ctx.state.imports ) )
             {
                 // std::cout << "oneof " << oneof.name << " type: " << type << " unknown\n";
                 return;
@@ -319,7 +317,8 @@ void resolve_message_dependencies( search_ctx & ctx )
     resolve_message_fields( ctx );
 }
 
-[[noreturn]] void dump_unresolved_message( const proto_messages & messages, const proto_file & file )
+[[noreturn]] void dump_unresolved_message( const proto_messages & messages,
+                                           const proto_file & file )
 {
     for( const auto & message : messages )
     {
@@ -333,8 +332,8 @@ void resolve_message_dependencies( search_ctx & ctx )
 
 void sort_messages( proto_messages & messages )
 {
-    std::sort( messages.begin( ), messages.end( ), []( const auto & a, const auto & b )
-               { return a.resolved < b.resolved; } );
+    std::sort( messages.begin( ), messages.end( ),
+               []( const auto & a, const auto & b ) { return a.resolved < b.resolved; } );
 
     for( auto & message : messages )
     {

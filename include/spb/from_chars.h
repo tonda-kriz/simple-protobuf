@@ -32,7 +32,8 @@ struct from_chars_result
     std::errc ec;
 };
 
-static inline auto from_chars( const char * first, const char * last, std::integral auto & number, int base = 10 ) -> from_chars_result
+static inline auto from_chars( const char * first, const char * last, std::integral auto & number,
+                               int base = 10 ) -> from_chars_result
 {
     assert( first <= last );
     char buffer[ 32 ];
@@ -52,8 +53,8 @@ static inline auto from_chars( const char * first, const char * last, std::integ
         if constexpr( sizeof( number ) < 4 )
         {
             auto tmp = strtol( buffer, ( char ** ) &end, base );
-            if( tmp <= std::numeric_limits< T >::max( ) &&
-                tmp >= std::numeric_limits< T >::min( ) ) [[likely]]
+            if( tmp <= std::numeric_limits< T >::max( ) && tmp >= std::numeric_limits< T >::min( ) )
+                [[likely]]
             {
                 result = T( tmp );
             }
@@ -107,7 +108,8 @@ static inline auto from_chars( const char * first, const char * last, std::integ
     return { end, std::errc( ) };
 }
 
-static inline auto from_chars( const char * first, const char * last, std::floating_point auto & number ) -> from_chars_result
+static inline auto from_chars( const char * first, const char * last,
+                               std::floating_point auto & number ) -> from_chars_result
 {
     assert( first <= last );
     char buffer[ 256 ];

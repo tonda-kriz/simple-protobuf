@@ -82,7 +82,8 @@ static inline void deserialize( auto & result, spb::io::reader on_read )
  */
 static inline void deserialize( auto & message, std::string_view json )
 {
-    auto reader = [ ptr = json.data( ), end = json.data( ) + json.size( ) ]( void * data, size_t size ) mutable -> size_t
+    auto reader = [ ptr = json.data( ), end = json.data( ) + json.size( ) ](
+                      void * data, size_t size ) mutable -> size_t
     {
         size_t bytes_left = end - ptr;
 

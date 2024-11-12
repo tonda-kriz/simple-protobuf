@@ -160,7 +160,8 @@ public:
     template < typename T >
     [[nodiscard]] auto deserialize_bitfield( uint32_t bits ) -> T;
     [[nodiscard]] auto deserialize_int( ) -> int32_t;
-    [[nodiscard]] auto deserialize_string_or_int( size_t min_size, size_t max_size ) -> std::variant< std::string_view, int32_t >;
+    [[nodiscard]] auto deserialize_string_or_int( size_t min_size, size_t max_size )
+        -> std::variant< std::string_view, int32_t >;
     [[nodiscard]] auto deserialize_key( size_t min_size, size_t max_size ) -> std::string_view;
     [[nodiscard]] auto current_key( ) const -> std::string_view;
 
@@ -209,8 +210,7 @@ public:
             return false;
         }
         auto token_view = reader.view( token.size( ) + 1 ).substr( 0, token.size( ) + 1 );
-        if( token_view.size( ) == token.size( ) ||
-            isspace( token_view.back( ) ) ||
+        if( token_view.size( ) == token.size( ) || isspace( token_view.back( ) ) ||
             ( !isalnum( token_view.back( ) ) && token_view.back( ) != '_' ) )
         {
             reader.skip( token.size( ) );
@@ -276,7 +276,8 @@ static inline void ignore_string( istream & stream )
     }
 }
 
-static inline auto deserialize_string_view( istream & stream, size_t min_size, size_t max_size ) -> std::string_view
+static inline auto deserialize_string_view( istream & stream, size_t min_size,
+                                            size_t max_size ) -> std::string_view
 {
     if( stream.current_char( ) != '"' )
     {
@@ -295,8 +296,7 @@ static inline auto deserialize_string_view( istream & stream, size_t min_size, s
         {
             stream.skip( length );
 
-            if( ( length - 2 ) >= min_size &&
-                ( length - 2 ) <= max_size )
+            if( ( length - 2 ) >= min_size && ( length - 2 ) <= max_size )
             {
                 return view.substr( 1, length - 2 );
             }
@@ -319,10 +319,10 @@ static inline auto unicode_from_hex( istream & stream ) -> uint16_t
     {
         throw std::runtime_error( "invalid escape sequence" );
     }
-    auto value  = uint16_t( 0 );
-    auto result = spb_std_emu::from_chars( unicode_view.data( ), unicode_view.data( ) + esc_size, value, 16 );
-    if( result.ec != std::errc{ } ||
-        result.ptr != unicode_view.data( ) + esc_size )
+    auto value = uint16_t( 0 );
+    auto result =
+        spb_std_emu::from_chars( unicode_view.data( ), unicode_view.data( ) + esc_size, value, 16 );
+    if( result.ec != std::errc{ } || result.ptr != unicode_view.data( ) + esc_size )
     {
         throw std::runtime_error( "invalid escape sequence" );
     }
@@ -333,8 +333,7 @@ static inline auto unicode_from_hex( istream & stream ) -> uint16_t
 static inline auto unescape_unicode( istream & stream, char utf8[ 4 ] ) -> uint32_t
 {
     auto value = uint32_t( unicode_from_hex( stream ) );
-    if( value >= 0xD800 && value <= 0xDBFF &&
-        stream.view( 2 ).starts_with( "\\u"sv ) )
+    if( value >= 0xD800 && value <= 0xDBFF && stream.view( 2 ).starts_with( "\\u"sv ) )
     {
         stream.skip( 2 );
         auto low = unicode_from_hex( stream );
@@ -454,7 +453,8 @@ static inline void deserialize( istream & stream, spb::detail::proto_field_strin
     spb::detail::utf8::validate( std::string_view( value.data( ), value.size( ) ) );
 }
 
-static inline void deserialize( istream & stream, spb::detail::proto_field_int_or_float auto & value )
+static inline void deserialize( istream & stream,
+                                spb::detail::proto_field_int_or_float auto & value )
 {
     if( stream.current_char( ) == '"' ) [[unlikely]]
     {
@@ -558,7 +558,8 @@ void deserialize_map_key( istream & stream, T & map_key )
         return deserialize( stream, map_key );
     }
     auto str_key_map = deserialize_string_view( stream, 1, UINT32_MAX );
-    auto reader      = [ ptr = str_key_map.data( ), end = str_key_map.data( ) + str_key_map.size( ) ]( void * data, size_t size ) mutable -> size_t
+    auto reader = [ ptr = str_key_map.data( ), end = str_key_map.data( ) + str_key_map.size( ) ](
+                      void * data, size_t size ) mutable -> size_t
     {
         size_t bytes_left = end - ptr;
         size              = std::min( size, bytes_left );
@@ -621,7 +622,9 @@ static inline void deserialize( istream & stream, spb::detail::proto_label_optio
     }
     else
     {
-        deserialize( stream, p_value.emplace( typename std::decay_t< decltype( p_value ) >::value_type( ) ) );
+        deserialize(
+            stream,
+            p_value.emplace( typename std::decay_t< decltype( p_value ) >::value_type( ) ) );
     }
 }
 
@@ -813,7 +816,8 @@ inline auto istream::deserialize_bitfield( uint32_t bits ) -> T
     return detail::deserialize_bitfield< T >( *this, bits );
 }
 
-inline auto istream::deserialize_string_or_int( size_t min_size, size_t max_size ) -> std::variant< std::string_view, int32_t >
+inline auto istream::deserialize_string_or_int( size_t min_size, size_t max_size )
+    -> std::variant< std::string_view, int32_t >
 {
     if( current_char( ) == '"' )
     {

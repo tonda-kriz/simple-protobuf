@@ -21,7 +21,8 @@ namespace spb::json::detail
 template < typename ostream >
 static inline void base64_encode( ostream & output, std::span< const std::byte > input )
 {
-    static constexpr char encode_table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    static constexpr char encode_table[] =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
     const auto * p_char = reinterpret_cast< const uint8_t * >( input.data( ) );
     //
@@ -62,23 +63,32 @@ static inline void base64_encode( ostream & output, std::span< const std::byte >
 }
 
 template < typename istream >
-static inline void base64_decode_string( spb::detail::proto_field_bytes auto & output, istream & stream )
+static inline void base64_decode_string( spb::detail::proto_field_bytes auto & output,
+                                         istream & stream )
 {
     static constexpr uint8_t decode_table[ 256 ] = {
-        128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
-        128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 62, 128, 128, 128, 63, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 128, 128, 128, 128, 128, 128,
-        128, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 128, 128, 128, 128, 128,
-        128, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 128, 128, 128, 128, 128,
-        128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
-        128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
-        128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
-        128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128
+        128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
+        128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
+        128, 128, 128, 128, 128, 128, 128, 62,  128, 128, 128, 63,  52,  53,  54,  55,  56,  57,
+        58,  59,  60,  61,  128, 128, 128, 128, 128, 128, 128, 0,   1,   2,   3,   4,   5,   6,
+        7,   8,   9,   10,  11,  12,  13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23,  24,
+        25,  128, 128, 128, 128, 128, 128, 26,  27,  28,  29,  30,  31,  32,  33,  34,  35,  36,
+        37,  38,  39,  40,  41,  42,  43,  44,  45,  46,  47,  48,  49,  50,  51,  128, 128, 128,
+        128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
+        128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
+        128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
+        128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
+        128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
+        128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
+        128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
+        128, 128, 128, 128
     };
 
     /*static constexpr uint8_t decode_table2[] = {
         62, 128, 128, 128, 63, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 128, 128, 128, 128, 128, 128,
-        128, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 128, 128, 128, 128, 128,
-        128, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51
+        128, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23,
+    24, 25, 128, 128, 128, 128, 128, 128, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39,
+    40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51
     };*/
 
     if constexpr( spb::detail::proto_field_bytes_resizable< decltype( output ) > )
@@ -102,8 +112,7 @@ static inline void base64_decode_string( spb::detail::proto_field_bytes auto & o
         auto view      = stream.view( UINT32_MAX );
         auto length    = view.find( '"' );
         auto end_found = length < view.npos;
-        if( ( end_found && length % 4 != 0 ) ||
-            view.size( ) <= 4 ) [[unlikely]]
+        if( ( end_found && length % 4 != 0 ) || view.size( ) <= 4 ) [[unlikely]]
         {
             throw std::runtime_error( "invalid base64" );
         }
@@ -128,9 +137,10 @@ static inline void base64_decode_string( spb::detail::proto_field_bytes auto & o
                 }
             }
 
-            auto * p_out       = output.data( ) + out_index;
-            const auto * p_in  = reinterpret_cast< const uint8_t * >( view.data( ) );
-            const auto * p_end = p_in + aligned_length - 4;//- exclude the last 4 chars (possible padding)
+            auto * p_out      = output.data( ) + out_index;
+            const auto * p_in = reinterpret_cast< const uint8_t * >( view.data( ) );
+            const auto * p_end =
+                p_in + aligned_length - 4;//- exclude the last 4 chars (possible padding)
 
             while( p_in < p_end ) [[likely]]
             {

@@ -17,7 +17,7 @@ BinPackParameters: 'true'
 BreakBeforeBinaryOperators: None
 BreakBeforeBraces: Allman
 BreakConstructorInitializersBeforeComma: 'true'
-ColumnLimit: '0'
+ColumnLimit: 100
 ConstructorInitializerAllOnOneLineOrOnePerLine: 'false'
 Cpp11BracedListStyle: 'false'
 IndentWidth: '4'
@@ -38,7 +38,6 @@ SpacesInSquareBrackets: 'true'
 Standard: Cpp11
 TabWidth: '4'
 UseTab: Never
-
 ...
 Language: Proto
 IndentWidth: '4'

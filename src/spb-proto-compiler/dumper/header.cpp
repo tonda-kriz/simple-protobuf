@@ -59,14 +59,12 @@ auto trim_include( std::string_view str ) -> std::string
 {
     auto p_begin = str.data( );
     auto p_end   = str.data( ) + str.size( );
-    while( p_begin < p_end &&
-           isspace( *p_begin ) )
+    while( p_begin < p_end && isspace( *p_begin ) )
     {
         p_begin++;
     }
 
-    while( p_begin < p_end &&
-           isspace( p_end[ -1 ] ) )
+    while( p_begin < p_end && isspace( p_end[ -1 ] ) )
     {
         p_end--;
     }
@@ -150,7 +148,9 @@ void get_std_includes( cpp_includes & includes, const proto_file & file )
     }
 }
 
-void get_include_from_options( cpp_includes & includes, const proto_options & options, const proto_options & message_options, const proto_options & file_options, std::string_view option_include )
+void get_include_from_options( cpp_includes & includes, const proto_options & options,
+                               const proto_options & message_options,
+                               const proto_options & file_options, std::string_view option_include )
 {
     if( auto include = options.find( option_include ); include != options.end( ) )
     {
@@ -169,29 +169,35 @@ void get_include_from_options( cpp_includes & includes, const proto_options & op
     }
 }
 
-void get_message_includes( cpp_includes & includes, const proto_message & message, const proto_file & file )
+void get_message_includes( cpp_includes & includes, const proto_message & message,
+                           const proto_file & file )
 {
     for( const auto & field : message.fields )
     {
         if( field.label == proto_field::Label::LABEL_OPTIONAL )
         {
-            get_include_from_options( includes, field.options, message.options, file.options, option_optional_include );
+            get_include_from_options( includes, field.options, message.options, file.options,
+                                      option_optional_include );
         }
         if( field.label == proto_field::Label::LABEL_REPEATED )
         {
-            get_include_from_options( includes, field.options, message.options, file.options, option_repeated_include );
+            get_include_from_options( includes, field.options, message.options, file.options,
+                                      option_repeated_include );
         }
         if( field.label == proto_field::Label::LABEL_PTR )
         {
-            get_include_from_options( includes, field.options, message.options, file.options, option_pointer_include );
+            get_include_from_options( includes, field.options, message.options, file.options,
+                                      option_pointer_include );
         }
         if( field.type == "string"sv )
         {
-            get_include_from_options( includes, field.options, message.options, file.options, option_string_include );
+            get_include_from_options( includes, field.options, message.options, file.options,
+                                      option_string_include );
         }
         if( field.type == "bytes"sv )
         {
-            get_include_from_options( includes, field.options, message.options, file.options, option_bytes_include );
+            get_include_from_options( includes, field.options, message.options, file.options,
+                                      option_bytes_include );
         }
     }
 
@@ -226,18 +232,19 @@ void dump_syntax( std::ostream & stream, const proto_file & file )
 
 auto type_literal_suffix( std::string_view type ) -> std::string_view
 {
-    static constexpr auto type_map = std::array< std::pair< std::string_view, std::string_view >, 12 >{ {
-        { "int64", "LL" },
-        { "uint8", "U" },
-        { "uint16", "U" },
-        { "uint32", "U" },
-        { "uint64", "ULL" },
-        { "sint64", "LL" },
-        { "fixed32", "U" },
-        { "fixed64", "ULL" },
-        { "sfixed64", "ULL" },
-        { "float", "F" },
-    } };
+    static constexpr auto type_map =
+        std::array< std::pair< std::string_view, std::string_view >, 12 >{ {
+            { "int64", "LL" },
+            { "uint8", "U" },
+            { "uint16", "U" },
+            { "uint32", "U" },
+            { "uint64", "ULL" },
+            { "sint64", "LL" },
+            { "fixed32", "U" },
+            { "fixed64", "ULL" },
+            { "sfixed64", "ULL" },
+            { "float", "F" },
+        } };
 
     for( auto [ proto_type, suffix ] : type_map )
     {
@@ -252,22 +259,23 @@ auto type_literal_suffix( std::string_view type ) -> std::string_view
 
 auto types_are_compatible( std::string_view type, std::string_view field_type ) -> bool
 {
-    static constexpr auto type_map = std::array< std::pair< std::string_view, std::array< std::string_view, 4 > >, 16 >{ {
-        { "int8", { "int8" } },
-        { "uint8", { "uint8" } },
-        { "int16", { "int8", "int16" } },
-        { "uint16", { "uint8", "uint16" } },
-        { "int32", { "int8", "int16", "int32" } },
-        { "int64", { "int8", "int16", "int32", "int64" } },
-        { "uint32", { "uint8", "uint16", "uint32" } },
-        { "uint64", { "uint8", "uint16", "uint32", "uint64" } },
-        { "sint32", { "int8", "int16", "int32" } },
-        { "sint64", { "int8", "int16", "int32", "int64" } },
-        { "fixed32", { "uint8", "uint16", "uint32" } },
-        { "fixed64", { "uint8", "uint16", "uint32", "uint64" } },
-        { "sfixed32", { "int8", "int16", "int32" } },
-        { "sfixed64", { "int8", "int16", "int32", "int64" } },
-    } };
+    static constexpr auto type_map =
+        std::array< std::pair< std::string_view, std::array< std::string_view, 4 > >, 16 >{ {
+            { "int8", { "int8" } },
+            { "uint8", { "uint8" } },
+            { "int16", { "int8", "int16" } },
+            { "uint16", { "uint8", "uint16" } },
+            { "int32", { "int8", "int16", "int32" } },
+            { "int64", { "int8", "int16", "int32", "int64" } },
+            { "uint32", { "uint8", "uint16", "uint32" } },
+            { "uint64", { "uint8", "uint16", "uint32", "uint64" } },
+            { "sint32", { "int8", "int16", "int32" } },
+            { "sint64", { "int8", "int16", "int32", "int64" } },
+            { "fixed32", { "uint8", "uint16", "uint32" } },
+            { "fixed64", { "uint8", "uint16", "uint32", "uint64" } },
+            { "sfixed32", { "int8", "int16", "int32" } },
+            { "sfixed64", { "int8", "int16", "int32", "int64" } },
+        } };
 
     for( auto [ proto_type, types ] : type_map )
     {
@@ -284,7 +292,8 @@ auto remove_bitfield( std::string_view type ) -> std::string_view
     return type.substr( 0, type.find( ':' ) );
 }
 
-auto get_field_type( const proto_file & file, const proto_options & options, std::string_view ctype ) -> std::string
+auto get_field_type( const proto_file & file, const proto_options & options,
+                     std::string_view ctype ) -> std::string
 {
     if( auto p_name = options.find( option_field_type ); p_name != options.end( ) )
     {
@@ -296,7 +305,9 @@ auto get_field_type( const proto_file & file, const proto_options & options, std
         }
         else
         {
-            throw_parse_error( file, field_type, std::string( "incompatible int type: " ) + std::string( ctype ) + " and " + std::string( field_type ) );
+            throw_parse_error( file, field_type,
+                               std::string( "incompatible int type: " ) + std::string( ctype ) +
+                                   " and " + std::string( field_type ) );
         }
     }
     return std::string( ctype );
@@ -316,7 +327,10 @@ auto get_field_bits( const proto_field & field ) -> std::string_view
     return { };
 }
 
-auto get_container_type( const proto_options & options, const proto_options & message_options, const proto_options & file_options, std::string_view option, std::string_view ctype, std::string_view default_type = { } ) -> std::string
+auto get_container_type( const proto_options & options, const proto_options & message_options,
+                         const proto_options & file_options, std::string_view option,
+                         std::string_view ctype,
+                         std::string_view default_type = { } ) -> std::string
 {
     if( auto p_name = options.find( option ); p_name != options.end( ) )
     {
@@ -336,15 +350,18 @@ auto get_container_type( const proto_options & options, const proto_options & me
     return replace( default_type, "$", ctype );
 }
 
-auto get_enum_type( const proto_file & file, const proto_options & options, const proto_options & message_options, const proto_options & file_options, std::string_view default_type ) -> std::string_view
+auto get_enum_type( const proto_file & file, const proto_options & options,
+                    const proto_options & message_options, const proto_options & file_options,
+                    std::string_view default_type ) -> std::string_view
 {
-    static constexpr auto type_map = std::array< std::pair< std::string_view, std::string_view >, 6 >{ {
-        { "int8"sv, "int8_t"sv },
-        { "uint8"sv, "uint8_t"sv },
-        { "int16"sv, "int16_t"sv },
-        { "uint16"sv, "uint16_t"sv },
-        { "int32"sv, "int32_t"sv },
-    } };
+    static constexpr auto type_map =
+        std::array< std::pair< std::string_view, std::string_view >, 6 >{ {
+            { "int8"sv, "int8_t"sv },
+            { "uint8"sv, "uint8_t"sv },
+            { "int16"sv, "int16_t"sv },
+            { "uint16"sv, "uint16_t"sv },
+            { "int32"sv, "int32_t"sv },
+        } };
 
     auto ctype_from_pb = [ & ]( std::string_view type )
     {
@@ -376,33 +393,39 @@ auto get_enum_type( const proto_file & file, const proto_options & options, cons
     return default_type;
 }
 
-auto convert_to_ctype( const proto_file & file, std::string_view type, const proto_options & options = { }, const proto_options & message_options = { }, const proto_options & file_options = { } ) -> std::string
+auto convert_to_ctype( const proto_file & file, std::string_view type,
+                       const proto_options & options         = { },
+                       const proto_options & message_options = { },
+                       const proto_options & file_options    = { } ) -> std::string
 {
-    static constexpr auto type_map = std::array< std::pair< std::string_view, std::string_view >, 16 >{ {
-        { "int8", "int8_t" },
-        { "uint8", "uint8_t" },
-        { "int16", "int16_t" },
-        { "uint16", "uint16_t" },
-        { "int32", "int32_t" },
-        { "int64", "int64_t" },
-        { "uint32", "uint32_t" },
-        { "uint64", "uint64_t" },
-        { "sint32", "int32_t" },
-        { "sint64", "int64_t" },
-        { "fixed32", "uint32_t" },
-        { "fixed64", "uint64_t" },
-        { "sfixed32", "int32_t" },
-        { "sfixed64", "int64_t" },
-    } };
+    static constexpr auto type_map =
+        std::array< std::pair< std::string_view, std::string_view >, 16 >{ {
+            { "int8", "int8_t" },
+            { "uint8", "uint8_t" },
+            { "int16", "int16_t" },
+            { "uint16", "uint16_t" },
+            { "int32", "int32_t" },
+            { "int64", "int64_t" },
+            { "uint32", "uint32_t" },
+            { "uint64", "uint64_t" },
+            { "sint32", "int32_t" },
+            { "sint64", "int64_t" },
+            { "fixed32", "uint32_t" },
+            { "fixed64", "uint64_t" },
+            { "sfixed32", "int32_t" },
+            { "sfixed64", "int64_t" },
+        } };
 
     if( type == "string"sv )
     {
-        return get_container_type( options, message_options, file_options, option_string_type, "char", "std::string" );
+        return get_container_type( options, message_options, file_options, option_string_type,
+                                   "char", "std::string" );
     }
 
     if( type == "bytes"sv )
     {
-        return get_container_type( options, message_options, file_options, option_bytes_type, "std::byte", "std::vector<$>" );
+        return get_container_type( options, message_options, file_options, option_bytes_type,
+                                   "std::byte", "std::vector<$>" );
     }
 
     auto type_str = get_field_type( file, options, type );
@@ -418,9 +441,11 @@ auto convert_to_ctype( const proto_file & file, std::string_view type, const pro
     return replace( type, ".", "::" );
 }
 
-void dump_field_type_and_name( std::ostream & stream, const proto_field & field, const proto_message & message, const proto_file & file )
+void dump_field_type_and_name( std::ostream & stream, const proto_field & field,
+                               const proto_message & message, const proto_file & file )
 {
-    const auto ctype = convert_to_ctype( file, field.type, field.options, message.options, file.options );
+    const auto ctype =
+        convert_to_ctype( file, field.type, field.options, message.options, file.options );
 
     switch( field.label )
     {
@@ -428,13 +453,16 @@ void dump_field_type_and_name( std::ostream & stream, const proto_field & field,
         stream << ctype << ' ' << field.name << get_field_bits( field );
         return;
     case proto_field::Label::LABEL_OPTIONAL:
-        stream << get_container_type( field.options, message.options, file.options, option_optional_type, ctype, "std::optional<$>" );
+        stream << get_container_type( field.options, message.options, file.options,
+                                      option_optional_type, ctype, "std::optional<$>" );
         break;
     case proto_field::Label::LABEL_REPEATED:
-        stream << get_container_type( field.options, message.options, file.options, option_repeated_type, ctype, "std::vector<$>" );
+        stream << get_container_type( field.options, message.options, file.options,
+                                      option_repeated_type, ctype, "std::vector<$>" );
         break;
     case proto_field::Label::LABEL_PTR:
-        stream << get_container_type( field.options, message.options, file.options, option_pointer_type, ctype, "std::unique_ptr<$>" );
+        stream << get_container_type( field.options, message.options, file.options,
+                                      option_pointer_type, ctype, "std::unique_ptr<$>" );
         break;
     }
     if( auto bitfield = get_field_bits( field ); !bitfield.empty( ) )
@@ -451,11 +479,14 @@ void dump_enum_field( std::ostream & stream, const proto_base & field )
     stream << field.name << " = " << field.number << ",\n";
 }
 
-void dump_enum( std::ostream & stream, const proto_enum & my_enum, const proto_message & message, const proto_file & file )
+void dump_enum( std::ostream & stream, const proto_enum & my_enum, const proto_message & message,
+                const proto_file & file )
 {
     dump_comment( stream, my_enum.comment );
 
-    stream << "enum class " << my_enum.name << " : " << get_enum_type( file, my_enum.options, message.options, file.options, "int32_t" ) << "\n{\n";
+    stream << "enum class " << my_enum.name << " : "
+           << get_enum_type( file, my_enum.options, message.options, file.options, "int32_t" )
+           << "\n{\n";
     for( const auto & field : my_enum.fields )
     {
         dump_enum_field( stream, field );
@@ -486,7 +517,8 @@ void dump_message_map( std::ostream & stream, const proto_map & map, const proto
 {
     dump_comment( stream, map.comment );
 
-    stream << "std::map< " << convert_to_ctype( file, map.key_type ) << ", " << convert_to_ctype( file, map.value_type ) << " > ";
+    stream << "std::map< " << convert_to_ctype( file, map.key_type ) << ", "
+           << convert_to_ctype( file, map.value_type ) << " > ";
     stream << map.name << ";\n";
 }
 
@@ -497,7 +529,8 @@ void dump_default_value( std::ostream & stream, const proto_field & field )
         if( is_scalar_type( field.type ) )
         {
             if( field.type == "string" &&
-                ( p_index->second.size( ) < 2 || p_index->second.front( ) != '"' || p_index->second.back( ) != '"' ) )
+                ( p_index->second.size( ) < 2 || p_index->second.front( ) != '"' ||
+                  p_index->second.back( ) != '"' ) )
             {
                 stream << " = \"" << p_index->second << "\"";
             }
@@ -515,13 +548,15 @@ void dump_default_value( std::ostream & stream, const proto_field & field )
 
 void dump_deprecated_attribute( std::ostream & stream, const proto_field & field )
 {
-    if( auto p_index = field.options.find( "deprecated" ); p_index != field.options.end( ) && p_index->second == "true" )
+    if( auto p_index = field.options.find( "deprecated" );
+        p_index != field.options.end( ) && p_index->second == "true" )
     {
         stream << "[[deprecated]] ";
     }
 }
 
-void dump_message_field( std::ostream & stream, const proto_field & field, const proto_message & message, const proto_file & file )
+void dump_message_field( std::ostream & stream, const proto_field & field,
+                         const proto_message & message, const proto_file & file )
 {
     dump_comment( stream, field.comment );
     dump_deprecated_attribute( stream, field );
@@ -575,8 +610,9 @@ void dump_message( std::ostream & stream, const proto_message & message, const p
     }
 
     //- TODO: is this used in any way?
-    // stream << "auto operator == ( const " << message.name << " & ) const noexcept -> bool = default;\n";
-    // stream << "auto operator != ( const " << message.name << " & ) const noexcept -> bool = default;\n";
+    // stream << "auto operator == ( const " << message.name << " & ) const noexcept -> bool =
+    // default;\n"; stream << "auto operator != ( const " << message.name << " & ) const noexcept ->
+    // bool = default;\n";
     stream << "};\n";
 }
 
