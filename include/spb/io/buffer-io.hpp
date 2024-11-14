@@ -54,8 +54,7 @@ private:
     {
         shift_data_to_start( );
 
-        while( bytes_in_buffer( ) < SPB_READ_BUFFER_SIZE &&
-               !eof_reached )
+        while( bytes_in_buffer( ) < SPB_READ_BUFFER_SIZE && !eof_reached )
         {
             auto bytes_in = on_read( &buffer[ end_index ], space_left_in_buffer( ) );
             eof_reached |= bytes_in == 0;

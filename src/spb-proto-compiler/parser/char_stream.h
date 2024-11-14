@@ -166,7 +166,9 @@ public:
     }
     [[noreturn]] void throw_parse_error( std::string_view message )
     {
-        throw std::runtime_error( std::to_string( current_line( ) ) + ":" + std::to_string( current_column( ) ) + ": " + std::string( message ) );
+        throw std::runtime_error( std::to_string( current_line( ) ) + ":" +
+                                  std::to_string( current_column( ) ) + ": " +
+                                  std::string( message ) );
     }
 };
 }// namespace spb

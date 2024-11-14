@@ -21,6 +21,7 @@
 namespace
 {
 using namespace std::literals;
+namespace fs = std::filesystem;
 
 constexpr auto opt_version = "--version"sv;
 constexpr auto opt_v       = "-v"sv;
@@ -35,18 +36,18 @@ constexpr auto opt_ipath      = "-IPATH="sv;
 
 void print_usage( )
 {
-    std::cout << "Usage: spb-protoc [OPTION] PROTO_FILES\n";
-    std::cout << "Parse PROTO_FILES and generate C++ source files.\n";
-    std::cout << "  -IPATH=, --proto_path=PATH  Specify the directory in which to search for imports.\n";
-    std::cout << "May be specified multiple times. directories will be searched in order.\n";
-    std::cout << "  -v, --version               Show version info and exit.\n";
-    std::cout << "  -h, --help                  Show this text and exit.\n";
-    std::cout << "  --cpp_out=OUT_DIR           Generate C++ header and source.\n\n";
+    std::cout
+        << "Usage: spb-protoc [OPTION] PROTO_FILES\n"
+        << "Parse PROTO_FILES and generate C++ source files.\n"
+        << "  -IPATH=, --proto_path=PATH  Specify the directory in which to search for imports.\n"
+        << "May be specified multiple times. directories will be searched in order.\n"
+        << "  -v, --version               Show version info and exit.\n"
+        << "  -h, --help                  Show this text and exit.\n"
+        << "  --cpp_out=OUT_DIR           Generate C++ header and source.\n\n";
 }
 
-void process_file( const std::filesystem::path & input_file,
-                   std::span< const std::filesystem::path > import_paths,
-                   const std::filesystem::path & output_dir )
+void process_file( const fs::path & input_file, std::span< const fs::path > import_paths,
+                   const fs::path & output_dir )
 {
     const auto parsed_file       = parse_proto_file( input_file, import_paths );
     const auto output_cpp_header = cpp_file_name_from_proto( input_file, ".pb.h" );
@@ -69,20 +70,18 @@ auto main( int argc, char * argv[] ) -> int
         return 1;
     }
 
-    auto output_dir   = std::filesystem::path( );
-    auto import_paths = std::vector< std::filesystem::path >{ std::filesystem::current_path( ) };
+    auto output_dir   = fs::path( );
+    auto import_paths = std::vector< fs::path >{ fs::current_path( ) };
 
     for( ; argc > 1 && argv[ 1 ][ 0 ] == '-'; argc--, argv++ )
     {
-        if( opt_help == argv[ 1 ] ||
-            opt_h == argv[ 1 ] )
+        if( opt_help == argv[ 1 ] || opt_h == argv[ 1 ] )
         {
             print_usage( );
             return 0;
         }
 
-        if( opt_version == argv[ 1 ] ||
-            opt_v == argv[ 1 ] )
+        if( opt_version == argv[ 1 ] || opt_v == argv[ 1 ] )
         {
             std::cout << "spb-protoc version 0.1.0\n";
             return 0;
@@ -107,7 +106,7 @@ auto main( int argc, char * argv[] ) -> int
         }
     }
 
-    auto input_files = std::vector< std::filesystem::path >( );
+    auto input_files = std::vector< fs::path >( );
     for( auto i = 1; i < argc; i++ )
     {
         input_files.emplace_back( argv[ i ] );

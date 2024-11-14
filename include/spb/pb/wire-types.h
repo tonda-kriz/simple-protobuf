@@ -52,10 +52,12 @@ static constexpr auto combine( scalar_encoder a, scalar_encoder b ) noexcept -> 
 {
     if( b == scalar_encoder::packed )
     {
-        return scalar_encoder( static_cast< std::underlying_type_t< scalar_encoder > >( a ) | static_cast< std::underlying_type_t< scalar_encoder > >( b ) );
+        return scalar_encoder( static_cast< std::underlying_type_t< scalar_encoder > >( a ) |
+                               static_cast< std::underlying_type_t< scalar_encoder > >( b ) );
     }
 
-    return scalar_encoder( static_cast< std::underlying_type_t< scalar_encoder > >( a ) | ( static_cast< std::underlying_type_t< scalar_encoder > >( b ) << 2 ) );
+    return scalar_encoder( static_cast< std::underlying_type_t< scalar_encoder > >( a ) |
+                           ( static_cast< std::underlying_type_t< scalar_encoder > >( b ) << 2 ) );
 }
 
 static constexpr auto type1( scalar_encoder a ) noexcept -> scalar_encoder
@@ -65,12 +67,14 @@ static constexpr auto type1( scalar_encoder a ) noexcept -> scalar_encoder
 
 static constexpr auto type2( scalar_encoder a ) noexcept -> scalar_encoder
 {
-    return scalar_encoder( ( static_cast< std::underlying_type_t< scalar_encoder > >( a ) >> 2 ) & 0x03 );
+    return scalar_encoder( ( static_cast< std::underlying_type_t< scalar_encoder > >( a ) >> 2 ) &
+                           0x03 );
 }
 
 static constexpr auto is_packed( scalar_encoder a ) noexcept -> bool
 {
-    return static_cast< std::underlying_type_t< scalar_encoder > >( a ) & static_cast< std::underlying_type_t< scalar_encoder > >( scalar_encoder::packed );
+    return static_cast< std::underlying_type_t< scalar_encoder > >( a ) &
+        static_cast< std::underlying_type_t< scalar_encoder > >( scalar_encoder::packed );
 }
 
 static constexpr auto wire_type_from_scalar_encoder( scalar_encoder a ) noexcept -> wire_type

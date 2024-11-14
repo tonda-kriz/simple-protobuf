@@ -23,6 +23,7 @@
 #include <exception>
 #include <filesystem>
 #include <io/file.h>
+#include <optional>
 #include <parser/char_stream.h>
 #include <spb/from_chars.h>
 #include <stdexcept>
@@ -30,12 +31,47 @@
 
 namespace
 {
-
+namespace fs       = std::filesystem;
 using parsed_files = std::set< std::string >;
 
-[[nodiscard]] auto parse_proto_file( const std::filesystem::path & file, parsed_files &, std::span< const std::filesystem::path > import_paths ) -> proto_file;
+[[nodiscard]] auto parse_proto_file( fs::path file, parsed_files &,
+                                     std::span< const fs::path > import_paths,
+                                     const fs::path & base_dir ) -> proto_file;
 
-[[nodiscard]] auto parse_all_imports( const proto_file & file, parsed_files & already_parsed, std::span< const std::filesystem::path > import_paths ) -> proto_files
+auto find_file_in_paths( const fs::path & file_name, std::span< const fs::path > import_paths,
+                         const fs::path & base_dir ) -> fs::path
+{
+    if( file_name.has_root_path( ) )
+    {
+        if( fs::exists( file_name ) )
+        {
+            return file_name;
+        }
+    }
+    else
+    {
+        if( fs::exists( base_dir / file_name ) )
+        {
+            return base_dir / file_name;
+        }
+
+        for( const auto & import_path : import_paths )
+        {
+            auto file_path = import_path.has_root_path( ) ? import_path / file_name
+                                                          : base_dir / import_path / file_name;
+            if( fs::exists( file_path ) )
+            {
+                return file_path;
+            }
+        }
+    }
+
+    throw std::runtime_error( strerror( ENOENT ) );
+}
+
+[[nodiscard]] auto parse_all_imports( const proto_file & file, parsed_files & already_parsed,
+                                      std::span< const fs::path > import_paths,
+                                      const fs::path & base_dir ) -> proto_files
 {
     proto_files result;
     result.reserve( file.imports.size( ) );
@@ -45,7 +81,8 @@ using parsed_files = std::set< std::string >;
         {
             try
             {
-                result.emplace_back( parse_proto_file( import.file_name, already_parsed, import_paths ) );
+                result.emplace_back(
+                    parse_proto_file( import.file_name, already_parsed, import_paths, base_dir ) );
             }
             catch( const std::runtime_error & error )
             {
@@ -54,24 +91,6 @@ using parsed_files = std::set< std::string >;
         }
     }
     return result;
-}
-
-auto find_file_in_paths( const std::filesystem::path & file_name, std::span< const std::filesystem::path > import_paths ) -> std::filesystem::path
-{
-    if( std::filesystem::exists( file_name ) )
-    {
-        return file_name;
-    }
-
-    for( const auto & import_path : import_paths )
-    {
-        auto file_path = import_path / file_name;
-        if( std::filesystem::exists( file_path ) )
-        {
-            return file_path;
-        }
-    }
-    throw std::runtime_error( strerror( ENOENT ) );
 }
 
 void parse_or_throw( bool parsed, spb::char_stream & stream, std::string_view message )
@@ -116,8 +135,7 @@ auto consume_number( spb::char_stream & stream, std::integral auto & number ) ->
     if( stream.consume( '0' ) )
     {
         base = 8;
-        if( stream.consume( 'x' ) ||
-            stream.consume( 'X' ) )
+        if( stream.consume( 'x' ) || stream.consume( 'X' ) )
         {
             base = 16;
         }
@@ -270,7 +288,8 @@ auto parse_comment( spb::char_stream & stream ) -> proto_comment
     return result;
 }
 
-[[nodiscard]] auto parse_ident( spb::char_stream & stream, bool skip_last_white_space = true ) -> std::string_view
+[[nodiscard]] auto parse_ident( spb::char_stream & stream,
+                                bool skip_last_white_space = true ) -> std::string_view
 {
     const auto * start = stream.begin( );
 
@@ -332,12 +351,14 @@ void consume_statement_end( spb::char_stream & stream, proto_comment & comment )
         stream.consume_current_char( false );
         auto line_comment = proto_comment( );
         parse_comment_line( stream, line_comment );
-        comment.comments.insert( comment.comments.end( ), line_comment.comments.begin( ), line_comment.comments.end( ) );
+        comment.comments.insert( comment.comments.end( ), line_comment.comments.begin( ),
+                                 line_comment.comments.end( ) );
     }
     stream.consume_space( );
 }
 
-void parse_top_level_syntax_body( spb::char_stream & stream, proto_syntax & syntax, proto_comment && comment )
+void parse_top_level_syntax_body( spb::char_stream & stream, proto_syntax & syntax,
+                                  proto_comment && comment )
 {
     //- syntax = ( "proto2" | "proto3" );
 
@@ -359,7 +380,8 @@ void parse_top_level_syntax_body( spb::char_stream & stream, proto_syntax & synt
     stream.throw_parse_error( "expecting proto2 or proto3" );
 }
 
-void parse_top_level_syntax_or_service( spb::char_stream & stream, proto_file & file, proto_comment && comment )
+void parse_top_level_syntax_or_service( spb::char_stream & stream, proto_file & file,
+                                        proto_comment && comment )
 {
     if( stream.consume( "syntax" ) )
     {
@@ -374,16 +396,19 @@ void parse_top_level_syntax_or_service( spb::char_stream & stream, proto_file & 
     stream.throw_parse_error( "expecting syntax or service" );
 }
 
-void parse_top_level_import( spb::char_stream & stream, proto_imports & imports, proto_comment && comment )
+void parse_top_level_import( spb::char_stream & stream, proto_imports & imports,
+                             proto_comment && comment )
 {
     // "import" [ "weak" | "public" ] strLit ";"
     consume_or_fail( stream, "import" );
     stream.consume( "weak" ) || stream.consume( "public" );
-    imports.emplace_back( proto_import{ .file_name = parse_string_literal( stream ), .comments = std::move( comment ) } );
+    imports.emplace_back( proto_import{ .file_name = parse_string_literal( stream ),
+                                        .comments  = std::move( comment ) } );
     consume_statement_end( stream, imports.back( ).comments );
 }
 
-void parse_top_level_package( spb::char_stream & stream, proto_base & package, proto_comment && comment )
+void parse_top_level_package( spb::char_stream & stream, proto_base & package,
+                              proto_comment && comment )
 {
     //- "package" fullIdent ";"
     consume_or_fail( stream, "package" );
@@ -424,7 +449,8 @@ void parse_top_level_package( spb::char_stream & stream, proto_base & package, p
 
 [[nodiscard]] auto parse_constant( spb::char_stream & stream ) -> std::string_view
 {
-    //- fullIdent | ( [ "-" | "+" ] intLit ) | ( [ "-" | "+" ] floatLit ) | strLit | boolLit | MessageValue
+    //- fullIdent | ( [ "-" | "+" ] intLit ) | ( [ "-" | "+" ] floatLit ) | strLit | boolLit |
+    // MessageValue
     if( stream.consume( "true" ) )
     {
         return "true";
@@ -452,7 +478,8 @@ void parse_option_body( spb::char_stream & stream, proto_options & options )
     options[ option_name ] = parse_constant( stream );
 }
 
-void parse_option_from_comment( const spb::char_stream & stream, proto_options & options, std::string_view comment )
+void parse_option_from_comment( const spb::char_stream & stream, proto_options & options,
+                                std::string_view comment )
 {
     for( ;; )
     {
@@ -474,7 +501,8 @@ void parse_option_from_comment( const spb::char_stream & stream, proto_options &
     }
 }
 
-void parse_options_from_comments( const spb::char_stream & stream, proto_options & options, const proto_comment & comment )
+void parse_options_from_comments( const spb::char_stream & stream, proto_options & options,
+                                  const proto_comment & comment )
 {
     for( auto & c : comment.comments )
     {
@@ -482,7 +510,8 @@ void parse_options_from_comments( const spb::char_stream & stream, proto_options
     }
 }
 
-[[nodiscard]] auto parse_option( spb::char_stream & stream, proto_options & options, proto_comment && comment ) -> bool
+[[nodiscard]] auto parse_option( spb::char_stream & stream, proto_options & options,
+                                 proto_comment && comment ) -> bool
 {
     //- "option" optionName  "=" constant ";"
     if( !stream.consume( "option" ) )
@@ -495,7 +524,8 @@ void parse_options_from_comments( const spb::char_stream & stream, proto_options
     return true;
 }
 
-void parse_reserved_names( spb::char_stream & stream, proto_reserved_name & name, proto_comment && comment )
+void parse_reserved_names( spb::char_stream & stream, proto_reserved_name & name,
+                           proto_comment && comment )
 {
     //- strFieldNames = strFieldName { "," strFieldName }
     //- strFieldName = "'" fieldName "'" | '"' fieldName '"'
@@ -508,7 +538,8 @@ void parse_reserved_names( spb::char_stream & stream, proto_reserved_name & name
     comment.comments.clear( );
 }
 
-void parse_reserved_ranges( spb::char_stream & stream, proto_reserved_range & range, proto_comment && comment )
+void parse_reserved_ranges( spb::char_stream & stream, proto_reserved_range & range,
+                            proto_comment && comment )
 {
     //- ranges = range { "," range }
     //- range =  intLit [ "to" ( intLit | "max" ) ]
@@ -536,7 +567,8 @@ void parse_reserved_ranges( spb::char_stream & stream, proto_reserved_range & ra
     comment.comments.clear( );
 }
 
-[[nodiscard]] auto parse_extensions( spb::char_stream & stream, proto_reserved_range & extensions, proto_comment && comment ) -> bool
+[[nodiscard]] auto parse_extensions( spb::char_stream & stream, proto_reserved_range & extensions,
+                                     proto_comment && comment ) -> bool
 {
     //- extensions = "extensions" ranges ";"
     if( !stream.consume( "extensions" ) )
@@ -548,7 +580,8 @@ void parse_reserved_ranges( spb::char_stream & stream, proto_reserved_range & ra
     return true;
 }
 
-[[nodiscard]] auto parse_reserved( spb::char_stream & stream, proto_reserved & reserved, proto_comment && comment ) -> bool
+[[nodiscard]] auto parse_reserved( spb::char_stream & stream, proto_reserved & reserved,
+                                   proto_comment && comment ) -> bool
 {
     //- reserved = "reserved" ( ranges | strFieldNames ) ";"
     if( !stream.consume( "reserved" ) )
@@ -589,18 +622,19 @@ void parse_enum_field( spb::char_stream & stream, proto_enum & new_enum, proto_c
 {
     //- enumField = ident "=" [ "-" ] intLit [ "[" enumValueOption { ","  enumValueOption } "]" ]";"
     //- enumValueOption = optionName "=" constant
-    auto field = proto_base{
-        .name    = parse_ident( stream ),
-        .number  = ( consume_or_fail( stream, '=' ), parse_number< decltype( proto_field::number ) >( stream ) ),
-        .options = parse_field_options( stream ),
-        .comment = std::move( comment )
-    };
+    auto field =
+        proto_base{ .name    = parse_ident( stream ),
+                    .number  = ( consume_or_fail( stream, '=' ),
+                                parse_number< decltype( proto_field::number ) >( stream ) ),
+                    .options = parse_field_options( stream ),
+                    .comment = std::move( comment ) };
 
     consume_statement_end( stream, field.comment );
     new_enum.fields.push_back( field );
 }
 
-[[nodiscard]] auto parse_enum_body( spb::char_stream & stream, proto_comment && enum_comment ) -> proto_enum
+[[nodiscard]] auto parse_enum_body( spb::char_stream & stream,
+                                    proto_comment && enum_comment ) -> proto_enum
 {
     //- enumBody = "{" { option | enumField | emptyStatement | reserved } "}"
 
@@ -632,7 +666,8 @@ void parse_enum_field( spb::char_stream & stream, proto_enum & new_enum, proto_c
     return new_enum;
 }
 
-[[nodiscard]] auto parse_enum( spb::char_stream & stream, proto_enums & enums, proto_comment && comment ) -> bool
+[[nodiscard]] auto parse_enum( spb::char_stream & stream, proto_enums & enums,
+                               proto_comment && comment ) -> bool
 {
     //- enum = "enum" enumName enumBody
     if( !stream.consume( "enum" ) )
@@ -672,7 +707,8 @@ void parse_field( spb::char_stream & stream, proto_fields & fields, proto_commen
         .type  = parse_full_ident( stream ),
     };
     new_field.name    = parse_ident( stream );
-    new_field.number  = ( consume_or_fail( stream, '=' ), parse_number< decltype( proto_field::number ) >( stream ) );
+    new_field.number  = ( consume_or_fail( stream, '=' ),
+                         parse_number< decltype( proto_field::number ) >( stream ) );
     new_field.options = parse_field_options( stream );
     new_field.comment = std::move( comment );
     consume_statement_end( stream, new_field.comment );
@@ -686,8 +722,12 @@ void parse_field( spb::char_stream & stream, proto_fields & fields, proto_commen
 
 auto parse_map_key_type( spb::char_stream & stream ) -> std::string_view
 {
-    //- keyType = "int32" | "int64" | "uint32" | "uint64" | "sint32" | "sint64" | "fixed32" | "fixed64" | "sfixed32" | "sfixed64" | "bool" | "string"
-    constexpr auto key_types = std::array< std::string_view, 12 >{ { "int32", "int64", "uint32", "uint64", "sint32", "sint64", "fixed32", "fixed64", "sfixed32", "sfixed64", "bool", "string" } };
+    //- keyType = "int32" | "int64" | "uint32" | "uint64" | "sint32" | "sint64" | "fixed32" |
+    //"fixed64" | "sfixed32" | "sfixed64" | "bool" | "string"
+    constexpr auto key_types =
+        std::array< std::string_view, 12 >{ { "int32", "int64", "uint32", "uint64", "sint32",
+                                              "sint64", "fixed32", "fixed64", "sfixed32",
+                                              "sfixed64", "bool", "string" } };
     for( auto key_type : key_types )
     {
         if( stream.consume( key_type ) )
@@ -706,15 +746,17 @@ auto parse_map_body( spb::char_stream & stream, proto_comment && comment ) -> pr
         .key_type   = parse_map_key_type( stream ),
         .value_type = ( consume_or_fail( stream, ',' ), parse_full_ident( stream ) ),
     };
-    new_map.name    = ( consume_or_fail( stream, '>' ), parse_ident( stream ) );
-    new_map.number  = ( consume_or_fail( stream, '=' ), parse_number< decltype( proto_map::number ) >( stream ) );
+    new_map.name = ( consume_or_fail( stream, '>' ), parse_ident( stream ) );
+    new_map.number =
+        ( consume_or_fail( stream, '=' ), parse_number< decltype( proto_map::number ) >( stream ) );
     new_map.options = parse_field_options( stream );
     new_map.comment = std::move( comment );
     consume_statement_end( stream, new_map.comment );
     return new_map;
 }
 
-[[nodiscard]] auto parse_map_field( spb::char_stream & stream, proto_maps & maps, proto_comment && comment ) -> bool
+[[nodiscard]] auto parse_map_field( spb::char_stream & stream, proto_maps & maps,
+                                    proto_comment && comment ) -> bool
 {
     //-  "map" "<"
     if( !stream.consume( "map" ) )
@@ -731,14 +773,16 @@ void parse_oneof_field( spb::char_stream & stream, proto_fields & fields, proto_
     //- oneofField = type fieldName "=" fieldNumber [ "[" fieldOptions "]" ] ";"
     proto_field new_field{ .type = parse_full_ident( stream ) };
     new_field.name    = parse_ident( stream );
-    new_field.number  = ( consume_or_fail( stream, '=' ), parse_number< decltype( proto_field::number ) >( stream ) );
+    new_field.number  = ( consume_or_fail( stream, '=' ),
+                         parse_number< decltype( proto_field::number ) >( stream ) );
     new_field.options = parse_field_options( stream );
     new_field.comment = std::move( comment );
     consume_statement_end( stream, new_field.comment );
     fields.push_back( new_field );
 }
 
-[[nodiscard]] auto parse_oneof_body( spb::char_stream & stream, proto_comment && oneof_comment ) -> proto_oneof
+[[nodiscard]] auto parse_oneof_body( spb::char_stream & stream,
+                                     proto_comment && oneof_comment ) -> proto_oneof
 {
     //- oneof = "oneof" oneofName "{" { option | oneofField } "}"
     auto new_oneof = proto_oneof{ proto_base{
@@ -762,7 +806,8 @@ void parse_oneof_field( spb::char_stream & stream, proto_fields & fields, proto_
     return new_oneof;
 }
 
-[[nodiscard]] auto parse_oneof( spb::char_stream & stream, proto_oneofs & oneofs, proto_comment && comment ) -> bool
+[[nodiscard]] auto parse_oneof( spb::char_stream & stream, proto_oneofs & oneofs,
+                                proto_comment && comment ) -> bool
 {
     //- oneof = "oneof" oneofName "{" { option | oneofField } "}"
     if( !stream.consume( "oneof" ) )
@@ -773,11 +818,14 @@ void parse_oneof_field( spb::char_stream & stream, proto_fields & fields, proto_
     return true;
 }
 
-[[nodiscard]] auto parse_message( spb::char_stream & stream, proto_messages & messages, proto_comment && comment ) -> bool;
+[[nodiscard]] auto parse_message( spb::char_stream & stream, proto_messages & messages,
+                                  proto_comment && comment ) -> bool;
 
-void parse_message_body( spb::char_stream & stream, proto_messages & messages, proto_comment && message_comment )
+void parse_message_body( spb::char_stream & stream, proto_messages & messages,
+                         proto_comment && message_comment )
 {
-    //- messageBody = messageName "{" { field | enum | message | extend | extensions | group | option | oneof | mapField | reserved | emptyStatement } "}"
+    //- messageBody = messageName "{" { field | enum | message | extend | extensions | group |
+    // option | oneof | mapField | reserved | emptyStatement } "}"
     auto new_message = proto_message{ proto_base{
         .name    = parse_ident( stream ),
         .comment = std::move( message_comment ),
@@ -810,7 +858,8 @@ void parse_message_body( spb::char_stream & stream, proto_messages & messages, p
     messages.push_back( new_message );
 }
 
-[[nodiscard]] auto parse_message( spb::char_stream & stream, proto_messages & messages, proto_comment && comment ) -> bool
+[[nodiscard]] auto parse_message( spb::char_stream & stream, proto_messages & messages,
+                                  proto_comment && comment ) -> bool
 {
     //- "message" messageName messageBody
     if( !stream.consume( "message" ) )
@@ -822,17 +871,22 @@ void parse_message_body( spb::char_stream & stream, proto_messages & messages, p
     return true;
 }
 
-void parse_top_level_option( spb::char_stream & stream, proto_options & options, proto_comment && comment )
+void parse_top_level_option( spb::char_stream & stream, proto_options & options,
+                             proto_comment && comment )
 {
-    parse_or_throw( parse_option( stream, options, std::move( comment ) ), stream, "expecting option" );
+    parse_or_throw( parse_option( stream, options, std::move( comment ) ), stream,
+                    "expecting option" );
 }
 
-void parse_top_level_message( spb::char_stream & stream, proto_messages & messages, proto_comment && comment )
+void parse_top_level_message( spb::char_stream & stream, proto_messages & messages,
+                              proto_comment && comment )
 {
-    parse_or_throw( parse_message( stream, messages, std::move( comment ) ), stream, "expecting message" );
+    parse_or_throw( parse_message( stream, messages, std::move( comment ) ), stream,
+                    "expecting message" );
 }
 
-void parse_top_level_enum( spb::char_stream & stream, proto_enums & enums, proto_comment && comment )
+void parse_top_level_enum( spb::char_stream & stream, proto_enums & enums,
+                           proto_comment && comment )
 {
     parse_or_throw( parse_enum( stream, enums, std::move( comment ) ), stream, "expecting enum" );
 }
@@ -883,20 +937,23 @@ void set_default_options( proto_file & file )
     file.options[ option_enum_type ] = "int32";
 }
 
-[[nodiscard]] auto parse_proto_file( const std::filesystem::path & file, parsed_files & already_parsed, std::span< const std::filesystem::path > import_paths ) -> proto_file
+[[nodiscard]] auto parse_proto_file( fs::path file, parsed_files & already_parsed,
+                                     std::span< const fs::path > import_paths,
+                                     const fs::path & base_dir ) -> proto_file
 {
     try
     {
-        auto file_path = find_file_in_paths( file, import_paths );
+        file = find_file_in_paths( file, import_paths, base_dir );
 
         auto result = proto_file{
-            .path    = file_path,
-            .content = load_file( file_path ),
+            .path    = file,
+            .content = load_file( file ),
         };
 
         parse_proto_file_content( result );
         already_parsed.insert( file.string( ) );
-        result.file_imports = parse_all_imports( result, already_parsed, import_paths );
+        result.file_imports =
+            parse_all_imports( result, already_parsed, import_paths, file.parent_path( ) );
         resolve_messages( result );
         return result;
     }
@@ -922,13 +979,15 @@ void parse_proto_file_content( proto_file & file )
     }
 }
 
-auto parse_proto_file( const std::filesystem::path & file, std::span< const std::filesystem::path > import_paths ) -> proto_file
+auto parse_proto_file( const fs::path & file, std::span< const fs::path > import_paths,
+                       const fs::path & base_dir ) -> proto_file
 {
     auto already_parsed = parsed_files( );
-    return parse_proto_file( file, already_parsed, import_paths );
+    return parse_proto_file( file, already_parsed, import_paths, base_dir );
 }
 
-[[nodiscard]] auto cpp_file_name_from_proto( const std::filesystem::path & proto_file_path, std::string_view extension ) -> std::filesystem::path
+[[nodiscard]] auto cpp_file_name_from_proto( const fs::path & proto_file_path,
+                                             std::string_view extension ) -> fs::path
 {
     return proto_file_path.stem( ).concat( extension );
 }

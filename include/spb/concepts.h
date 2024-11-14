@@ -29,8 +29,8 @@ concept container = requires( T container ) {
 };
 
 template < class T >
-concept proto_field_bytes = container< T > &&
-    std::is_same_v< typename std::decay_t< T >::value_type, std::byte >;
+concept proto_field_bytes =
+    container< T > && std::is_same_v< typename std::decay_t< T >::value_type, std::byte >;
 
 template < class T >
 concept proto_field_bytes_resizable = proto_field_bytes< T > && requires( T obj ) {
@@ -39,8 +39,8 @@ concept proto_field_bytes_resizable = proto_field_bytes< T > && requires( T obj 
 };
 
 template < class T >
-concept proto_field_string = container< T > &&
-    std::is_same_v< typename std::decay_t< T >::value_type, char >;
+concept proto_field_string =
+    container< T > && std::is_same_v< typename std::decay_t< T >::value_type, char >;
 
 template < class T >
 concept proto_field_string_resizable = proto_field_string< T > && requires( T obj ) {
@@ -76,10 +76,7 @@ concept proto_enum = std::is_enum_v< T >;
  * @brief proto `message` converted to C++ struct
  */
 template < class T >
-concept proto_message = std::is_class_v< T > &&
-    !proto_field_string< T > &&
-    !proto_field_bytes< T > &&
-    !proto_label_repeated< T > &&
-    !proto_label_optional< T >;
+concept proto_message = std::is_class_v< T > && !proto_field_string< T > &&
+    !proto_field_bytes< T > && !proto_label_repeated< T > && !proto_label_optional< T >;
 
 }// namespace spb::detail

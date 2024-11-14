@@ -40,4 +40,5 @@ auto replace( std::string_view input, std::string_view what, std::string_view wi
  * @param at error offset
  * @param message message to the user
  */
-[[noreturn]] void throw_parse_error( const proto_file & file, std::string_view at, std::string_view message );
+[[noreturn]] void throw_parse_error( const proto_file & file, std::string_view at,
+                                     std::string_view message );

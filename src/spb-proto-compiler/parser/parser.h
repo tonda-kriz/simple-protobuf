@@ -23,16 +23,20 @@
  * @param extension CPP file extension (example: ".pb.h")
  * @return CPP file name
  */
-[[nodiscard]] auto cpp_file_name_from_proto( const std::filesystem::path & proto_file_path, std::string_view extension ) -> std::filesystem::path;
+[[nodiscard]] auto cpp_file_name_from_proto( const std::filesystem::path & proto_file_path,
+                                             std::string_view extension ) -> std::filesystem::path;
 
 /**
  * @brief parse proto file
  *
  * @param file_path file path
  * @param import_paths proto import paths (searched in order)
+ * @param base_dir working directory
  * @return proto_file parsed proto
  */
-auto parse_proto_file( const std::filesystem::path & file_path, std::span< const std::filesystem::path > import_paths ) -> proto_file;
+auto parse_proto_file(
+    const std::filesystem::path & file_path, std::span< const std::filesystem::path > import_paths,
+    const std::filesystem::path & base_dir = std::filesystem::current_path( ) ) -> proto_file;
 
 /**
  * @brief parse proto file content, used for fuzzing
