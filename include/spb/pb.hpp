@@ -13,8 +13,7 @@
 #include "pb/deserialize.hpp"
 #include "pb/serialize.hpp"
 #include "spb/io/io.hpp"
-#include <algorithm>
-#include <cstdint>
+#include <cstdlib>
 
 namespace spb::pb
 {
@@ -49,7 +48,7 @@ static inline auto serialize( const auto & message, spb::io::writer on_write ) -
  * @param[out] result serialized protobuf
  * @return serialized size in bytes
  * @throws std::runtime_error on error
- * @example `auto serialized = std::vector<std::byte>();`
+ * @example `auto serialized = std::vector< std::byte >();`
  *          `spb::pb::serialize( message, serialized );`
  */
 template < typename Message, spb::resizable_container Container >
@@ -101,6 +100,9 @@ static inline void deserialize( auto & message, spb::io::reader reader )
  * @param[in] protobuf string with protobuf
  * @param[out] message deserialized message
  * @throws std::runtime_error on error
+ * @example `auto serialized = std::vector< std::byte >( ... );`
+ *          `auto message = Message();`
+ *          `spb::pb::deserialize( message, serialized );`
  */
 template < typename Message, spb::size_container Container >
 static inline void deserialize( Message & message, const Container & protobuf )
@@ -120,11 +122,12 @@ static inline void deserialize( Message & message, const Container & protobuf )
 
 /**
  * @brief deserialize message from protobuf
- *        use it like `auto message = spb::pb::deserialize< Message >( protobuf_str )`
  *
- * @param[in] protobuf string with protobuf
+ * @param[in] protobuf serialized protobuf
  * @return deserialized message
  * @throws std::runtime_error on error
+ * @example `auto serialized = std::vector< std::byte >( ... );`
+ *          `auto message = spb::pb::deserialize< Message >( serialized );`
  */
 template < typename Message, spb::size_container Container >
 [[nodiscard]] static inline auto deserialize( const Container & protobuf ) -> Message
@@ -136,7 +139,6 @@ template < typename Message, spb::size_container Container >
 
 /**
  * @brief deserialize message from reader
- *        use it like `auto message = spb::pb::deserialize< Message >( protobuf_str )`
  *
  * @param[in] reader function for handling reads
  * @return deserialized message

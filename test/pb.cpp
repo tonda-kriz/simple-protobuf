@@ -247,16 +247,17 @@ TEST_CASE( "protobuf" )
                         "\x0a\x02h\x80"sv ) );
                     CHECK_THROWS( ( void ) spb::json::serialize< std::string >( "h\x80" ) );
                     CHECK_THROWS(
-                        ( void ) spb::json::deserialize< std::string >( R"("h\u02w1")" ) );
-                    CHECK_THROWS( ( void ) spb::json::deserialize< std::string >( R"("h\u02")" ) );
+                        ( void ) spb::json::deserialize< std::string >( R"("h\u02w1")"sv ) );
                     CHECK_THROWS(
-                        ( void ) spb::json::deserialize< std::string >( R"("h\ud800\u")" ) );
+                        ( void ) spb::json::deserialize< std::string >( R"("h\u02")"sv ) );
                     CHECK_THROWS(
-                        ( void ) spb::json::deserialize< std::string >( R"("h\ud800\u1")" ) );
+                        ( void ) spb::json::deserialize< std::string >( R"("h\ud800\u")"sv ) );
                     CHECK_THROWS(
-                        ( void ) spb::json::deserialize< std::string >( R"("h\ud800\udbff")" ) );
+                        ( void ) spb::json::deserialize< std::string >( R"("h\ud800\u1")"sv ) );
                     CHECK_THROWS(
-                        ( void ) spb::json::deserialize< std::string >( R"("h\ud800\ue000")" ) );
+                        ( void ) spb::json::deserialize< std::string >( R"("h\ud800\udbff")"sv ) );
+                    CHECK_THROWS(
+                        ( void ) spb::json::deserialize< std::string >( R"("h\ud800\ue000")"sv ) );
                 }
             }
         }
@@ -307,7 +308,7 @@ TEST_CASE( "protobuf" )
                 CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::OptStringFixed >(
                     "\x0a\x07hello12"sv ) );
                 CHECK_THROWS( ( void ) spb::json::deserialize< Test::Scalar::OptStringFixed >(
-                    R"({"value":"hello12"})" ) );
+                    R"({"value":"hello12"})"sv ) );
             }
             SUBCASE( "repeated" )
             {
@@ -320,7 +321,7 @@ TEST_CASE( "protobuf" )
                 CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::RepStringFixed >(
                     "\x0a\x06hello1\x0a\x05world"sv ) );
                 CHECK_THROWS( ( void ) spb::json::deserialize< Test::Scalar::RepStringFixed >(
-                    R"({"value":["hello1","world"]})" ) );
+                    R"({"value":["hello1","world"]})"sv ) );
             }
         }
     }

@@ -12,7 +12,7 @@
 #include "spb/io/io.hpp"
 #include "json/deserialize.hpp"
 #include "json/serialize.hpp"
-#include <cstdint>
+#include <cstdlib>
 
 namespace spb::json
 {
@@ -47,10 +47,14 @@ static inline auto serialize( const auto & message, spb::io::writer on_write ) -
  * @param message to be serialized
  * @return serialized json
  * @throws std::runtime_error on error
+ * @example `auto serialized = std::vector< std::byte >();`
+ *          `spb::json::serialize( message, serialized );`
  */
-[[nodiscard]] static inline auto serialize( const auto & message ) -> std::string
+template < typename Message, spb::resizable_container Container >
+static inline auto serialize( const Message & message, Container & result ) -> size_t
 {
-    auto result = std::string( serialize_size( message ), '\0' );
+    const auto size = serialize_size( message );
+    result.resize( size );
     auto writer = [ ptr = result.data( ) ]( const void * data, size_t size ) mutable
     {
         memcpy( ptr, data, size );
@@ -58,6 +62,22 @@ static inline auto serialize( const auto & message, spb::io::writer on_write ) -
     };
 
     serialize( message, writer );
+    return size;
+}
+
+/**
+ * @brief serialize message into json
+ *
+ * @param[in] message to be serialized
+ * @return serialized json
+ * @throws std::runtime_error on error
+ * @example `auto serialized_message = spb::json::serialize( message );`
+ */
+template < typename Message, spb::resizable_container Container = std::string >
+[[nodiscard]] static inline auto serialize( const Message & message ) -> Container
+{
+    auto result = Container( );
+    serialize< Message, Container >( message, result );
     return result;
 }
 
@@ -79,8 +99,12 @@ static inline void deserialize( auto & result, spb::io::reader on_read )
  * @param json string with json
  * @param message deserialized json
  * @throws std::runtime_error on error
+ * @example `auto serialized = std::string( ... );`
+ *          `auto message = Message();`
+ *          `spb::json::deserialize( message, serialized );`
  */
-static inline void deserialize( auto & message, std::string_view json )
+template < typename Message, spb::size_container Container >
+static inline void deserialize( Message & message, const Container & json )
 {
     auto reader = [ ptr = json.data( ), end = json.data( ) + json.size( ) ](
                       void * data, size_t size ) mutable -> size_t
@@ -97,14 +121,14 @@ static inline void deserialize( auto & message, std::string_view json )
 
 /**
  * @brief deserialize json-string into variable
- *        use it like `auto message = spb::json::deserialize< Message >( json_string )`
  *
  * @param json string with json
  * @return deserialized json or throw an exception
- * @throws std::runtime_error on error
+ * @example `auto serialized = std::string( ... );`
+ *          `auto message = spb::json::deserialize< Message >( serialized );`
  */
-template < typename Message >
-[[nodiscard]] static inline auto deserialize( std::string_view json ) -> Message
+template < typename Message, spb::size_container Container >
+[[nodiscard]] static inline auto deserialize( const Container & json ) -> Message
 {
     auto message = Message{ };
     deserialize( message, json );
@@ -113,11 +137,11 @@ template < typename Message >
 
 /**
  * @brief deserialize json-string into variable
- *        use it like `auto message = spb::json::deserialize< Message >( reader )`
  *
  * @param on_read function for handling reads
  * @return deserialized json
  * @throws std::runtime_error on error
+ * @example `auto message = spb::json::deserialize< Message >( reader )`
  */
 template < typename Message >
 [[nodiscard]] static inline auto deserialize( spb::io::reader on_read ) -> Message
