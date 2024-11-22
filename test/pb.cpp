@@ -117,6 +117,13 @@ template < typename T >
 void pb_test( const T & value, std::string_view protobuf )
 {
     {
+        auto serialized = spb::pb::serialize< std::vector< std::byte > >( value );
+        CHECK( serialized.size( ) == protobuf.size( ) );
+        auto proto = std::string_view( ( char * ) serialized.data( ), serialized.size( ) );
+        CHECK( proto == protobuf );
+    }
+
+    {
         auto serialized = spb::pb::serialize( value );
         CHECK( serialized == protobuf );
         auto size = spb::pb::serialize_size( value );
@@ -153,6 +160,13 @@ void pb_test( const T & value, std::string_view protobuf )
 template < typename T >
 void json_test( const T & value, std::string_view json )
 {
+    {
+        auto serialized = spb::json::serialize< std::vector< std::byte > >( value );
+        CHECK( serialized.size( ) == json.size( ) );
+        auto js = std::string_view( ( char * ) serialized.data( ), serialized.size( ) );
+        CHECK( js == json );
+    }
+
     {
         auto serialized = spb::json::serialize( value );
         CHECK( serialized == json );
@@ -245,7 +259,8 @@ TEST_CASE( "protobuf" )
                 {
                     CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::ReqString >(
                         "\x0a\x02h\x80"sv ) );
-                    CHECK_THROWS( ( void ) spb::json::serialize< std::string >( "h\x80" ) );
+                    CHECK_THROWS(
+                        ( void ) spb::json::serialize< std::string, std::string >( "h\x80" ) );
                     CHECK_THROWS(
                         ( void ) spb::json::deserialize< std::string >( R"("h\u02w1")"sv ) );
                     CHECK_THROWS(

@@ -74,7 +74,7 @@ static inline auto serialize( const Message & message, Container & result ) -> s
  * @throws std::runtime_error on error
  * @example `auto serialized_message = spb::pb::serialize< std::vector< std::byte > >( message );`
  */
-template < typename Message, spb::resizable_container Container = std::string >
+template < spb::resizable_container Container = std::string, typename Message >
 [[nodiscard]] static inline auto serialize( const Message & message ) -> Container
 {
     auto result = Container( );
