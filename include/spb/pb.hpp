@@ -9,11 +9,11 @@
 \***************************************************************************/
 #pragma once
 
+#include "concepts.h"
 #include "pb/deserialize.hpp"
 #include "pb/serialize.hpp"
 #include "spb/io/io.hpp"
-#include <algorithm>
-#include <cstdint>
+#include <cstdlib>
 
 namespace spb::pb
 {
@@ -45,12 +45,17 @@ static inline auto serialize( const auto & message, spb::io::writer on_write ) -
  * @brief serialize message into protobuf
  *
  * @param[in] message to be serialized
- * @return serialized protobuf
+ * @param[out] result serialized protobuf
+ * @return serialized size in bytes
  * @throws std::runtime_error on error
+ * @example `auto serialized = std::vector< std::byte >();`
+ *          `spb::pb::serialize( message, serialized );`
  */
-[[nodiscard]] static inline auto serialize( const auto & message ) -> std::string
+template < typename Message, spb::resizable_container Container >
+static inline auto serialize( const Message & message, Container & result ) -> size_t
 {
-    auto result = std::string( serialize_size( message ), '\0' );
+    const auto size = serialize_size( message );
+    result.resize( size );
     auto writer = [ ptr = result.data( ) ]( const void * data, size_t size ) mutable
     {
         memcpy( ptr, data, size );
@@ -58,6 +63,22 @@ static inline auto serialize( const auto & message, spb::io::writer on_write ) -
     };
 
     serialize( message, writer );
+    return size;
+}
+
+/**
+ * @brief serialize message into protobuf
+ *
+ * @param[in] message to be serialized
+ * @return serialized protobuf
+ * @throws std::runtime_error on error
+ * @example `auto serialized_message = spb::pb::serialize< std::vector< std::byte > >( message );`
+ */
+template < spb::resizable_container Container = std::string, typename Message >
+[[nodiscard]] static inline auto serialize( const Message & message ) -> Container
+{
+    auto result = Container( );
+    serialize< Message, Container >( message, result );
     return result;
 }
 
@@ -79,8 +100,12 @@ static inline void deserialize( auto & message, spb::io::reader reader )
  * @param[in] protobuf string with protobuf
  * @param[out] message deserialized message
  * @throws std::runtime_error on error
+ * @example `auto serialized = std::vector< std::byte >( ... );`
+ *          `auto message = Message();`
+ *          `spb::pb::deserialize( message, serialized );`
  */
-static inline void deserialize( auto & message, std::string_view protobuf )
+template < typename Message, spb::size_container Container >
+static inline void deserialize( Message & message, const Container & protobuf )
 {
     auto reader = [ ptr = protobuf.data( ), end = protobuf.data( ) + protobuf.size( ) ](
                       void * data, size_t size ) mutable -> size_t
@@ -97,14 +122,15 @@ static inline void deserialize( auto & message, std::string_view protobuf )
 
 /**
  * @brief deserialize message from protobuf
- *        use it like `auto message = spb::pb::deserialize< Message >( protobuf_str )`
  *
- * @param[in] protobuf string with protobuf
+ * @param[in] protobuf serialized protobuf
  * @return deserialized message
  * @throws std::runtime_error on error
+ * @example `auto serialized = std::vector< std::byte >( ... );`
+ *          `auto message = spb::pb::deserialize< Message >( serialized );`
  */
-template < typename Message >
-[[nodiscard]] static inline auto deserialize( std::string_view protobuf ) -> Message
+template < typename Message, spb::size_container Container >
+[[nodiscard]] static inline auto deserialize( const Container & protobuf ) -> Message
 {
     auto message = Message{ };
     deserialize( message, protobuf );
@@ -113,7 +139,6 @@ template < typename Message >
 
 /**
  * @brief deserialize message from reader
- *        use it like `auto message = spb::pb::deserialize< Message >( protobuf_str )`
  *
  * @param[in] reader function for handling reads
  * @return deserialized message

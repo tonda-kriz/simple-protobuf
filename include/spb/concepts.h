@@ -13,9 +13,26 @@
 #include <cstddef>
 #include <type_traits>
 
-namespace spb::detail
+namespace spb
 {
+template < class T >
+concept resizable_container = requires( T container ) {
+    { container.data( ) } -> std::same_as< typename std::decay_t< T >::value_type * >;
+    { container.resize( 1 ) };
+    typename std::decay_t< T >::value_type;
+    { sizeof( typename std::decay_t< T >::value_type ) == sizeof( char ) };
+};
 
+template < class T >
+concept size_container = requires( T container ) {
+    { container.data( ) };
+    { container.size( ) } -> std::convertible_to< std::size_t >;
+    typename std::decay_t< T >::value_type;
+    { sizeof( typename std::decay_t< T >::value_type ) == sizeof( char ) };
+};
+
+namespace detail
+{
 template < class T >
 concept proto_field_int_or_float = std::is_integral_v< T > || std::is_floating_point_v< T >;
 
@@ -66,17 +83,12 @@ concept proto_label_optional = requires( T container ) {
     typename T::value_type;
 };
 
-/**
- * @brief proto `enum` converted to C++ enum
- */
 template < class T >
 concept proto_enum = std::is_enum_v< T >;
 
-/**
- * @brief proto `message` converted to C++ struct
- */
 template < class T >
 concept proto_message = std::is_class_v< T > && !proto_field_string< T > &&
     !proto_field_bytes< T > && !proto_label_repeated< T > && !proto_label_optional< T >;
 
-}// namespace spb::detail
+}// namespace detail
+}// namespace spb
