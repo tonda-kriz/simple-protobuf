@@ -68,7 +68,7 @@ spb is an alternative implementation of [protobuf](https://github.com/protocolbu
 
 * C++ compiler (at least C++20)
 * cmake
-* *(optional) std library*
+* std library
 * *(optional) clang-format for code formatting*
 
 ### cheat sheet
@@ -80,8 +80,8 @@ add_subdirectory(external/spb-proto)
 spb_protobuf_generate(PROTO_SRCS PROTO_HDRS ${CMAKE_SOURCE_DIR}/proto/person.proto)
 # add generated files to your project
 add_executable(myapp ${PROTO_SRCS} ${PROTO_HDRS})
-# `spb-proto` is an interface library
-# the main purpose is to update include path of `myapp` 
+# `spb-proto` is an interface library 
+# the main purpose is to update include path of `myapp`
 target_link_libraries(myapp PUBLIC spb-proto)
 ```
 
@@ -209,9 +209,8 @@ template < typename Message >
 auto deserialize( spb::io::reader reader ) -> Message;
 ```
 
-API is prefixed with `spb::json::` for **json** and `spb::pb::` for **protobuf**
-
-[`spb::io::reader`](include/spb/io/io.hpp) and [`spb::io::writer`](include/spb/io/io.hpp) are user specified *functions* for IO, more info at [`include/io/io.hpp`](include/spb/io/io.hpp)
+API is prefixed with `spb::json::` for **json** and `spb::pb::` for **protobuf**,
+template concepts `spb::size_container` and `spb::resizable_container` are defined in [`include/spb/concepts.h`](include/spb/concepts.h), [`spb::io::reader`](include/spb/io/io.hpp) and [`spb::io::writer`](include/spb/io/io.hpp) are user specified *functions* for IO, more info at [`include/io/io.hpp`](include/spb/io/io.hpp)
 
 ## type mapping
 
