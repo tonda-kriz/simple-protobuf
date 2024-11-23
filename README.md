@@ -210,7 +210,7 @@ auto deserialize( spb::io::reader reader ) -> Message;
 ```
 
 API is prefixed with `spb::json::` for **json** and `spb::pb::` for **protobuf**,
-template concepts `spb::size_container` and `spb::resizable_container` are defined in [`include/spb/concepts.h`](include/spb/concepts.h), [`spb::io::reader`](include/spb/io/io.hpp) and [`spb::io::writer`](include/spb/io/io.hpp) are user specified *functions* for IO, more info at [`include/io/io.hpp`](include/spb/io/io.hpp)
+template concepts [`spb::size_container`](include/spb/concepts.h) and [`spb::resizable_container`](include/spb/concepts.h) are defined in [`include/spb/concepts.h`](include/spb/concepts.h), [`spb::io::reader`](include/spb/io/io.hpp) and [`spb::io::writer`](include/spb/io/io.hpp) are user specified *functions* for IO, more info at [`include/io/io.hpp`](include/spb/io/io.hpp)
 
 ## type mapping
 
