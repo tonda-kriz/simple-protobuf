@@ -9,9 +9,10 @@ spb_enable_warnings(spb-protoc)
 
 target_compile_features(spb-protoc PUBLIC cxx_std_20)
 
-include(CheckIPOSupported)
-check_ipo_supported(RESULT result)
-if(result)
-  set_target_properties(spb-protoc PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+if(NOT CMAKE_BUILD_TYPE MATCHES Debug)
+  include(CheckIPOSupported)
+  check_ipo_supported(RESULT result)
+  if(result)
+    set_target_properties(spb-protoc PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+  endif()
 endif()
-

@@ -50,8 +50,10 @@ target_link_libraries(pb-test PUBLIC spb-proto)
 add_dependencies(unit_tests pb-test)
 doctest_discover_tests(pb-test)
 
-include(CheckIPOSupported)
-check_ipo_supported(RESULT IPO_ENABLED)
+if(NOT CMAKE_BUILD_TYPE MATCHES Debug)
+  include(CheckIPOSupported)
+  check_ipo_supported(RESULT IPO_ENABLED)
+endif()
 
 add_executable(compiled-protos protos.cpp ${SPB_PROTO_SRCS} ${SPB_PROTO_HDRS})
 spb_enable_warnings(compiled-protos)
