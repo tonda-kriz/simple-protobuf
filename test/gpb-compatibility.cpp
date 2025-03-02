@@ -3,6 +3,7 @@
 #include <climits>
 #include <cstdint>
 #include <cstdio>
+#include <google/protobuf/util/delimited_message_util.h>
 #include <google/protobuf/util/json_util.h>
 #include <gpb-name.pb.h>
 #include <gpb-person.pb.h>
@@ -166,14 +167,25 @@ auto enum_value( const std::optional< T > & value )
 }
 
 template < typename GPB, typename SPB >
-void gpb_test( const SPB & spb )
+void gpb_test( const SPB & spb, const spb::pb::serialize_options & options = { } )
 {
     using T = typename ExtractOptional< std::decay_t< decltype( SPB::value ) > >::type;
 
     auto gpb            = GPB( );
-    auto spb_serialized = spb::pb::serialize( spb );
+    auto spb_serialized = spb::pb::serialize( spb, options );
 
-    REQUIRE( gpb.ParseFromString( spb_serialized ) );
+    if( options.delimited )
+    {
+        std::istringstream input_stream{ spb_serialized };
+        auto raw_input_stream = google::protobuf::io::IstreamInputStream{ &input_stream };
+        REQUIRE( google::protobuf::util::ParseDelimitedFromZeroCopyStream( &gpb, &raw_input_stream,
+                                                                           nullptr ) );
+    }
+    else
+    {
+        REQUIRE( gpb.ParseFromString( spb_serialized ) );
+    }
+
     if constexpr( is_gpb_repeated< GPB > )
     {
         REQUIRE( gpb.value( ).size( ) == opt_size( spb.value ) );
@@ -198,9 +210,30 @@ void gpb_test( const SPB & spb )
     {
         REQUIRE( spb.value == gpb.value( ) );
     }
+
     auto gpb_serialized = std::string( );
-    REQUIRE( gpb.SerializeToString( &gpb_serialized ) );
-    REQUIRE( spb::pb::deserialize< SPB >( gpb_serialized ).value == spb.value );
+    if( options.delimited )
+    {
+        std::ostringstream output_stream;
+        //- Wrapped so that the destructor of OstreamOutputStream is called,
+        //- which flushes the stream.
+        {
+            auto raw_output_stream = google::protobuf::io::OstreamOutputStream{ &output_stream };
+            REQUIRE( google::protobuf::util::SerializeDelimitedToZeroCopyStream(
+                gpb, &raw_output_stream ) );
+        }
+        gpb_serialized = output_stream.str( );
+    }
+    else
+    {
+        REQUIRE( gpb.SerializeToString( &gpb_serialized ) );
+    }
+
+    REQUIRE( spb::pb::deserialize< SPB >( gpb_serialized,
+                                          {
+                                              .delimited = options.delimited,
+                                          } )
+                 .value == spb.value );
     REQUIRE( gpb_serialized == spb_serialized );
 }
 
@@ -267,6 +300,7 @@ void gpb_compatibility( const SPB & spb )
     SUBCASE( "gpb serialize/deserialize" )
     {
         gpb_test< GPB, SPB >( spb );
+        gpb_test< GPB, SPB >( spb, { .delimited = true } );
     }
     SUBCASE( "json serialize/deserialize" )
     {
