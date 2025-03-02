@@ -1,4 +1,4 @@
-cmake_minimum_required( VERSION 3.12 )
+cmake_minimum_required( VERSION 3.20 )
 
 project(spb-proto VERSION 1.0.0 LANGUAGES CXX)
 
@@ -27,6 +27,12 @@ option(SPB_PROTO_USE_COVERAGE "Enable code coverage" OFF)
 option(SPB_PROTO_USE_ADDRESS_SANITIZER "Enable address sanitizer" OFF)
 option(SPB_PROTO_USE_UB_SANITIZER "Enable undefined behavior sanitizer" OFF)
 
+#[[ 
+  You may specify the output directory for auto-generated files either
+  as an absolute path or relative to CMAKE_SOURCE_DIR.
+  If nothing is set, files will be generated in CMAKE_CURRENT_BINARY_DIR.
+]]
+set(SPB_PROTO_OUTPUT_DIR "" CACHE STRING "Output directory for auto-generated files")
 
 if(SPB_PROTO_USE_COVERAGE)
     find_program(GCOV gcov)
