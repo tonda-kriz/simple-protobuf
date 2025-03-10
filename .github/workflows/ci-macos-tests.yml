@@ -8,10 +8,13 @@ on:
 
 jobs:
   build:
-    name: ${{ matrix.os }}-${{ matrix.compiler.name || matrix.compiler }}-${{ matrix.compiler.version || '' }}
+    name: ${{ matrix.os }}, ${{ matrix.compiler.name || matrix.compiler }}, ${{ matrix.compiler.version || '' }}
     runs-on: ${{ matrix.os }}
 
     strategy:
+      # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations. Consider changing this to true when your workflow is stable.
+      fail-fast: false
+      
       matrix:
         os: [macos-13, macos-14, macos-latest]
         compiler:
@@ -51,7 +54,7 @@ jobs:
       - name: Configure CMake
         run: |
           if [ "${{ matrix.compiler }}" == "appleclang" ]; then
-            cmake -GNinja \
+            cmake \
               -B ${{ steps.strings.outputs.build-output-dir }} \
               -DCMAKE_C_COMPILER=/Library/Developer/CommandLineTools/usr/bin/cc \
               -DCMAKE_CXX_COMPILER=/Library/Developer/CommandLineTools/usr/bin/c++ \
@@ -60,7 +63,7 @@ jobs:
               -DSPB_PROTO_BUILD_EXAMPLES=ON \
               -S ${{ github.workspace }}
           elif [ "${{ matrix.compiler.name }}" == "clang" ]; then
-            cmake -GNinja \
+            cmake \
               -B ${{ steps.strings.outputs.build-output-dir }} \
               -DCMAKE_C_COMPILER=/usr/local/opt/llvm@${{ matrix.compiler.version }}/bin/clang \
               -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@${{ matrix.compiler.version }}/bin/clang++ \
@@ -69,7 +72,7 @@ jobs:
               -DSPB_PROTO_BUILD_EXAMPLES=ON \
               -S ${{ github.workspace }}
           elif [ "${{ matrix.compiler.name }}" == "gcc" ]; then
-            cmake -GNinja \
+            cmake \
               -B ${{ steps.strings.outputs.build-output-dir }} \
               -DCMAKE_C_COMPILER=/usr/local/bin/gcc-${{ matrix.compiler.version }} \
               -DCMAKE_CXX_COMPILER=/usr/local/bin/g++-${{ matrix.compiler.version }} \
