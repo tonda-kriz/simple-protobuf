@@ -14,7 +14,7 @@ jobs:
     strategy:
       # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations. Consider changing this to true when your workflow is stable.
       fail-fast: false
-      
+
       matrix:
         os: [macos-13, macos-14, macos-latest]
         compiler:
@@ -43,7 +43,9 @@ jobs:
         if: matrix.compiler.name == 'clang'
         run: |
           brew install llvm@${{ matrix.compiler.version }}
-          echo "/usr/local/opt/llvm@${{ matrix.compiler.version }}/bin" >> $GITHUB_PATH
+          CLANG_PATH=$(brew --prefix llvm@${{ matrix.compiler.version }})
+          echo "CLANG_PATH=$CLANG_PATH/bin" >> $GITHUB_ENV
+          echo "$CLANG_PATH/bin" >> $GITHUB_PATH
   
       - name: Install GCC (if selected)
         if: matrix.compiler.name == 'gcc'
@@ -65,8 +67,8 @@ jobs:
           elif [ "${{ matrix.compiler.name }}" == "clang" ]; then
             cmake \
               -B ${{ steps.strings.outputs.build-output-dir }} \
-              -DCMAKE_C_COMPILER=/usr/local/opt/llvm@${{ matrix.compiler.version }}/bin/clang \
-              -DCMAKE_CXX_COMPILER=/usr/local/opt/llvm@${{ matrix.compiler.version }}/bin/clang++ \
+              -DCMAKE_C_COMPILER=${{ env.CLANG_PATH }}/clang \
+              -DCMAKE_CXX_COMPILER=${{ env.CLANG_PATH }}/clang++ \
               -DCMAKE_BUILD_TYPE=Release \
               -DSPB_PROTO_BUILD_TESTS=ON \
               -DSPB_PROTO_BUILD_EXAMPLES=ON \
