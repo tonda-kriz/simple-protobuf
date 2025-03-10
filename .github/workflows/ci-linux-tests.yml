@@ -45,6 +45,22 @@ jobs:
             compiler: clang
             build_type: Debug
             version: '16'
+          - os: ubuntu-24.04
+            compiler: clang
+            build_type: Release
+            version: '17'
+          - os: ubuntu-24.04
+            compiler: clang
+            build_type: Debug
+            version: '17'
+          - os: ubuntu-24.04
+            compiler: clang
+            build_type: Release
+            version: '18'
+          - os: ubuntu-24.04
+            compiler: clang
+            build_type: Debug
+            version: '18'
     steps:
     - uses: actions/checkout@v4
 
