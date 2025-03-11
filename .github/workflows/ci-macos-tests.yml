@@ -7,7 +7,18 @@ on:
     branches: [ "master" ]
 
 jobs:
+  detect-macos-latest:
+    runs-on: macos-latest
+    outputs:
+      macos_version: ${{ steps.detect.outputs.macos_version }}
+    steps:
+      - name: Detect macOS Latest Version
+        id: detect
+        run: |
+          MACOS_VERSION=$(sw_vers -productVersion | cut -d'.' -f1)
+          echo "macos_version=$MACOS_VERSION" >> $GITHUB_OUTPUT
   build:
+    needs: detect-macos-latest
     name: ${{ matrix.os }}, ${{ matrix.compiler.name || matrix.compiler }}, ${{ matrix.compiler.version || 'default' }}
     runs-on: ${{ matrix.os }}
 
@@ -31,6 +42,18 @@ jobs:
           - { name: gcc, version: 14 }
     
     steps:
+      - name: Skip if macos-14 and macos-latest is 14
+        if: matrix.os == 'macos-14' && needs.detect-macos-latest.outputs.macos_version == '14'
+        run: |
+          echo "Skipping macos-14 job because macos-latest is also macOS 14"
+          exit 0
+
+      - name: Skip if macos-13 and gcc-13
+        if: matrix.os == 'macos-13' && matrix.compiler.name == 'gcc' && matrix.compiler.version == 13
+        run: |
+          echo "Skipping macos-13 job with gcc-13"
+          exit 0
+
       - uses: actions/checkout@v4
 
       - name: Set reusable strings
