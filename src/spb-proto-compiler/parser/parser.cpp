@@ -443,7 +443,7 @@ void parse_top_level_package( spb::char_stream & stream, proto_base & package,
         return ident;
     }
 
-    return std::string_view{ ident.begin( ), ident2.end( ) };
+    return { ident.begin( ), static_cast< size_t >( ident2.end( ) - ident.begin( ) ) };
 }
 
 [[nodiscard]] auto parse_constant( spb::char_stream & stream ) -> std::string_view
