@@ -10,22 +10,16 @@
 
 #include "ast.h"
 #include "dumper/header.h"
-#include "io/file.h"
 #include "proto-field.h"
 #include "proto-file.h"
-#include "proto-import.h"
 #include "proto-message.h"
 #include <algorithm>
 #include <array>
 #include <cerrno>
 #include <cstddef>
-#include <iostream>
 #include <parser/char_stream.h>
 #include <algorithm>
-#include <set>
-#include <stdexcept>
 #include <string_view>
-#include <vector>
 
 namespace
 {

@@ -79,6 +79,7 @@ jobs:
           echo "$GCC_PATH/bin" >> $GITHUB_PATH
 
       - name: Configure CMake
+        shell: /bin/bash -e {0}
         run: |
           if [ "${{ matrix.compiler }}" == "appleclang" ]; then
             cmake \

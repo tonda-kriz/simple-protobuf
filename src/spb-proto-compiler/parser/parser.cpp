@@ -23,7 +23,6 @@
 #include <exception>
 #include <filesystem>
 #include <io/file.h>
-#include <optional>
 #include <parser/char_stream.h>
 #include <spb/from_chars.h>
 #include <stdexcept>
@@ -193,7 +192,7 @@ auto parse_int_or_float( spb::char_stream & stream ) -> std::string_view
     if( result.ec == std::errc{ } ) [[likely]]
     {
         stream.skip_to( result.ptr );
-        return { start, result.ptr };
+        return { start, static_cast< size_t >( result.ptr - start ) };
     }
     stream.throw_parse_error( "expecting number" );
 }
@@ -288,8 +287,8 @@ auto parse_comment( spb::char_stream & stream ) -> proto_comment
     return result;
 }
 
-[[nodiscard]] auto parse_ident( spb::char_stream & stream,
-                                bool skip_last_white_space = true ) -> std::string_view
+[[nodiscard]] auto parse_ident( spb::char_stream & stream, bool skip_last_white_space = true )
+    -> std::string_view
 {
     const auto * start = stream.begin( );
 
@@ -633,8 +632,8 @@ void parse_enum_field( spb::char_stream & stream, proto_enum & new_enum, proto_c
     new_enum.fields.push_back( field );
 }
 
-[[nodiscard]] auto parse_enum_body( spb::char_stream & stream,
-                                    proto_comment && enum_comment ) -> proto_enum
+[[nodiscard]] auto parse_enum_body( spb::char_stream & stream, proto_comment && enum_comment )
+    -> proto_enum
 {
     //- enumBody = "{" { option | enumField | emptyStatement | reserved } "}"
 
@@ -781,8 +780,8 @@ void parse_oneof_field( spb::char_stream & stream, proto_fields & fields, proto_
     fields.push_back( new_field );
 }
 
-[[nodiscard]] auto parse_oneof_body( spb::char_stream & stream,
-                                     proto_comment && oneof_comment ) -> proto_oneof
+[[nodiscard]] auto parse_oneof_body( spb::char_stream & stream, proto_comment && oneof_comment )
+    -> proto_oneof
 {
     //- oneof = "oneof" oneofName "{" { option | oneofField } "}"
     auto new_oneof = proto_oneof{ proto_base{
