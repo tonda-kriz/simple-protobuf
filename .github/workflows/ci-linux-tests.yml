@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: ${{ matrix.os }}, ${{ matrix.compiler }}-${{ matrix.version }}, ${{ matrix.build_type }}
+    name: ${{ matrix.os }}, ${{ matrix.compiler }}-${{ matrix.version }}, ${{ matrix.build_type }}, sanitizer:${{ matrix.sanitizer }}
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -21,46 +21,57 @@ jobs:
             compiler: gcc
             build_type: Release
             version: '13'
+            sanitizer: 'OFF'
           - os: ubuntu-24.04
             compiler: gcc
             build_type: Release
             version: '14'
+            sanitizer: 'ON'
+          - os: ubuntu-24.04
+            compiler: gcc
+            build_type: Release
+            version: '14'
+            sanitizer: 'OFF'
           - os: ubuntu-24.04
             compiler: gcc
             build_type: Debug
-            version: '14'          
+            version: '14'
+            sanitizer: 'ON'
           - os: ubuntu-24.04
             compiler: clang
             build_type: Release
             version: '14'
+            sanitizer: 'OFF'
           - os: ubuntu-24.04
             compiler: clang
             build_type: Release
             version: '15'
+            sanitizer: 'OFF'
           - os: ubuntu-24.04
             compiler: clang
             build_type: Release
             version: '16'
-          - os: ubuntu-24.04
-            compiler: clang
-            build_type: Debug
-            version: '16'
+            sanitizer: 'OFF'
           - os: ubuntu-24.04
             compiler: clang
             build_type: Release
             version: '17'
-          - os: ubuntu-24.04
-            compiler: clang
-            build_type: Debug
-            version: '17'
+            sanitizer: 'OFF'
           - os: ubuntu-24.04
             compiler: clang
             build_type: Release
             version: '18'
+            sanitizer: 'OFF'
+          - os: ubuntu-24.04
+            compiler: clang
+            build_type: Release
+            version: '18'
+            sanitizer: 'ON'
           - os: ubuntu-24.04
             compiler: clang
             build_type: Debug
             version: '18'
+            sanitizer: 'ON'
     steps:
     - uses: actions/checkout@v4
 
@@ -100,6 +111,8 @@ jobs:
         -DSPB_PROTO_BUILD_EXAMPLES=ON
         -DSPB_PROTO_BUILD_COMPATIBILITY_TESTS=ON
         -DSPB_PROTO_BUILD_ETL_TESTS=ON
+        -DSPB_PROTO_USE_ADDRESS_SANITIZER=${{ matrix.sanitizer }}
+        -DSPB_PROTO_USE_UB_SANITIZER=${{ matrix.sanitizer }}
         -S ${{ github.workspace }}
 
     - name: Build
