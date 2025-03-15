@@ -12,7 +12,7 @@ auto create_command( uint8_t arg ) -> ETL::Example::Command
     };
 }
 
-auto main( int argc, char * argv[] ) -> int
+auto main( int, char *[] ) -> int
 {
     std::cout << "sizeof(Command): " << sizeof( ETL::Example::Command ) << std::endl;
     std::cout << "sizeof(DeviceStatus): " << sizeof( ETL::Example::DeviceStatus ) << std::endl;

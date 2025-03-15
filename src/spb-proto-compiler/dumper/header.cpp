@@ -169,36 +169,66 @@ void get_include_from_options( cpp_includes & includes, const proto_options & op
     }
 }
 
+void get_includes_from_field( cpp_includes & includes, const proto_field & field,
+                              const proto_message & message, const proto_file & file )
+{
+    if( field.label == proto_field::Label::LABEL_OPTIONAL )
+    {
+        get_include_from_options( includes, field.options, message.options, file.options,
+                                  option_optional_include );
+    }
+    if( field.label == proto_field::Label::LABEL_REPEATED )
+    {
+        get_include_from_options( includes, field.options, message.options, file.options,
+                                  option_repeated_include );
+    }
+    if( field.label == proto_field::Label::LABEL_PTR )
+    {
+        get_include_from_options( includes, field.options, message.options, file.options,
+                                  option_pointer_include );
+    }
+    if( field.type == "string"sv )
+    {
+        get_include_from_options( includes, field.options, message.options, file.options,
+                                  option_string_include );
+    }
+    if( field.type == "bytes"sv )
+    {
+        get_include_from_options( includes, field.options, message.options, file.options,
+                                  option_bytes_include );
+    }
+}
+
 void get_message_includes( cpp_includes & includes, const proto_message & message,
                            const proto_file & file )
 {
     for( const auto & field : message.fields )
     {
-        if( field.label == proto_field::Label::LABEL_OPTIONAL )
+        get_includes_from_field( includes, field, message, file );
+    }
+
+    for( const auto & oneof : message.oneofs )
+    {
+        for( const auto & field : oneof.fields )
         {
-            get_include_from_options( includes, field.options, message.options, file.options,
-                                      option_optional_include );
+            get_includes_from_field( includes, field, message, file );
         }
-        if( field.label == proto_field::Label::LABEL_REPEATED )
-        {
-            get_include_from_options( includes, field.options, message.options, file.options,
-                                      option_repeated_include );
-        }
-        if( field.label == proto_field::Label::LABEL_PTR )
-        {
-            get_include_from_options( includes, field.options, message.options, file.options,
-                                      option_pointer_include );
-        }
-        if( field.type == "string"sv )
-        {
-            get_include_from_options( includes, field.options, message.options, file.options,
-                                      option_string_include );
-        }
-        if( field.type == "bytes"sv )
-        {
-            get_include_from_options( includes, field.options, message.options, file.options,
-                                      option_bytes_include );
-        }
+    }
+
+    for( const auto & map : message.maps )
+    {
+        const auto key_field = proto_field{
+            .label = proto_field::LABEL_NONE,
+            .type  = map.key_type,
+        };
+
+        const auto value_field = proto_field{
+            .label = proto_field::LABEL_NONE,
+            .type  = map.value_type,
+        };
+
+        get_includes_from_field( includes, key_field, message, file );
+        get_includes_from_field( includes, value_field, message, file );
     }
 
     for( const auto & m : message.messages )
@@ -329,8 +359,8 @@ auto get_field_bits( const proto_field & field ) -> std::string_view
 
 auto get_container_type( const proto_options & options, const proto_options & message_options,
                          const proto_options & file_options, std::string_view option,
-                         std::string_view ctype,
-                         std::string_view default_type = { } ) -> std::string
+                         std::string_view ctype, std::string_view default_type = { } )
+    -> std::string
 {
     if( auto p_name = options.find( option ); p_name != options.end( ) )
     {

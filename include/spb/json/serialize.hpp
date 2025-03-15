@@ -11,6 +11,8 @@
 #pragma once
 
 #include "../concepts.h"
+
+#include "../to_from_chars.h"
 #include "base64.h"
 #include "spb/json/deserialize.hpp"
 #include "spb/utf8.h"
@@ -18,19 +20,16 @@
 #include <array>
 #include <cctype>
 #include <charconv>
-#include <concepts>
 #include <cstddef>
 #include <cstring>
 #include <map>
 #include <memory>
-#include <span>
 #include <spb/io/io.hpp>
 #include <stdexcept>
 #include <string>
 #include <string_view>
 #include <sys/types.h>
 #include <type_traits>
-#include <vector>
 
 namespace spb::json::detail
 {
@@ -248,7 +247,7 @@ static inline void serialize( ostream & stream, spb::detail::proto_field_int_or_
 {
     auto buffer = std::array< char, 32 >( );
 
-    auto result = std::to_chars( buffer.data( ), buffer.data( ) + sizeof( buffer ), value );
+    auto result = spb_std_emu::to_chars( buffer.data( ), buffer.data( ) + sizeof( buffer ), value );
     stream.write(
         std::string_view( buffer.data( ), static_cast< size_t >( result.ptr - buffer.data( ) ) ) );
 }

@@ -12,13 +12,11 @@
 
 #include "../bits.h"
 #include "../concepts.h"
-#include "../from_chars.h"
+#include "../to_from_chars.h"
 #include "../utf8.h"
 #include "base64.h"
 #include <algorithm>
 #include <cctype>
-#include <charconv>
-#include <concepts>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -276,8 +274,8 @@ static inline void ignore_string( istream & stream )
     }
 }
 
-static inline auto deserialize_string_view( istream & stream, size_t min_size,
-                                            size_t max_size ) -> std::string_view
+static inline auto deserialize_string_view( istream & stream, size_t min_size, size_t max_size )
+    -> std::string_view
 {
     if( stream.current_char( ) != '"' )
     {

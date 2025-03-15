@@ -13,15 +13,12 @@
 
 #include "proto-comment.h"
 #include "proto-common.h"
-#include "proto-enum.h"
 #include "proto-import.h"
 #include "proto-message.h"
 #include "proto-service.h"
 #include "proto-syntax.h"
 #include <filesystem>
-#include <set>
 #include <string>
-#include <string_view>
 #include <vector>
 
 struct proto_file;

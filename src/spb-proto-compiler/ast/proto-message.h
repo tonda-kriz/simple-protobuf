@@ -11,7 +11,6 @@
 
 #pragma once
 
-#include "proto-comment.h"
 #include "proto-common.h"
 #include "proto-enum.h"
 #include "proto-field.h"

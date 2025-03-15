@@ -10,53 +10,48 @@
 
 #include "ast.h"
 #include "dumper/header.h"
-#include "io/file.h"
 #include "proto-field.h"
 #include "proto-file.h"
-#include "proto-import.h"
 #include "proto-message.h"
 #include <algorithm>
 #include <array>
+#include <cerrno>
 #include <cstddef>
-#include <iostream>
 #include <parser/char_stream.h>
-#include <ranges>
-#include <set>
-#include <stdexcept>
+#include <algorithm>
 #include <string_view>
-#include <vector>
 
 namespace
 {
 [[nodiscard]] auto is_imported( std::string_view type, const proto_files & imports ) -> bool
 {
-    return std::ranges::any_of( imports, [ = ]( const auto & import ) -> bool
-                                { return type == import.package.name; } );
+    return std::any_of( imports.begin( ), imports.end( ), [ type ]( const auto & import ) -> bool
+                        { return type == import.package.name; } );
 }
 
 [[nodiscard]] auto is_enum( std::string_view type, const proto_enums & enums ) -> bool
 {
-    return std::ranges::any_of( enums, [ = ]( const auto & enum_field ) -> bool
-                                { return type == enum_field.name; } );
+    return std::any_of( enums.begin( ), enums.end( ), [ type ]( const auto & enum_field ) -> bool
+                        { return type == enum_field.name; } );
 }
 
 [[nodiscard]] auto is_sub_message( std::string_view type, const proto_messages & messages ) -> bool
 {
-    return std::ranges::any_of( messages, [ = ]( const auto & message ) -> bool
-                                { return type == message.name; } );
+    return std::any_of( messages.begin( ), messages.end( ),
+                        [ type ]( const auto & message ) -> bool { return type == message.name; } );
 }
 
-[[nodiscard]] auto is_resolved_sub_message( std::string_view type,
-                                            const proto_messages & messages ) -> bool
+[[nodiscard]] auto is_resolved_sub_message( std::string_view type, const proto_messages & messages )
+    -> bool
 {
-    return std::ranges::any_of( messages, [ = ]( const auto & message ) -> bool
-                                { return type == message.name && message.resolved > 0; } );
+    return std::any_of( messages.begin( ), messages.end( ), [ type ]( const auto & message ) -> bool
+                        { return type == message.name && message.resolved > 0; } );
 }
 
 [[nodiscard]] auto is_sub_oneof( std::string_view type, const proto_oneofs & oneofs ) -> bool
 {
-    return std::ranges::any_of( oneofs, [ = ]( const auto & oneof ) -> bool
-                                { return type == oneof.name; } );
+    return std::any_of( oneofs.begin( ), oneofs.end( ),
+                        [ type ]( const auto & oneof ) -> bool { return type == oneof.name; } );
 }
 
 struct search_state
@@ -223,8 +218,8 @@ struct search_ctx
 
 [[nodiscard]] auto all_types_are_resolved( const proto_messages & messages ) -> bool
 {
-    return std::ranges::all_of( messages,
-                                []( const auto & message ) { return message.resolved > 0; } );
+    return std::all_of( messages.begin( ), messages.end( ),
+                        []( const auto & message ) { return message.resolved > 0; } );
 }
 
 void mark_message_as_resolved( search_ctx & ctx )
@@ -279,7 +274,7 @@ void resolve_message_fields( search_ctx & ctx )
         for( const auto & field : oneof.fields )
         {
             //- check only the first type (before .) and leave the rest for the C++ compiler to
-            //check
+            // check
             const auto type = field.type.substr( 0, field.type.find( '.' ) );
             if( !is_scalar_type( field.type ) && !is_enum( field.type, ctx.message.enums ) &&
                 !is_sub_message( type, ctx.message.messages ) &&
