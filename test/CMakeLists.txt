@@ -33,19 +33,19 @@ endif()
 add_custom_target(unit_tests)
 
 add_executable(base64-test base64.cpp)
-spb_enable_warnings(base64-test)
+spb_set_compile_options(base64-test)
 target_link_libraries(base64-test PUBLIC spb-proto)
 add_dependencies(unit_tests base64-test)
 doctest_discover_tests(base64-test)
 
 add_executable(json-test json.cpp ${SPB_PROTO_PERSON_SRC} ${SPB_PROTO_NAME_SRC} ${SPB_PROTO_SCALAR_SRC})
-spb_enable_warnings(json-test)
+spb_set_compile_options(json-test)
 target_link_libraries(json-test PUBLIC spb-proto)
 add_dependencies(unit_tests json-test)
 doctest_discover_tests(json-test)
 
 add_executable(pb-test pb.cpp ${SPB_PROTO_PERSON_SRC} ${SPB_PROTO_NAME_SRC} ${SPB_PROTO_SCALAR_SRC})
-spb_enable_warnings(pb-test)
+spb_set_compile_options(pb-test)
 target_link_libraries(pb-test PUBLIC spb-proto)
 add_dependencies(unit_tests pb-test)
 doctest_discover_tests(pb-test)
@@ -56,16 +56,48 @@ if(NOT CMAKE_BUILD_TYPE MATCHES Debug)
 endif()
 
 add_executable(compiled-protos protos.cpp ${SPB_PROTO_SRCS} ${SPB_PROTO_HDRS})
-spb_enable_warnings(compiled-protos)
+spb_set_compile_options(compiled-protos)
 if(MSVC)
 else()
   target_compile_options(compiled-protos PRIVATE -Wno-deprecated-declarations -Wno-deprecated)
 endif()
 target_link_libraries(compiled-protos PUBLIC spb-proto)
-set_target_properties(compiled-protos PROPERTIES INTERPROCEDURAL_OPTIMIZATION IPO_ENABLED)
 
 if(SPB_PROTO_BUILD_COMPATIBILITY_TESTS)
-  find_package(Protobuf REQUIRED)
+  set(ABSL_PROPAGATE_CXX_STD On)
+  set(ABSL_ENABLE_INSTALL Off)
+  set(BUILD_SHARED_LIBS Off)
+  
+  set(protobuf_INSTALL Off)
+  set(protobuf_BUILD_LIBPROTOC Off)
+  set(protobuf_BUILD_TESTS Off)
+  set(protobuf_BUILD_SHARED_LIBS Off)
+  set(protobuf_ABSL_PROVIDER "module")
+  
+  FetchContent_Declare(
+    protobuf
+    GIT_REPOSITORY https://github.com/protocolbuffers/protobuf.git
+    GIT_TAG v30.0
+  )
+  FetchContent_MakeAvailable(protobuf)
+  
+  function(PROTOBUF_GENERATE_CPP SRC_VAR HDR_VAR PROTO_FILE)
+    get_filename_component(PROTO_NAME ${PROTO_FILE} NAME_WE)
+    set(OUTPUT_CC "${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME}.pb.cc")
+    set(OUTPUT_H "${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME}.pb.h")
+    
+    add_custom_command(
+        OUTPUT ${OUTPUT_CC} ${OUTPUT_H}
+        COMMAND protobuf::protoc
+        ARGS --cpp_out=${CMAKE_CURRENT_BINARY_DIR} -I${CMAKE_CURRENT_BINARY_DIR} ${PROTO_FILE}
+        DEPENDS ${PROTO_FILE}
+        COMMENT "Generating Protobuf files for ${PROTO_FILE} as ${OUTPUT_CC} and ${OUTPUT_H}"
+        VERBATIM
+    )
+    
+    set(${SRC_VAR} ${OUTPUT_CC} PARENT_SCOPE)
+    set(${HDR_VAR} ${OUTPUT_H} PARENT_SCOPE)
+  endfunction()
 
   PROTOBUF_GENERATE_CPP(PROTO_PERSON_SRC PROTO_PERSON_HDR ${CMAKE_CURRENT_BINARY_DIR}/gpb-person.proto)
   PROTOBUF_GENERATE_CPP(PROTO_NAME_SRC PROTO_NAME_HDR ${CMAKE_CURRENT_BINARY_DIR}/gpb-name.proto)
@@ -76,17 +108,11 @@ if(SPB_PROTO_BUILD_COMPATIBILITY_TESTS)
   endif()
 
   add_library(gpb-proto STATIC ${PROTO_ETL_PERSON_SRC} ${PROTO_ETL_SCALAR_SRC} ${PROTO_SCALAR_SRC} ${PROTO_PERSON_SRC} ${PROTO_NAME_SRC})
-
-  if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND EXISTS "/etc/arch-release")
-    # On Arch Linux protobuf::libprotobuf needs to be linked with absl
-    target_link_libraries(gpb-proto PUBLIC protobuf::libprotobuf absl_log_internal_check_op absl_log_internal_message absl_status)
-  else()
-    target_link_libraries(gpb-proto PUBLIC protobuf::libprotobuf)
-  endif()
+  target_link_libraries(gpb-proto PUBLIC protobuf::libprotobuf)
   target_compile_features(gpb-proto INTERFACE cxx_std_20)
 
   add_executable(gpb-compatibility-test gpb-compatibility.cpp ${SPB_PROTO_PERSON_SRC} ${SPB_PROTO_NAME_SRC} ${SPB_PROTO_SCALAR_SRC})
-  spb_enable_warnings(gpb-compatibility-test)
+  spb_set_compile_options(gpb-compatibility-test)
   target_link_libraries(gpb-compatibility-test PUBLIC spb-proto gpb-proto)
   add_dependencies(unit_tests gpb-compatibility-test)
   doctest_discover_tests(gpb-compatibility-test)
