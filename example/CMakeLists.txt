@@ -16,12 +16,4 @@ FetchContent_MakeAvailable(etl)
 
 add_executable(etl-example etl.cpp ${PROTO_ETL_SRCS})
 target_link_libraries(etl-example PUBLIC spb-proto etl::etl)
-
-if(NOT CMAKE_BUILD_TYPE MATCHES Debug)
-  include(CheckIPOSupported)
-  check_ipo_supported(RESULT result)
-  if(result)
-    set_target_properties(addressbook PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
-    set_target_properties(etl PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
-  endif()
-endif()
+spb_set_compile_options(etl-example)
