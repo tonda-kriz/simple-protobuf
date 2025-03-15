@@ -74,6 +74,7 @@ jobs:
     - name: Install Linux dependencies
       run: >
           sudo apt-get install
+          protobuf-compiler
           ninja-build
     - name: Install gcc
       if: matrix.compiler == 'gcc'

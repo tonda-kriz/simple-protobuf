@@ -64,23 +64,27 @@ endif()
 target_link_libraries(compiled-protos PUBLIC spb-proto)
 
 if(SPB_PROTO_BUILD_COMPATIBILITY_TESTS)
-  set(ABSL_PROPAGATE_CXX_STD On)
-  set(ABSL_ENABLE_INSTALL Off)
-  set(BUILD_SHARED_LIBS Off)
+  if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND EXISTS "/etc/arch-release")
+    set(ABSL_PROPAGATE_CXX_STD On)
+    set(ABSL_ENABLE_INSTALL Off)
+    set(BUILD_SHARED_LIBS Off)
   
-  set(protobuf_INSTALL Off)
-  set(protobuf_BUILD_LIBPROTOC Off)
-  set(protobuf_BUILD_TESTS Off)
-  set(protobuf_BUILD_SHARED_LIBS Off)
-  set(protobuf_ABSL_PROVIDER "module")
+    set(protobuf_INSTALL Off)
+    set(protobuf_BUILD_LIBPROTOC Off)
+    set(protobuf_BUILD_TESTS Off)
+    set(protobuf_BUILD_SHARED_LIBS Off)
+    set(protobuf_ABSL_PROVIDER "module")
   
-  FetchContent_Declare(
-    protobuf
-    GIT_REPOSITORY https://github.com/protocolbuffers/protobuf.git
-    GIT_TAG v30.0
-  )
-  FetchContent_MakeAvailable(protobuf)
-  
+    FetchContent_Declare(
+      protobuf
+      GIT_REPOSITORY https://github.com/protocolbuffers/protobuf.git
+      GIT_TAG v30.0
+    )
+    FetchContent_MakeAvailable(protobuf)
+  else()
+    find_package(Protobuf REQUIRED)
+  endif()
+
   function(PROTOBUF_GENERATE_CPP SRC_VAR HDR_VAR PROTO_FILE)
     get_filename_component(PROTO_NAME ${PROTO_FILE} NAME_WE)
     set(OUTPUT_CC "${CMAKE_CURRENT_BINARY_DIR}/${PROTO_NAME}.pb.cc")

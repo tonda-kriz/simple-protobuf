@@ -185,11 +185,8 @@ static inline auto to_chars( char * first, char * last, const std::floating_poin
     const auto buffer_size = last - first;
 
     const char * format;
-    if constexpr( std::is_same_v< std::remove_cvref_t< decltype( number ) >, float > )
-    {
-        format = "%g";
-    }
-    else if constexpr( std::is_same_v< std::remove_cvref_t< decltype( number ) >, double > )
+
+    if constexpr( std::is_same_v< std::remove_cvref_t< decltype( number ) >, double > )
     {
         format = "%lg";
     }
@@ -199,7 +196,7 @@ static inline auto to_chars( char * first, char * last, const std::floating_poin
     }
     else
     {
-        static_assert( false, "Unsupported floating-point type" );
+        format = "%g";
     }
 
     const int written = snprintf( first, buffer_size, format, number );
