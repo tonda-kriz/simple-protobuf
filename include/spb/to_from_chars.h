@@ -1,5 +1,5 @@
 /***************************************************************************\
-* Name        : std::from_chars emulation, #if __cpp_lib_to_chars < 201611L *
+* Name        : std::to/from_chars emulation, #if __cpp_lib_to_chars < 201611L *
 * Description : string to number conversion, (std::from_chars or strtoX)    *
 * Author      : antonin.kriz@gmail.com                                      *
 * ------------------------------------------------------------------------- *
@@ -10,6 +10,7 @@
 
 #pragma once
 #include <charconv>
+#include <string>
 
 #if __cpp_lib_to_chars >= 201611L
 namespace spb_std_emu = std;
@@ -27,6 +28,12 @@ namespace spb_std_emu = std;
 namespace spb::std_emu
 {
 struct from_chars_result
+{
+    const char * ptr;
+    std::errc ec;
+};
+
+struct to_chars_result
 {
     const char * ptr;
     std::errc ec;
@@ -140,6 +147,69 @@ static inline auto from_chars( const char * first, const char * last,
     }
     number = result;
     return { end, std::errc( ) };
+}
+
+static inline auto to_chars( char * first, char * last, const std::integral auto & number,
+                             int base = 10 ) -> to_chars_result
+{
+    if( base != 10 )
+    {
+        return { first, std::errc::invalid_argument };
+    }
+
+    if( last <= first )
+    {
+        return { first, std::errc::value_too_large };
+    }
+
+    const auto result      = std::to_string( number );
+    const auto buffer_size = static_cast< size_t >( last - first );
+
+    if( result.size( ) > buffer_size )
+    {
+        return { first, std::errc::value_too_large };
+    }
+
+    memcpy( first, result.data( ), result.size( ) );
+    return { first + result.size( ), std::errc{} };
+}
+
+static inline auto to_chars( char * first, char * last, const std::floating_point auto & number )
+    -> to_chars_result
+{
+    if( last <= first )
+    {
+        return { first, std::errc::value_too_large };
+    }
+
+    const auto buffer_size = last - first;
+
+    const char * format;
+
+    if constexpr( std::is_same_v< std::remove_cvref_t< decltype( number ) >, double > )
+    {
+        format = "%lg";
+    }
+    else if constexpr( std::is_same_v< std::remove_cvref_t< decltype( number ) >, long double > )
+    {
+        format = "%Lg";
+    }
+    else
+    {
+        format = "%g";
+    }
+
+    const int written = snprintf( first, buffer_size, format, number );
+    if( written < 0 )
+    {
+        return { first, std::errc::invalid_argument };
+    }
+    else if( written > buffer_size )
+    {
+        return { first, std::errc::value_too_large };
+    }
+
+    return { first + written, std::errc{} };
 }
 
 }// namespace spb::std_emu

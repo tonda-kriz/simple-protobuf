@@ -13,7 +13,6 @@
 
 #include "proto-common.h"
 #include "proto-field.h"
-#include <string_view>
 #include <vector>
 
 struct proto_oneof : public proto_base

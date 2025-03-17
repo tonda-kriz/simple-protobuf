@@ -11,8 +11,6 @@
 #pragma once
 
 #include "proto-file.h"
-#include <filesystem>
-#include <span>
 #include <string_view>
 
 /**
