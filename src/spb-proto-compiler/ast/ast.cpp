@@ -23,10 +23,15 @@
 
 namespace
 {
-[[nodiscard]] auto is_imported( std::string_view type, const proto_files & imports ) -> bool
+[[nodiscard]] auto is_imported( std::string_view full_type, const proto_files & imports ) -> bool
 {
-    return std::any_of( imports.begin( ), imports.end( ), [ type ]( const auto & import ) -> bool
-                        { return type == import.package.name; } );
+    return std::any_of( imports.begin( ), imports.end( ),
+                        [ full_type ]( const auto & import ) -> bool
+                        {
+                            return full_type.size( ) > import.package.name.size( ) &&
+                                full_type[ import.package.name.size( ) ] == '.' &&
+                                full_type.starts_with( import.package.name );
+                        } );
 }
 
 [[nodiscard]] auto is_enum( std::string_view type, const proto_enums & enums ) -> bool
@@ -246,7 +251,7 @@ void resolve_message_fields( search_ctx & ctx )
             is_enum( field.type, ctx.message.enums ) ||
             is_sub_message( type, ctx.message.messages ) ||
             is_sub_oneof( type, ctx.message.oneofs ) || is_parent( field, ctx ) ||
-            is_defined_in_parents( type, ctx ) || is_imported( type, ctx.state.imports ) ||
+            is_defined_in_parents( type, ctx ) || is_imported( field.type, ctx.state.imports ) ||
             is_forwarded( field, ctx ) )
         {
             continue;
@@ -262,7 +267,7 @@ void resolve_message_fields( search_ctx & ctx )
         const auto type = map.value_type.substr( 0, map.value_type.find( '.' ) );
         if( !is_scalar_type( map.value_type ) && !is_enum( map.value_type, ctx.message.enums ) &&
             !is_sub_message( type, ctx.message.messages ) && !is_defined_in_parents( type, ctx ) &&
-            !is_imported( type, ctx.state.imports ) )
+            !is_imported( map.value_type, ctx.state.imports ) )
         {
             // std::cout << "map" << map.name << " type: " << type << " unknown\n";
             return;
@@ -278,7 +283,8 @@ void resolve_message_fields( search_ctx & ctx )
             const auto type = field.type.substr( 0, field.type.find( '.' ) );
             if( !is_scalar_type( field.type ) && !is_enum( field.type, ctx.message.enums ) &&
                 !is_sub_message( type, ctx.message.messages ) &&
-                !is_defined_in_parents( type, ctx ) && !is_imported( type, ctx.state.imports ) )
+                !is_defined_in_parents( type, ctx ) &&
+                !is_imported( field.type, ctx.state.imports ) )
             {
                 // std::cout << "oneof " << oneof.name << " type: " << type << " unknown\n";
                 return;
