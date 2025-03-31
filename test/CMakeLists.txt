@@ -73,6 +73,7 @@ if(SPB_PROTO_BUILD_COMPATIBILITY_TESTS)
     set(protobuf_BUILD_LIBPROTOC Off)
     set(protobuf_BUILD_TESTS Off)
     set(protobuf_BUILD_SHARED_LIBS Off)
+    set(protobuf_BUILD_LIBUPB Off)
     set(protobuf_ABSL_PROVIDER "module")
   
     FetchContent_Declare(

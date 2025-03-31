@@ -232,6 +232,40 @@ TEST_CASE( "protobuf" )
                           "\xfa\xff\xff\xff\x0f\x05hello", R"({"value":"hello"})" );
         }
     }
+    SUBCASE( "enum" )
+    {
+        SUBCASE( "alias" )
+        {
+            SUBCASE( "required" )
+            {
+                pb_json_test(
+                    Test::Scalar::ReqEnumAlias{ .value =
+                                                    Test::Scalar::ReqEnumAlias::Enum::EAA_STARTED },
+                    "\x08\x01", R"({"value":"EAA_STARTED"})" );
+            }
+            SUBCASE( "optional" )
+            {
+                pb_json_test( Test::Scalar::OptEnumAlias{ }, "", "{}" );
+                pb_json_test(
+                    Test::Scalar::OptEnumAlias{ .value =
+                                                    Test::Scalar::OptEnumAlias::Enum::EAA_STARTED },
+                    "\x08\x01", R"({"value":"EAA_STARTED"})" );
+            }
+            SUBCASE( "repeated" )
+            {
+                pb_json_test( Test::Scalar::RepEnumAlias{ }, "", "{}" );
+                pb_json_test(
+                    Test::Scalar::RepEnumAlias{
+                        .value = { Test::Scalar::RepEnumAlias::Enum::EAA_STARTED } },
+                    "\x08\x01", R"({"value":["EAA_STARTED"]})" );
+                pb_json_test(
+                    Test::Scalar::RepEnumAlias{
+                        .value = { Test::Scalar::RepEnumAlias::Enum::EAA_STARTED,
+                                   Test::Scalar::RepEnumAlias::Enum::EAA_RUNNING } },
+                    "\x08\x01\x08\x01", R"({"value":["EAA_STARTED","EAA_STARTED"]})" );
+            }
+        }
+    }
     SUBCASE( "string" )
     {
         SUBCASE( "required" )

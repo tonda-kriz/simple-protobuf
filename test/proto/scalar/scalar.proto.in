@@ -1168,3 +1168,57 @@ message ReqSfixed64_64_2
     //[[ field.type = "int64:2" ]]
     required sfixed64 value = 1;
 }
+
+message OptEnumAlias
+{
+    enum Enum
+    {
+        option allow_alias = true;
+        EAA_UNSPECIFIED = 0;
+        EAA_STARTED = 1;
+        EAA_RUNNING = 1;
+        EAA_FINISHED = 2;
+    }
+
+    optional Enum value = 1;
+}
+message ReqEnumAlias
+{
+    enum Enum
+    {
+        option allow_alias = true;
+        EAA_UNSPECIFIED = 0;
+        EAA_STARTED = 1;
+        EAA_RUNNING = 1;
+        EAA_FINISHED = 2;
+    }
+
+    required Enum value = 1;
+}
+
+message RepEnumAlias
+{
+    enum Enum
+    {
+        option allow_alias = true;
+        EAA_UNSPECIFIED = 0;
+        EAA_STARTED = 1;
+        EAA_RUNNING = 1;
+        EAA_FINISHED = 2;
+    }
+    repeated Enum value = 1;
+}
+
+message RepPackEnumAlias
+{
+    enum Enum
+    {
+        option allow_alias = true;
+        EAA_UNSPECIFIED = 0;
+        EAA_STARTED = 1;
+        EAA_RUNNING = 1;
+        EAA_FINISHED = 2;
+    }
+
+    repeated Enum value = 1 [ packed = true ];
+}

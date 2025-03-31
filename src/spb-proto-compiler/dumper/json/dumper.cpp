@@ -214,13 +214,17 @@ void dump_cpp_serialize_value( std::ostream & stream, const proto_enum & my_enum
     stream << "void serialize_value( detail::ostream & stream, const " << full_name
            << " & value )\n{\n";
     stream << "\tswitch( value )\n\t{\n";
-    std::set<int32_t> numbers_taken;
+
+    std::set< int32_t > numbers_taken;
     for( const auto & field : my_enum.fields )
     {
-        if (numbers_taken.contains(field.number)) continue;
+        if( !numbers_taken.insert( field.number ).second )
+        {
+            continue;
+        }
+
         stream << "\tcase " << full_name << "::" << field.name
                << ":\n\t\treturn stream.serialize( \"" << field.name << "\"sv);\n";
-        numbers_taken.insert(field.number);
     }
     stream << "\tdefault:\n\t\tthrow std::system_error( std::make_error_code( "
               "std::errc::invalid_argument ) );\n";
@@ -277,12 +281,15 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_enum & my_en
               "std::errc::invalid_argument ) );\n";
     stream << "\t\t},\n\t\t[&]( int32_t enum_int )\n\t\t{\n\t\t\tswitch( " << full_name
            << "( enum_int ) )\n\t\t\t{\n";
-    std::set<int32_t> numbers_taken;
+    std::set< int32_t > numbers_taken;
     for( const auto & field : my_enum.fields )
     {
-        if (numbers_taken.contains(field.number)) continue;
+        if( !numbers_taken.insert( field.number ).second )
+        {
+            continue;
+        }
+
         stream << "\t\t\tcase " << full_name << "::" << field.name << ":\n";
-        numbers_taken.insert(field.number);
     }
     stream << "\t\t\t\tvalue = " << full_name << "( enum_int );\n\t\t\t\treturn ;\n";
     stream << "\t\t\t}\n\t\t\tthrow std::system_error( std::make_error_code( "

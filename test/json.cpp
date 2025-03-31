@@ -1,3 +1,4 @@
+#include "spb/json.hpp"
 #include <cstdint>
 #include <memory>
 #include <name.pb.h>
@@ -219,8 +220,16 @@ TEST_CASE( "json" )
         {
             CHECK( spb::json::deserialize< PhoneBook::Person::PhoneType >( "\"HOME\""sv ) ==
                    PhoneBook::Person::PhoneType::HOME );
-            CHECK( spb::json::deserialize< PhoneBook::Person::PhoneType >( "1"sv ) ==
-                   PhoneBook::Person::PhoneType::HOME );
+            CHECK( Test::Scalar::ReqEnumAlias::Enum::EAA_STARTED ==
+                   Test::Scalar::ReqEnumAlias::Enum::EAA_RUNNING );
+            CHECK( spb::json::deserialize< Test::Scalar::ReqEnumAlias::Enum >(
+                       "\"EAA_STARTED\""sv ) == Test::Scalar::ReqEnumAlias::Enum::EAA_STARTED );
+            CHECK( spb::json::deserialize< Test::Scalar::ReqEnumAlias::Enum >(
+                       "\"EAA_STARTED\""sv ) == Test::Scalar::ReqEnumAlias::Enum::EAA_RUNNING );
+            CHECK( spb::json::deserialize< Test::Scalar::ReqEnumAlias::Enum >(
+                       "\"EAA_RUNNING\""sv ) == Test::Scalar::ReqEnumAlias::Enum::EAA_STARTED );
+            CHECK( spb::json::deserialize< Test::Scalar::ReqEnumAlias::Enum >(
+                       "\"EAA_RUNNING\""sv ) == Test::Scalar::ReqEnumAlias::Enum::EAA_RUNNING );
             REQUIRE_THROWS(
                 ( void ) spb::json::deserialize< PhoneBook::Person::PhoneType >( "3"sv ) );
             REQUIRE_THROWS(
