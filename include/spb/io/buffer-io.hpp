@@ -44,7 +44,7 @@ private:
     {
         if( begin_index > 0 )
         {
-            memmove( &buffer[ 0 ], &buffer[ begin_index ], bytes_in_buffer( ) );
+            memmove( buffer.data( ), buffer.data( ) + begin_index, bytes_in_buffer( ) );
             end_index -= begin_index;
             begin_index = 0;
         }
