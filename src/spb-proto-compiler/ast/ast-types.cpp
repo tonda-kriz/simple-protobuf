@@ -66,18 +66,6 @@ using scalar_encoder = spb::pb::detail::scalar_encoder;
                                  size_t type_part )
     -> std::pair< proto_field::Type, proto_field::BitType >;
 
-[[nodiscard]] auto packed_array( const proto_field & field ) -> scalar_encoder
-{
-    if( field.label != proto_field::Label::REPEATED )
-        return { };
-
-    auto p_packed = field.options.find( "packed" );
-    if( p_packed != field.options.end( ) && p_packed->second == "true" )
-        return scalar_encoder::packed;
-
-    return { };
-}
-
 [[nodiscard]] auto remove_bitfield( std::string_view type ) -> std::string_view
 {
     return type.substr( 0, type.find( ':' ) );
@@ -373,13 +361,21 @@ void resolve_types( const search_ctx & parent, proto_message & message )
 }
 }// namespace
 
-auto is_packed_array( const proto_field & field ) -> bool
+auto is_packed_array( const proto_file & file, const proto_field & field ) -> bool
 {
     if( field.label != proto_field::Label::REPEATED )
         return { };
 
-    const auto p_packed = field.options.find( "packed" );
-    return p_packed != field.options.end( ) && p_packed->second == "true";
+    if( file.syntax.version < 3 )
+    {
+        const auto p_packed = field.options.find( "packed" );
+        return p_packed != field.options.end( ) && p_packed->second == "true";
+    }
+    else
+    {
+        const auto p_packed = field.options.find( "packed" );
+        return p_packed == field.options.end( ) || p_packed->second != "false";
+    }
 }
 
 auto is_scalar( const proto_field::Type & type ) -> bool
@@ -407,40 +403,6 @@ auto is_scalar( const proto_field::Type & type ) -> bool
     case proto_field::Type::FIXED64:
     case proto_field::Type::SFIXED64:
         return true;
-    }
-}
-
-auto get_scalar_encoder( const proto_field & field ) -> scalar_encoder
-{
-    switch( field.type )
-    {
-    case proto_field::Type::NONE:
-    case proto_field::Type::BYTES:
-    case proto_field::Type::MESSAGE:
-    case proto_field::Type::STRING:
-        return { };
-
-    case proto_field::Type::BOOL:
-    case proto_field::Type::ENUM:
-    case proto_field::Type::INT32:
-    case proto_field::Type::UINT32:
-    case proto_field::Type::INT64:
-    case proto_field::Type::UINT64:
-        return scalar_encoder::varint | packed_array( field );
-
-    case proto_field::Type::SINT32:
-    case proto_field::Type::SINT64:
-        return scalar_encoder::svarint | packed_array( field );
-
-    case proto_field::Type::FLOAT:
-    case proto_field::Type::FIXED32:
-    case proto_field::Type::SFIXED32:
-        return scalar_encoder::i32 | packed_array( field );
-
-    case proto_field::Type::DOUBLE:
-    case proto_field::Type::FIXED64:
-    case proto_field::Type::SFIXED64:
-        return scalar_encoder::i64 | packed_array( field );
     }
 }
 

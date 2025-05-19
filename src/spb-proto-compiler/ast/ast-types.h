@@ -12,20 +12,9 @@
 
 #include "ast/proto-field.h"
 #include "proto-file.h"
-#include "spb/pb/wire-types.h"
-
-/**
- * @brief return scalar type or no type
- *        https://protobuf.dev/programming-guides/proto3/#scalar
- *
- * @param type_name
- * @return scalar type or no type
- */
-[[nodiscard]] auto get_scalar_encoder( const proto_field & field )
-    -> spb::pb::detail::scalar_encoder;
 
 [[nodiscard]] auto is_scalar( const proto_field::Type & type ) -> bool;
-[[nodiscard]] auto is_packed_array( const proto_field & field ) -> bool;
+[[nodiscard]] auto is_packed_array( const proto_file & file, const proto_field & field ) -> bool;
 
 /**
  * @brief resolve types in a proto file

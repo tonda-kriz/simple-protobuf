@@ -2,6 +2,7 @@
 #include "spb/pb/wire-types.h"
 #include <array>
 #include <cstdint>
+#include <enum.pb.h>
 #include <name.pb.h>
 #include <optional>
 #include <person.pb.h>
@@ -49,6 +50,14 @@ auto operator==( const Test::Variant & lhs, const Test::Variant & rhs ) noexcept
 }
 
 }// namespace Test
+
+namespace example
+{
+auto operator==( const SomeMessage & lhs, const SomeMessage & rhs ) noexcept -> bool
+{
+    return lhs.values == rhs.values;
+}
+}// namespace example
 
 namespace PhoneBook
 {
@@ -463,6 +472,15 @@ TEST_CASE( "protobuf" )
                     "\x0a\x02\x42"sv ) );
                 CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::RepPackEnum >(
                     "\x0a\x02\x42\xff"sv ) );
+
+                pb_json_test(
+                    example::SomeMessage{ .values = { example::SomeEnum::SOME_ENUM_ONE,
+                                                      example::SomeEnum::SOME_ENUM_TWO,
+                                                      example::SomeEnum::SOME_ENUM_THREE,
+                                                      example::SomeEnum::SOME_ENUM_FOUR,
+                                                      example::SomeEnum::SOME_ENUM_FIVE } },
+                    "\x0A\x05\x01\x02\x03\x04\x05"sv,
+                    R"({"values":["SOME_ENUM_ONE","SOME_ENUM_TWO","SOME_ENUM_THREE","SOME_ENUM_FOUR","SOME_ENUM_FIVE"]})" );
             }
         }
     }
