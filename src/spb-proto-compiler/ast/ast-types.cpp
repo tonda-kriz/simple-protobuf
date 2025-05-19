@@ -404,6 +404,8 @@ auto is_scalar( const proto_field::Type & type ) -> bool
     case proto_field::Type::SFIXED64:
         return true;
     }
+
+    return false;
 }
 
 void resolve_types( proto_file & file )

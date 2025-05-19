@@ -419,6 +419,8 @@ auto convert_to_ctype( const proto_file & file, const proto_field & field,
     case proto_field::Type::FIXED64:
         return "uint64_t";
     }
+
+    throw_parse_error( file, field.type_name, "invalid type" );
 }
 
 void dump_field_type_and_name( std::ostream & stream, const proto_field & field,
