@@ -34,7 +34,9 @@ struct proto_reserved
  */
 struct proto_base
 {
+    //- points to .proto file
     std::string_view name;
+
     //- field number
     int32_t number;
 

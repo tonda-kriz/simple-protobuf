@@ -72,6 +72,7 @@ if(SPB_PROTO_BUILD_COMPATIBILITY_TESTS)
     set(protobuf_INSTALL Off)
     set(protobuf_BUILD_LIBPROTOC Off)
     set(protobuf_BUILD_TESTS Off)
+    set(protobuf_BUILD_LIBUPB Off)
     set(protobuf_BUILD_SHARED_LIBS Off)
     set(protobuf_BUILD_LIBUPB Off)
     set(protobuf_ABSL_PROVIDER "module")
@@ -141,20 +142,23 @@ if(SPB_PROTO_BUILD_COMPATIBILITY_TESTS)
   endif()
 endif()
 
-add_executable(spb-protoc-test parser.cpp 
-    ../../src/spb-proto-compiler/parser/parser.cpp 
-    ../../src/spb-proto-compiler/dumper/pb/dumper.cpp
-    ../../src/spb-proto-compiler/dumper/json/dumper.cpp
-    ../../src/spb-proto-compiler/dumper/dumper.cpp
-    ../../src/spb-proto-compiler/dumper/header.cpp
-    ../../src/spb-proto-compiler/io/file.cpp
-    ../../src/spb-proto-compiler/ast/ast.cpp
-    )
-target_include_directories(spb-protoc-test PUBLIC ${CMAKE_SOURCE_DIR}/src/spb-proto-compiler)
-target_link_libraries(spb-protoc-test PUBLIC spb-proto)
-add_dependencies(unit_tests spb-protoc-test)
-doctest_discover_tests(spb-protoc-test)
-
+if(SPB_PROTO_BUILD_COMPILER_TESTS)
+  add_executable(spb-protoc-test parser.cpp 
+      ../../src/spb-proto-compiler/parser/parser.cpp 
+      ../../src/spb-proto-compiler/dumper/pb/dumper.cpp
+      ../../src/spb-proto-compiler/dumper/json/dumper.cpp
+      ../../src/spb-proto-compiler/dumper/dumper.cpp
+      ../../src/spb-proto-compiler/dumper/header.cpp
+      ../../src/spb-proto-compiler/io/file.cpp
+      ../../src/spb-proto-compiler/ast/ast.cpp
+      ../../src/spb-proto-compiler/ast/ast-types.cpp
+      ../../src/spb-proto-compiler/ast/ast-messages-order.cpp
+      )
+  target_include_directories(spb-protoc-test PUBLIC ${CMAKE_SOURCE_DIR}/src/spb-proto-compiler)
+  target_link_libraries(spb-protoc-test PUBLIC spb-proto)
+  add_dependencies(unit_tests spb-protoc-test)
+  doctest_discover_tests(spb-protoc-test)
+endif()
 
 if(SPB_PROTO_BUILD_FUZZER_TESTS)
   if(SPB_PROTO_USE_ADDRESS_SANITIZER)

@@ -16,7 +16,9 @@
 
 struct proto_import
 {
+    //- points to .proto file
     std::string_view file_name;
+
     proto_comment comments;
 };
 

@@ -206,7 +206,7 @@ template < typename T >
                 {
                     //- GPB encodes signed varints always as 64-bits
                     //- so int32_t(-2) is encoded as "\xfe\xff\xff\xff\xff\xff\xff\xff\xff\x01",
-                    //same as int64_t(-2)
+                    // same as int64_t(-2)
                     //- but it should be encoded as  "\xfe\xff\xff\xff\x0f"
                     value = T( value );
                 }
@@ -280,19 +280,19 @@ template < scalar_encoder encoder, typename T >
 static inline auto deserialize_bitfield_as( istream & stream, uint32_t bits, wire_type type ) -> T
 {
     auto value = T( );
-    if constexpr( type1( encoder ) == scalar_encoder::svarint )
+    if constexpr( scalar_encoder_type1( encoder ) == scalar_encoder::svarint )
     {
         check_wire_type( type, wire_type::varint );
 
         auto tmp = read_varint< std::make_unsigned_t< T > >( stream );
         value    = T( ( tmp >> 1 ) ^ ( ~( tmp & 1 ) + 1 ) );
     }
-    else if constexpr( type1( encoder ) == scalar_encoder::varint )
+    else if constexpr( scalar_encoder_type1( encoder ) == scalar_encoder::varint )
     {
         check_wire_type( type, wire_type::varint );
         value = read_varint< T >( stream );
     }
-    else if constexpr( type1( encoder ) == scalar_encoder::i32 )
+    else if constexpr( scalar_encoder_type1( encoder ) == scalar_encoder::i32 )
     {
         static_assert( sizeof( T ) <= sizeof( uint32_t ) );
 
@@ -310,7 +310,7 @@ static inline auto deserialize_bitfield_as( istream & stream, uint32_t bits, wir
             value = T( tmp );
         }
     }
-    else if constexpr( type1( encoder ) == scalar_encoder::i64 )
+    else if constexpr( scalar_encoder_type1( encoder ) == scalar_encoder::i64 )
     {
         static_assert( sizeof( T ) <= sizeof( uint64_t ) );
         check_wire_type( type, wire_type::fixed64 );
@@ -332,34 +332,49 @@ static inline auto deserialize_bitfield_as( istream & stream, uint32_t bits, wir
 }
 
 template < scalar_encoder encoder >
+static inline void deserialize_as( istream & stream, spb::detail::proto_enum auto & value,
+                                   wire_type type )
+{
+    using T        = std::remove_cvref_t< decltype( value ) >;
+    using int_type = std::underlying_type_t< T >;
+
+    if constexpr( !scalar_encoder_is_packed( encoder ) )
+    {
+        check_wire_type( type, wire_type::varint );
+    }
+
+    value = T( read_varint< int_type >( stream ) );
+}
+
+template < scalar_encoder encoder >
 static inline void deserialize_as( istream & stream,
                                    spb::detail::proto_field_int_or_float auto & value,
                                    wire_type type )
 {
     using T = std::remove_cvref_t< decltype( value ) >;
 
-    if constexpr( type1( encoder ) == scalar_encoder::svarint )
+    if constexpr( scalar_encoder_type1( encoder ) == scalar_encoder::svarint )
     {
-        if constexpr( !is_packed( encoder ) )
+        if constexpr( !scalar_encoder_is_packed( encoder ) )
         {
             check_wire_type( type, wire_type::varint );
         }
         auto tmp = read_varint< std::make_unsigned_t< T > >( stream );
         value    = T( ( tmp >> 1 ) ^ ( ~( tmp & 1 ) + 1 ) );
     }
-    else if constexpr( type1( encoder ) == scalar_encoder::varint )
+    else if constexpr( scalar_encoder_type1( encoder ) == scalar_encoder::varint )
     {
-        if constexpr( !is_packed( encoder ) )
+        if constexpr( !scalar_encoder_is_packed( encoder ) )
         {
             check_wire_type( type, wire_type::varint );
         }
         value = read_varint< T >( stream );
     }
-    else if constexpr( type1( encoder ) == scalar_encoder::i32 )
+    else if constexpr( scalar_encoder_type1( encoder ) == scalar_encoder::i32 )
     {
         static_assert( sizeof( T ) <= sizeof( uint32_t ) );
 
-        if constexpr( !is_packed( encoder ) )
+        if constexpr( !scalar_encoder_is_packed( encoder ) )
         {
             check_wire_type( type, wire_type::fixed32 );
         }
@@ -392,10 +407,10 @@ static inline void deserialize_as( istream & stream,
             }
         }
     }
-    else if constexpr( type1( encoder ) == scalar_encoder::i64 )
+    else if constexpr( scalar_encoder_type1( encoder ) == scalar_encoder::i64 )
     {
         static_assert( sizeof( T ) <= sizeof( uint64_t ) );
-        if constexpr( !is_packed( encoder ) )
+        if constexpr( !scalar_encoder_is_packed( encoder ) )
         {
             check_wire_type( type, wire_type::fixed64 );
         }
@@ -428,16 +443,6 @@ static inline void deserialize_as( istream & stream,
             }
         }
     }
-}
-
-static inline void deserialize( istream & stream, spb::detail::proto_enum auto & value,
-                                wire_type type )
-{
-    using T        = std::remove_cvref_t< decltype( value ) >;
-    using int_type = std::underlying_type_t< T >;
-
-    check_wire_type( type, wire_type::varint );
-    value = T( read_varint< int_type >( stream ) );
 }
 
 static inline void deserialize( istream & stream, spb::detail::proto_label_optional auto & p_value,
@@ -523,7 +528,7 @@ static inline void deserialize_packed_as( istream & stream, C & value, wire_type
 template < scalar_encoder encoder, spb::detail::proto_label_repeated C >
 static inline void deserialize_as( istream & stream, C & value, wire_type type )
 {
-    if constexpr( is_packed( encoder ) )
+    if constexpr( scalar_encoder_is_packed( encoder ) )
     {
         deserialize_packed_as< encoder >( stream, value, wire_type_from_scalar_encoder( encoder ) );
     }
@@ -544,8 +549,8 @@ template < scalar_encoder encoder, typename keyT, typename valueT >
 static inline void deserialize_as( istream & stream, std::map< keyT, valueT > & value,
                                    wire_type type )
 {
-    const auto key_encoder   = type1( encoder );
-    const auto value_encoder = type2( encoder );
+    const auto key_encoder   = scalar_encoder_type1( encoder );
+    const auto value_encoder = scalar_encoder_type2( encoder );
 
     check_wire_type( type, wire_type::length_delimited );
 
@@ -582,7 +587,7 @@ static inline void deserialize_as( istream & stream, std::map< keyT, valueT > & 
             key_defined = true;
             break;
         case 2:
-            if constexpr( spb::detail::proto_field_int_or_float< valueT > )
+            if constexpr( spb::detail::proto_field_number< valueT > )
             {
                 deserialize_as< value_encoder >( stream, pair.second, field_type );
             }
@@ -597,7 +602,7 @@ static inline void deserialize_as( istream & stream, std::map< keyT, valueT > & 
                 }
                 else
                 {
-                    deserialize( stream, pair.second, field_type );
+                    throw std::runtime_error( "invalid field" );
                 }
             }
             value_defined = true;

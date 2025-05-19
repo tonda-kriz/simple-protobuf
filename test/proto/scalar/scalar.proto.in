@@ -652,6 +652,8 @@ message OptEnum
         Enum_min = -2147483648;
         Enum_max = 2147483647;
         Enum_value = 1;
+        Enum_value2 = 2;
+        Enum_value3 = 3;
     }
     
     optional Enum value = 1;
@@ -663,6 +665,8 @@ message ReqEnum
         Enum_min = -2147483648;
         Enum_max = 2147483647;
         Enum_value = 1;
+        Enum_value2 = 2;
+        Enum_value3 = 3;
     }
     
     required Enum value = 1;
@@ -674,9 +678,24 @@ message RepEnum
         Enum_min = -2147483648;
         Enum_max = 2147483647;
         Enum_value = 1;
+        Enum_value2 = 2;
+        Enum_value3 = 3;
     }
     
     repeated Enum value = 1;
+}
+
+message RepPackEnum
+{
+    enum Enum {
+        Enum_min = -2147483648;
+        Enum_max = 2147483647;
+        Enum_value = 1;
+        Enum_value2 = 2;
+        Enum_value3 = 3;
+    }
+    
+    repeated Enum value = 1 [packed = true];
 }
 
 message OptEnumInt8

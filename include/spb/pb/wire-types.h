@@ -36,50 +36,56 @@ enum class wire_type : uint8_t
 //- type1, type2 and packed flag
 enum class scalar_encoder : uint8_t
 {
-    //- int32, int64, uint32, uint64, bool, enum
-    varint = 0,
+    //- int32, int64, uint32, uint64, bool
+    varint = 0x01,
     //- zigzag int32 or int64
-    svarint = 1,
+    svarint = 0x02,
     //- 4 bytes
-    i32 = 2,
+    i32 = 0x03,
     //- 8 bytes
-    i64 = 3,
+    i64 = 0x04,
     //- packed array
-    packed = 0x80
+    packed = 0x08
 };
 
-static constexpr auto combine( scalar_encoder a, scalar_encoder b ) noexcept -> scalar_encoder
+static constexpr scalar_encoder operator&( scalar_encoder lhs, scalar_encoder rhs ) noexcept
 {
-    if( b == scalar_encoder::packed )
-    {
-        return scalar_encoder( static_cast< std::underlying_type_t< scalar_encoder > >( a ) |
-                               static_cast< std::underlying_type_t< scalar_encoder > >( b ) );
-    }
-
-    return scalar_encoder( static_cast< std::underlying_type_t< scalar_encoder > >( a ) |
-                           ( static_cast< std::underlying_type_t< scalar_encoder > >( b ) << 2 ) );
+    return scalar_encoder( std::underlying_type_t< scalar_encoder >( lhs ) &
+                           std::underlying_type_t< scalar_encoder >( rhs ) );
 }
 
-static constexpr auto type1( scalar_encoder a ) noexcept -> scalar_encoder
+static constexpr scalar_encoder operator|( scalar_encoder lhs, scalar_encoder rhs ) noexcept
 {
-    return scalar_encoder( static_cast< std::underlying_type_t< scalar_encoder > >( a ) & 0x03 );
+    return scalar_encoder( std::underlying_type_t< scalar_encoder >( lhs ) |
+                           std::underlying_type_t< scalar_encoder >( rhs ) );
 }
 
-static constexpr auto type2( scalar_encoder a ) noexcept -> scalar_encoder
+static constexpr auto scalar_encoder_combine( scalar_encoder type1, scalar_encoder type2 ) noexcept
+    -> scalar_encoder
 {
-    return scalar_encoder( ( static_cast< std::underlying_type_t< scalar_encoder > >( a ) >> 2 ) &
-                           0x03 );
+    return scalar_encoder( ( std::underlying_type_t< scalar_encoder >( type1 ) & 0x0f ) |
+                           ( ( std::underlying_type_t< scalar_encoder >( type2 ) & 0x0f ) << 4 ) );
 }
 
-static constexpr auto is_packed( scalar_encoder a ) noexcept -> bool
+static constexpr auto scalar_encoder_is_packed( scalar_encoder a ) noexcept -> bool
 {
-    return static_cast< std::underlying_type_t< scalar_encoder > >( a ) &
-        static_cast< std::underlying_type_t< scalar_encoder > >( scalar_encoder::packed );
+    return ( a & scalar_encoder::packed ) == scalar_encoder::packed;
+}
+
+static constexpr auto scalar_encoder_type1( scalar_encoder a ) noexcept -> scalar_encoder
+{
+    return scalar_encoder( static_cast< std::underlying_type_t< scalar_encoder > >( a ) & 0x07 );
+}
+
+static constexpr auto scalar_encoder_type2( scalar_encoder a ) noexcept -> scalar_encoder
+{
+    return scalar_encoder( ( static_cast< std::underlying_type_t< scalar_encoder > >( a ) >> 4 ) &
+                           0x07 );
 }
 
 static constexpr auto wire_type_from_scalar_encoder( scalar_encoder a ) noexcept -> wire_type
 {
-    switch( type1( a ) )
+    switch( scalar_encoder_type1( a ) )
     {
     case scalar_encoder::i32:
         return wire_type::fixed32;
