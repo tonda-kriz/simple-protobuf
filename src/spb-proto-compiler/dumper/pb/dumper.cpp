@@ -128,6 +128,7 @@ auto encoder_type_str( const proto_file & file, const proto_field & field ) -> s
         return is_packed_array( file, field ) ? "scalar_encoder::i64 | scalar_encoder::packed"
                                               : "scalar_encoder::i64";
     }
+    return { };
 }
 
 auto encoder_type( const proto_file & file, const proto_field & field ) -> std::string
