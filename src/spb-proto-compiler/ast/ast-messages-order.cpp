@@ -133,9 +133,7 @@ struct search_ctx
 [[nodiscard]] auto is_forwarded( proto_field & field, search_ctx & ctx ) -> bool
 {
     if( ctx.p_parent == nullptr )
-    {
         return false;
-    }
 
     for( auto & message : ctx.p_parent->message.messages )
     {
@@ -181,9 +179,7 @@ struct search_ctx
 [[nodiscard]] auto is_parent( proto_field & field, const search_ctx & ctx ) -> bool
 {
     if( ctx.p_parent == nullptr )
-    {
         return false;
-    }
 
     if( field.type_name == ctx.p_parent->message.name )
     {
@@ -207,9 +203,7 @@ struct search_ctx
 [[nodiscard]] auto is_defined_in_parents( std::string_view type, const search_ctx & ctx ) -> bool
 {
     if( ctx.p_parent == nullptr )
-    {
         return false;
-    }
 
     const auto & message = ctx.p_parent->message;
     if( is_enum( type, message.enums ) || is_resolved_sub_message( type, message.messages ) ||
@@ -234,76 +228,64 @@ void mark_message_as_resolved( search_ctx & ctx )
     ctx.message.resolved = ++ctx.state.resolved_messages;
 }
 
+[[nodiscard]] auto resolve_message_field( search_ctx & ctx, proto_field & field ) -> bool
+{
+    //- check only the first type (before .) and leave the rest for the C++ compiler to check
+    //- TODO: check full type name
+    const auto type_name = field.type_name.substr( 0, field.type_name.find( '.' ) );
+
+    return is_scalar( field.type ) || is_self( field, ctx ) ||
+        is_enum( field.type_name, ctx.message.enums ) ||
+        is_sub_message( type_name, ctx.message.messages ) ||
+        is_sub_oneof( type_name, ctx.message.oneofs ) || is_parent( field, ctx ) ||
+        is_defined_in_parents( type_name, ctx ) ||
+        is_imported( field.type_name, ctx.state.imports ) || is_forwarded( field, ctx );
+}
+
+[[nodiscard]] auto resolve_field( search_ctx & ctx, const proto_field & field ) -> bool
+{
+    const auto type_name = field.type_name.substr( 0, field.type_name.find( '.' ) );
+
+    return is_scalar( field.type ) || is_enum( field.type_name, ctx.message.enums ) ||
+        is_sub_message( type_name, ctx.message.messages ) ||
+        is_defined_in_parents( type_name, ctx ) ||
+        is_imported( field.type_name, ctx.state.imports );
+}
+
 void resolve_message_fields( search_ctx & ctx )
 {
     if( ctx.message.resolved > 0 )
-    {
         return;
-    }
 
     for( auto & field : ctx.message.fields )
     {
-        //- check only the first type (before .) and leave the rest for the C++ compiler to check
-        //- TODO: check full type name
-        const auto type_name = field.type_name.substr( 0, field.type_name.find( '.' ) );
-
-        if( is_scalar( field.type ) || is_self( field, ctx ) ||
-            is_enum( field.type_name, ctx.message.enums ) ||
-            is_sub_message( type_name, ctx.message.messages ) ||
-            is_sub_oneof( type_name, ctx.message.oneofs ) || is_parent( field, ctx ) ||
-            is_defined_in_parents( type_name, ctx ) ||
-            is_imported( field.type_name, ctx.state.imports ) || is_forwarded( field, ctx ) )
-        {
-            continue;
-        }
-
-        //- can't forward declare sub messages
-        return;
+        if( !resolve_message_field( ctx, field ) )
+            return;
     }
 
     for( const auto & map : ctx.message.maps )
     {
-        //- check only the first type (before .) and leave the rest for the C++ compiler to check
-        const auto type = map.value.type_name.substr( 0, map.value.type_name.find( '.' ) );
-        if( !is_scalar( map.value.type ) && !is_enum( map.value.type_name, ctx.message.enums ) &&
-            !is_sub_message( type, ctx.message.messages ) && !is_defined_in_parents( type, ctx ) &&
-            !is_imported( map.value.type_name, ctx.state.imports ) )
-        {
-            // std::cout << "map" << map.name << " type: " << type << " unknown\n";
+        if( !resolve_field( ctx, map.value ) )
             return;
-        }
     }
 
     for( const auto & oneof : ctx.message.oneofs )
     {
         for( const auto & field : oneof.fields )
         {
-            //- check only the first type (before .) and leave the rest for the C++ compiler to
-            // check
-            const auto type_name = field.type_name.substr( 0, field.type_name.find( '.' ) );
-            if( !is_scalar( field.type ) && !is_enum( field.type_name, ctx.message.enums ) &&
-                !is_sub_message( type_name, ctx.message.messages ) &&
-                !is_defined_in_parents( type_name, ctx ) &&
-                !is_imported( field.type_name, ctx.state.imports ) )
-            {
-                // std::cout << "oneof " << oneof.name << " type: " << type << " unknown\n";
+            if( !resolve_field( ctx, field ) )
                 return;
-            }
         }
     }
 
     if( all_types_are_resolved( ctx.message.messages ) )
-    {
         mark_message_as_resolved( ctx );
-    }
 }
 
 void resolve_message_dependencies( search_ctx & ctx )
 {
     if( ctx.message.resolved > 0 )
-    {
         return;
-    }
 
     for( auto & message : ctx.message.messages )
     {

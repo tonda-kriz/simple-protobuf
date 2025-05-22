@@ -34,21 +34,21 @@ add_custom_target(unit_tests)
 
 add_executable(base64-test base64.cpp)
 spb_set_compile_options(base64-test)
+spb_disable_warnings(base64-test)
 target_link_libraries(base64-test PUBLIC spb-proto)
 add_dependencies(unit_tests base64-test)
 doctest_discover_tests(base64-test)
 
 add_executable(json-test json.cpp ${SPB_PROTO_PERSON_SRC} ${SPB_PROTO_NAME_SRC} ${SPB_PROTO_SCALAR_SRC})
 spb_set_compile_options(json-test)
+spb_disable_warnings(json-test)
 target_link_libraries(json-test PUBLIC spb-proto)
 add_dependencies(unit_tests json-test)
 doctest_discover_tests(json-test)
 
 add_executable(pb-test pb.cpp ${SPB_PROTO_SRCS} ${SPB_PROTO_PERSON_SRC} ${SPB_PROTO_NAME_SRC} ${SPB_PROTO_SCALAR_SRC})
 spb_set_compile_options(pb-test)
-if(NOT MSVC)
-  target_compile_options(pb-test PRIVATE -Wno-deprecated-declarations -Wno-deprecated)
-endif()
+spb_disable_warnings(pb-test)
 target_link_libraries(pb-test PUBLIC spb-proto)
 add_dependencies(unit_tests pb-test)
 doctest_discover_tests(pb-test)
@@ -60,9 +60,7 @@ endif()
 
 add_executable(compiled-protos protos.cpp ${SPB_PROTO_SRCS} ${SPB_PROTO_HDRS})
 spb_set_compile_options(compiled-protos)
-if(NOT MSVC)
-  target_compile_options(compiled-protos PRIVATE -Wno-deprecated-declarations -Wno-deprecated)
-endif()
+spb_disable_warnings(compiled-protos)
 target_link_libraries(compiled-protos PUBLIC spb-proto)
 
 if(SPB_PROTO_BUILD_COMPATIBILITY_TESTS)
@@ -179,19 +177,19 @@ endif()
     )
   target_include_directories(spb-protoc-fuzzer PUBLIC ${CMAKE_SOURCE_DIR}/src/spb-proto-compiler)
   target_link_libraries(spb-protoc-fuzzer PUBLIC spb-proto)
-  target_compile_options(spb-protoc-fuzzer PRIVATE -Wno-deprecated-declarations -Wno-deprecated)
+  spb_disable_warnings(spb-protoc-fuzzer)
 
   add_executable(spb-pb-fuzzer fuzzer/spb-pb-fuzzer.cpp 
     ${SPB_PROTO_PERSON_SRC} ${SPB_PROTO_NAME_SRC} ${SPB_PROTO_SCALAR_SRC} ${SPB_PROTO_SRCS}
   )
   target_link_libraries(spb-pb-fuzzer PUBLIC spb-proto)
-  target_compile_options(spb-pb-fuzzer PRIVATE -Wno-deprecated-declarations -Wno-deprecated)
+  spb_disable_warnings(spb-pb-fuzzer)
 
   add_executable(spb-json-fuzzer fuzzer/spb-json-fuzzer.cpp 
     ${SPB_PROTO_PERSON_SRC} ${SPB_PROTO_NAME_SRC} ${SPB_PROTO_SCALAR_SRC} ${SPB_PROTO_SRCS}
   )
   target_link_libraries(spb-json-fuzzer PUBLIC spb-proto)
-  target_compile_options(spb-json-fuzzer PRIVATE -Wno-deprecated-declarations -Wno-deprecated)
+  spb_disable_warnings(spb-json-fuzzer)
 endif()
 
 
