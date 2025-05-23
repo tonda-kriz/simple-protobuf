@@ -1,5 +1,5 @@
 /***************************************************************************\
-* Name        : ast render                                                  *
+* Name        : ast types resolver                                          *
 * Description : resolve types in ast tree                                   *
 * Author      : antonin.kriz@gmail.com                                      *
 * ------------------------------------------------------------------------- *
@@ -13,19 +13,11 @@
 #include "ast/proto-field.h"
 #include "proto-file.h"
 
-/**
- * @brief return scalar type or no type
- *        https://protobuf.dev/programming-guides/proto3/#scalar
- *
- * @param type_name
- * @return scalar type or no type
- */
-[[nodiscard]] auto get_encoder( const proto_field & field ) -> proto_field::Type;
+[[nodiscard]] auto is_scalar( const proto_field::Type & type ) -> bool;
+[[nodiscard]] auto is_packed_array( const proto_file & file, const proto_field & field ) -> bool;
 
 /**
- * @brief resolve types and sort all messages in a proto file
- *        so if message A depends on message B
- *        then message B must be defined before message A
+ * @brief resolve types in a proto file
  *
  */
-void resolve_messages( proto_file & file );
+void resolve_types( proto_file & file );

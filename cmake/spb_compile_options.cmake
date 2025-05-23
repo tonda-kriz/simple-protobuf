@@ -45,6 +45,12 @@ function(spb_enable_warnings TARGET)
     endif()
 endfunction(spb_enable_warnings)
 
+function(spb_disable_warnings TARGET)
+    if(NOT MSVC)
+        target_compile_options(${TARGET} PRIVATE -Wno-deprecated-declarations -Wno-deprecated "-Wno-#warnings")
+    endif()
+endfunction(spb_disable_warnings)
+
 function(spb_set_compile_options TARGET)
     spb_enable_warnings(${TARGET})
 

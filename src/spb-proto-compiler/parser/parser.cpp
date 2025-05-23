@@ -9,11 +9,13 @@
 \***************************************************************************/
 
 #include "parser.h"
+#include "ast/proto-field.h"
 #include "ast/proto-file.h"
 #include "dumper/header.h"
 #include "options.h"
 #include <array>
 #include <ast/ast.h>
+#include <ast/ast-types.h>
 #include <cctype>
 #include <cerrno>
 #include <concepts>
@@ -681,18 +683,18 @@ void parse_enum_field( spb::char_stream & stream, proto_enum & new_enum, proto_c
 {
     if( stream.consume( "optional" ) )
     {
-        return proto_field::LABEL_OPTIONAL;
+        return proto_field::Label::OPTIONAL;
     }
     if( stream.consume( "repeated" ) )
     {
-        return proto_field::LABEL_REPEATED;
+        return proto_field::Label::REPEATED;
     }
     if( stream.consume( "required" ) )
     {
-        return proto_field::LABEL_NONE;
+        return proto_field::Label::NONE;
     }
 
-    return proto_field::LABEL_OPTIONAL;
+    return proto_field::Label::OPTIONAL;
     // stream.throw_parse_error( "expecting label" );
 }
 
@@ -702,9 +704,10 @@ void parse_field( spb::char_stream & stream, proto_fields & fields, proto_commen
     //- fieldOptions = fieldOption { ","  fieldOption }
     //- fieldOption = optionName "=" constant
     auto new_field = proto_field{
-        .label = parse_field_label( stream ),
-        .type  = parse_full_ident( stream ),
+        .label     = parse_field_label( stream ),
+        .type_name = parse_full_ident( stream ),
     };
+
     new_field.name    = parse_ident( stream );
     new_field.number  = ( consume_or_fail( stream, '=' ),
                          parse_number< decltype( proto_field::number ) >( stream ) );
@@ -742,8 +745,9 @@ auto parse_map_body( spb::char_stream & stream, proto_comment && comment ) -> pr
     //- "map" "<" keyType "," type ">" mapName "=" fieldNumber [ "[" fieldOptions "]" ] ";"
 
     auto new_map = proto_map{
-        .key_type   = parse_map_key_type( stream ),
-        .value_type = ( consume_or_fail( stream, ',' ), parse_full_ident( stream ) ),
+        .key   = proto_field{ .type_name = parse_map_key_type( stream ) },
+        .value = proto_field{ .type_name =
+                                  ( consume_or_fail( stream, ',' ), parse_full_ident( stream ) ) },
     };
     new_map.name = ( consume_or_fail( stream, '>' ), parse_ident( stream ) );
     new_map.number =
@@ -770,7 +774,8 @@ auto parse_map_body( spb::char_stream & stream, proto_comment && comment ) -> pr
 void parse_oneof_field( spb::char_stream & stream, proto_fields & fields, proto_comment && comment )
 {
     //- oneofField = type fieldName "=" fieldNumber [ "[" fieldOptions "]" ] ";"
-    proto_field new_field{ .type = parse_full_ident( stream ) };
+    auto new_field = proto_field{ .type_name = parse_full_ident( stream ) };
+
     new_field.name    = parse_ident( stream );
     new_field.number  = ( consume_or_fail( stream, '=' ),
                          parse_number< decltype( proto_field::number ) >( stream ) );

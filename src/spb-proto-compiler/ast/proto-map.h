@@ -11,13 +11,13 @@
 
 #pragma once
 
+#include "ast/proto-field.h"
 #include "proto-common.h"
-#include <string_view>
 
 struct proto_map : public proto_base
 {
-    std::string_view key_type;
-    std::string_view value_type;
+    proto_field key;
+    proto_field value;
 };
 
 using proto_maps = std::vector< proto_map >;

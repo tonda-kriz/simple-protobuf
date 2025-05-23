@@ -10,10 +10,8 @@
 
 #include "dumper.h"
 #include "header.h"
-#include "io/file.h"
 #include "pb/dumper.h"
 #include "json/dumper.h"
-#include <sstream>
 
 void dump_cpp_header( const proto_file & file, std::ostream & stream )
 {

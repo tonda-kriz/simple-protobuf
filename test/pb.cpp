@@ -2,6 +2,7 @@
 #include "spb/pb/wire-types.h"
 #include <array>
 #include <cstdint>
+#include <enum.pb.h>
 #include <name.pb.h>
 #include <optional>
 #include <person.pb.h>
@@ -49,6 +50,14 @@ auto operator==( const Test::Variant & lhs, const Test::Variant & rhs ) noexcept
 }
 
 }// namespace Test
+
+namespace example
+{
+auto operator==( const SomeMessage & lhs, const SomeMessage & rhs ) noexcept -> bool
+{
+    return lhs.values == rhs.values;
+}
+}// namespace example
 
 namespace PhoneBook
 {
@@ -416,6 +425,62 @@ TEST_CASE( "protobuf" )
                     "\x0a\x02\x08"sv ) );
                 CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::RepPackBool >(
                     "\x0a\x01\x08"sv ) );
+            }
+        }
+    }
+    SUBCASE( "enum" )
+    {
+        SUBCASE( "required" )
+        {
+            pb_json_test( Test::Scalar::ReqEnum{ .value = Test::Scalar::ReqEnum::Enum::Enum_value },
+                          "\x08\x01", R"({"value":"Enum_value"})" );
+        }
+        SUBCASE( "optional" )
+        {
+            pb_json_test( Test::Scalar::OptEnum{ }, "", "{}" );
+            pb_json_test( Test::Scalar::OptEnum{ .value = Test::Scalar::OptEnum::Enum::Enum_value },
+                          "\x08\x01", R"({"value":"Enum_value"})" );
+        }
+        SUBCASE( "repeated" )
+        {
+            pb_json_test( Test::Scalar::RepEnum{ }, "", "{}" );
+            pb_json_test(
+                Test::Scalar::RepEnum{ .value = { Test::Scalar::RepEnum::Enum::Enum_value } },
+                "\x08\x01", R"({"value":["Enum_value"]})" );
+            pb_json_test(
+                Test::Scalar::RepEnum{ .value = { Test::Scalar::RepEnum::Enum::Enum_value,
+                                                  Test::Scalar::RepEnum::Enum::Enum_value2,
+                                                  Test::Scalar::RepEnum::Enum::Enum_value3 } },
+                "\x08\x01\x08\x02\x08\x03",
+                R"({"value":["Enum_value","Enum_value2","Enum_value3"]})" );
+            pb_json_test( Test::Scalar::RepEnum{ .value = {} }, "", "{}" );
+
+            SUBCASE( "packed" )
+            {
+                pb_json_test( Test::Scalar::RepPackEnum{ }, "", "{}" );
+                pb_json_test(
+                    Test::Scalar::RepPackEnum{
+                        .value = { Test::Scalar::RepPackEnum::Enum::Enum_value } },
+                    "\x0a\x01\x01", R"({"value":["Enum_value"]})" );
+                pb_json_test(
+                    Test::Scalar::RepPackEnum{
+                        .value = { Test::Scalar::RepPackEnum::Enum::Enum_value,
+                                   Test::Scalar::RepPackEnum::Enum::Enum_value3 } },
+                    "\x0a\x02\x01\x03", R"({"value":["Enum_value","Enum_value3"]})" );
+                pb_json_test( Test::Scalar::RepPackEnum{ .value = {} }, "", "{}" );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::RepPackEnum >(
+                    "\x0a\x02\x42"sv ) );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::RepPackEnum >(
+                    "\x0a\x02\x42\xff"sv ) );
+
+                pb_json_test(
+                    example::SomeMessage{ .values = { example::SomeEnum::SOME_ENUM_ONE,
+                                                      example::SomeEnum::SOME_ENUM_TWO,
+                                                      example::SomeEnum::SOME_ENUM_THREE,
+                                                      example::SomeEnum::SOME_ENUM_FOUR,
+                                                      example::SomeEnum::SOME_ENUM_FIVE } },
+                    "\x0A\x05\x01\x02\x03\x04\x05"sv,
+                    R"({"values":["SOME_ENUM_ONE","SOME_ENUM_TWO","SOME_ENUM_THREE","SOME_ENUM_FOUR","SOME_ENUM_FIVE"]})" );
             }
         }
     }
@@ -856,6 +921,7 @@ TEST_CASE( "protobuf" )
                 }
                 SUBCASE( "required" )
                 {
+                    CHECK( sizeof( Test::Scalar::ReqFixed32_8::value ) == sizeof( uint8_t ) );
                     pb_json_test( Test::Scalar::ReqFixed32_8{ .value = 0x42 },
                                   "\x0d\x42\x00\x00\x00"sv, R"({"value":66})" );
                     pb_json_test( Test::Scalar::ReqFixed32_8{ .value = 0xff },
@@ -927,6 +993,8 @@ TEST_CASE( "protobuf" )
                 }
                 SUBCASE( "required" )
                 {
+                    CHECK( sizeof( Test::Scalar::ReqFixed32_16::value ) == sizeof( uint16_t ) );
+
                     pb_json_test( Test::Scalar::ReqFixed32_16{ .value = 0x42 },
                                   "\x0d\x42\x00\x00\x00"sv, R"({"value":66})" );
                     pb_json_test( Test::Scalar::ReqFixed32_16{ .value = 0xff },
@@ -1066,6 +1134,8 @@ TEST_CASE( "protobuf" )
                 }
                 SUBCASE( "required" )
                 {
+                    CHECK( sizeof( Test::Scalar::ReqFixed64_8::value ) == sizeof( uint8_t ) );
+
                     pb_json_test( Test::Scalar::ReqFixed64_8{ .value = 0x42 },
                                   "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv, R"({"value":66})" );
                     pb_json_test( Test::Scalar::ReqFixed64_8{ .value = 0xff },
@@ -1199,6 +1269,8 @@ TEST_CASE( "protobuf" )
                 }
                 SUBCASE( "required" )
                 {
+                    CHECK( sizeof( Test::Scalar::ReqSfixed32_8::value ) == sizeof( uint8_t ) );
+
                     pb_json_test( Test::Scalar::ReqSfixed32_8{ .value = 0x42 },
                                   "\x0d\x42\x00\x00\x00"sv, R"({"value":66})" );
                     pb_json_test( Test::Scalar::ReqSfixed32_8{ .value = -2 },
@@ -1333,6 +1405,8 @@ TEST_CASE( "protobuf" )
                 }
                 SUBCASE( "required" )
                 {
+                    CHECK( sizeof( Test::Scalar::ReqSfixed64_8::value ) == sizeof( uint8_t ) );
+
                     pb_json_test( Test::Scalar::ReqSfixed64_8{ .value = 0x42 },
                                   "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv, R"({"value":66})" );
                     pb_json_test( Test::Scalar::ReqSfixed64_8{ .value = -2 },
@@ -1526,39 +1600,43 @@ TEST_CASE( "protobuf" )
     {
         SUBCASE( "int32/int32" )
         {
-            CHECK( pb_serialize_as< combine( spb::pb::detail::scalar_encoder::varint,
-                                             spb::pb::detail::scalar_encoder::varint ) >(
+            CHECK( pb_serialize_as< scalar_encoder_combine( scalar_encoder::varint,
+                                                            scalar_encoder::varint ) >(
                        std::map< int32_t, int32_t >{ { 1, 2 } } ) == "\x0a\x04\x08\x01\x10\x02" );
-            CHECK( pb_serialize_as< combine( spb::pb::detail::scalar_encoder::varint,
-                                             spb::pb::detail::scalar_encoder::varint ) >(
-                       std::map< int32_t, int32_t >{ { 1, 2 }, { 2, 3 } } ) ==
-                   "\x0a\x08\x08\x01\x10\x02\x08\x02\x10\x03" );
+            CHECK( pb_serialize_as< scalar_encoder_combine(
+                       spb::pb::detail::scalar_encoder::varint,
+                       spb::pb::detail::scalar_encoder::varint ) >( std::map< int32_t, int32_t >{
+                       { 1, 2 }, { 2, 3 } } ) == "\x0a\x08\x08\x01\x10\x02\x08\x02\x10\x03" );
         }
         SUBCASE( "string/string" )
         {
-            CHECK( pb_serialize_as< combine( spb::pb::detail::scalar_encoder::varint,
-                                             spb::pb::detail::scalar_encoder::varint ) >(
+            CHECK( pb_serialize_as< scalar_encoder_combine(
+                       spb::pb::detail::scalar_encoder::varint,
+                       spb::pb::detail::scalar_encoder::varint ) >(
                        std::map< std::string, std::string >{ { "hello", "world" } } ) ==
                    "\x0a\x0e\x0a\x05hello\x12\x05world" );
         }
         SUBCASE( "int32/string" )
         {
-            CHECK( pb_serialize_as< combine( spb::pb::detail::scalar_encoder::varint,
-                                             spb::pb::detail::scalar_encoder::varint ) >(
+            CHECK( pb_serialize_as< scalar_encoder_combine(
+                       spb::pb::detail::scalar_encoder::varint,
+                       spb::pb::detail::scalar_encoder::varint ) >(
                        std::map< int32_t, std::string >{ { 1, "hello" } } ) ==
                    "\x0a\x09\x08\x01\x12\x05hello" );
         }
         SUBCASE( "string/int32" )
         {
-            CHECK( pb_serialize_as< combine( spb::pb::detail::scalar_encoder::varint,
-                                             spb::pb::detail::scalar_encoder::varint ) >(
+            CHECK( pb_serialize_as< scalar_encoder_combine(
+                       spb::pb::detail::scalar_encoder::varint,
+                       spb::pb::detail::scalar_encoder::varint ) >(
                        std::map< std::string, int32_t >{ { "hello", 2 } } ) ==
                    "\x0a\x09\x0a\x05hello\x10\x02" );
         }
         SUBCASE( "string/name" )
         {
-            CHECK( pb_serialize_as< combine( spb::pb::detail::scalar_encoder::varint,
-                                             spb::pb::detail::scalar_encoder::varint ) >(
+            CHECK( pb_serialize_as< scalar_encoder_combine(
+                       spb::pb::detail::scalar_encoder::varint,
+                       spb::pb::detail::scalar_encoder::varint ) >(
                        std::map< std::string, Test::Name >{ { "hello", { .name = "john" } } } ) ==
                    "\x0a\x0f\x0a\x05hello\x12\x06\x0A\x04john" );
         }

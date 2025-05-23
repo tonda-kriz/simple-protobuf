@@ -14,24 +14,64 @@
 #include "proto-common.h"
 #include <string_view>
 #include <vector>
+#include <spb/pb/wire-types.h>
 
 struct proto_field : public proto_base
 {
-    enum Label
+    enum Type
     {
-        //- no type modifier, only `type`
-        LABEL_NONE = 0,
-        //- std::optional< type >
-        LABEL_OPTIONAL = 1,
-        //- std::vector< type >
-        LABEL_REPEATED = 2,
-        //- std::unique_ptr< type >, used to break up circular references
-        LABEL_PTR = 3,
+        NONE,
+        BOOL,
+        BYTES,
+        DOUBLE,
+        ENUM,
+        FLOAT,
+        FIXED32,
+        FIXED64,
+        INT32,
+        INT64,
+        MESSAGE,
+        SFIXED32,
+        SFIXED64,
+        SINT32,
+        SINT64,
+        STRING,
+        UINT32,
+        UINT64,
     };
 
-    Label label = LABEL_OPTIONAL;
-    std::string_view type;
+    enum class BitType
+    {
+        NONE,
+        INT8,
+        INT16,
+        INT32,
+        INT64,
+        UINT8,
+        UINT16,
+        UINT32,
+        UINT64,
+    };
 
+    enum class Label
+    {
+        //- no type modifier, only `type`
+        NONE = 0,
+        //- std::optional< type >
+        OPTIONAL = 1,
+        //- std::vector< type >
+        REPEATED = 2,
+        //- std::unique_ptr< type >, used to break up circular references
+        PTR = 3,
+    };
+
+    Type type   = Type::NONE;
+    Label label = Label::OPTIONAL;
+
+    //- points to .proto file
+    std::string_view type_name;
+
+    BitType bit_type = BitType::NONE;
     std::string_view bit_field;
 };
 

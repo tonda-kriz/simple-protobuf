@@ -34,7 +34,13 @@ concept size_container = requires( T container ) {
 namespace detail
 {
 template < class T >
+concept proto_enum = std::is_enum_v< T >;
+
+template < class T >
 concept proto_field_int_or_float = std::is_integral_v< T > || std::is_floating_point_v< T >;
+
+template < class T >
+concept proto_field_number = proto_enum< T > || proto_field_int_or_float< T >;
 
 template < class T >
 concept container = requires( T container ) {
@@ -82,9 +88,6 @@ concept proto_label_optional = requires( T container ) {
     { container.emplace( typename T::value_type( ) ) } -> std::same_as< typename T::value_type & >;
     typename T::value_type;
 };
-
-template < class T >
-concept proto_enum = std::is_enum_v< T >;
 
 template < class T >
 concept proto_message = std::is_class_v< T > && !proto_field_string< T > &&

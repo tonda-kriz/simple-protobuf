@@ -16,9 +16,9 @@
 #include <cctype>
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <cstring>
 #include <map>
-#include <memory>
 #include <spb/io/io.hpp>
 #include <sys/types.h>
 #include <type_traits>
@@ -85,7 +85,7 @@ static inline void serialize_varint( ostream & stream, uint64_t value )
 }
 static inline void serialize_svarint( ostream & stream, int64_t value )
 {
-    auto tmp = uint64_t( ( value << 1 ) ^ ( value >> 63 ) );
+    const auto tmp = uint64_t( ( value << 1 ) ^ ( value >> 63 ) );
     return serialize_varint( stream, tmp );
 }
 
@@ -113,10 +113,16 @@ static inline void serialize_as( ostream & stream, uint32_t field_number,
 
 template < scalar_encoder encoder >
 static inline void serialize_as( ostream & stream, uint32_t field_number,
-                                 spb::detail::proto_field_int_or_float auto value )
+                                 spb::detail::proto_field_number auto value )
 {
     serialize_tag( stream, field_number, wire_type_from_scalar_encoder( encoder ) );
     serialize_as< encoder >( stream, value );
+}
+
+template < scalar_encoder encoder >
+static inline void serialize_as( ostream & stream, const spb::detail::proto_enum auto & value )
+{
+    serialize_varint( stream, int32_t( value ) );
 }
 
 template < scalar_encoder encoder >
@@ -125,7 +131,7 @@ static inline void serialize_as( ostream & stream,
 {
     using T = std::remove_cvref_t< decltype( value ) >;
 
-    const auto type = type1( encoder );
+    const auto type = scalar_encoder_type1( encoder );
 
     if constexpr( type == scalar_encoder::varint )
     {
@@ -139,7 +145,7 @@ static inline void serialize_as( ostream & stream,
         else if constexpr( std::is_signed_v< T > )
         {
             //- GPB is serializing all negative ints always as int64_t
-            auto u_value = uint64_t( int64_t( value ) );
+            const auto u_value = uint64_t( int64_t( value ) );
             return serialize_varint( stream, u_value );
         }
         else
@@ -205,8 +211,8 @@ static inline void serialize( ostream & stream, uint32_t field_number,
 template < scalar_encoder encoder, typename keyT, typename valueT >
 static inline void serialize_as( ostream & stream, const std::map< keyT, valueT > & value )
 {
-    const auto key_encoder   = type1( encoder );
-    const auto value_encoder = type2( encoder );
+    const auto key_encoder   = scalar_encoder_type1( encoder );
+    const auto value_encoder = scalar_encoder_type2( encoder );
 
     for( const auto & [ k, v ] : value )
     {
@@ -218,7 +224,7 @@ static inline void serialize_as( ostream & stream, const std::map< keyT, valueT 
         {
             serialize( stream, 1, k );
         }
-        if constexpr( spb::detail::proto_field_int_or_float< valueT > )
+        if constexpr( spb::detail::proto_field_number< valueT > )
         {
             serialize_as< value_encoder >( stream, 2, v );
         }
@@ -261,7 +267,7 @@ static inline void serialize_packed_as( ostream & stream, const C & container )
 template < scalar_encoder encoder, spb::detail::proto_label_repeated C >
 static inline void serialize_as( ostream & stream, uint32_t field_number, const C & value )
 {
-    if constexpr( is_packed( encoder ) )
+    if constexpr( scalar_encoder_is_packed( encoder ) )
     {
         if( value.empty( ) )
         {
@@ -349,13 +355,6 @@ static inline void serialize( ostream & stream, uint32_t field_number,
         //
         serialize( stream, value );
     }
-}
-
-static inline void serialize( ostream & stream, uint32_t field_number,
-                              const spb::detail::proto_enum auto & value )
-{
-    serialize_tag( stream, field_number, wire_type::varint );
-    serialize_varint( stream, int32_t( value ) );
 }
 
 static inline auto serialize( const auto & value, spb::io::writer on_write ) -> size_t

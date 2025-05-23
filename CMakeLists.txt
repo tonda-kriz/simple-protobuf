@@ -9,6 +9,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(SPB_PROTO_BUILD_TESTS "Build tests" OFF)
 option(SPB_PROTO_BUILD_COMPATIBILITY_TESTS "Build gpb compatibility tests" OFF)
+option(SPB_PROTO_BUILD_COMPILER_TESTS "Build sprotoc tests" OFF)
 option(SPB_PROTO_BUILD_ETL_TESTS "Build etl compatibility tests" OFF)
 option(SPB_PROTO_BUILD_FUZZER_TESTS "Build fuzzers for spb-protoc, json-parser, gpb-parser" OFF)
 option(SPB_PROTO_BUILD_EXAMPLES "Build examples" OFF)
