@@ -2090,5 +2090,20 @@ TEST_CASE( "protobuf" )
                     ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x07\x05hello"sv ) );
             }
         }
+        SUBCASE( "options" )
+        {
+            SUBCASE( "delimited" )
+            {
+                CHECK( spb::pb::serialize( Test::Scalar::ReqString{ .value = "hello" },
+                                           { .delimited = true } ) == "\x07\x0a\x05hello" );
+                CHECK( spb::pb::serialize( Test::Scalar::Simple{ .value = "hello" },
+                                           { .delimited = true } ) == "\x08\xA2\x06\x05hello" );
+                CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x08\xA2\x06\x05hello"sv,
+                                                                     { .delimited = true } ) ==
+                       Test::Scalar::Simple{ .value = "hello" } );
+                CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Simple >(
+                    "\x0a\x05hello"sv, { .delimited = true } ) );
+            }
+        }
     }
 }
