@@ -165,7 +165,9 @@ void dump_prototypes( std::ostream & stream, const proto_messages & messages,
 
 void dump_prototypes( std::ostream & stream, const proto_file & file )
 {
-    const auto package_name = replace( file.package.name, ".", "::" );
+    const auto package_name = file.package.name.empty( )
+        ? std::string( )
+        : "::" + replace( file.package.name, ".", "::" );
     dump_prototypes( stream, file.package.messages, package_name );
     dump_prototypes( stream, file.package.enums, package_name );
 }
@@ -514,7 +516,9 @@ void dump_cpp_messages( std::ostream & stream, const proto_messages & messages,
 
 void dump_cpp( std::ostream & stream, const proto_file & file )
 {
-    const auto str_namespace = "::" + replace( file.package.name, ".", "::" );
+    const auto str_namespace = file.package.name.empty( )
+        ? std::string( )
+        : "::" + replace( file.package.name, ".", "::" );
     dump_cpp_enums( stream, file.package.enums, str_namespace );
     dump_cpp_messages( stream, file.package.messages, str_namespace );
 }
