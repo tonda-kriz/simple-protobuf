@@ -13,10 +13,10 @@
 #include "../dumper/header.h"
 #include "../parser/options.h"
 #include "proto-field.h"
-#include <algorithm>
 #include "proto-file.h"
 #include "proto-message.h"
 #include "spb/pb/wire-types.h"
+#include <algorithm>
 #include <array>
 #include <string_view>
 #include <utility>
@@ -266,6 +266,11 @@ using scalar_encoder = spb::pb::detail::scalar_encoder;
 [[nodiscard]] auto resolve_from_import( const proto_file & import, const proto_field & field )
     -> proto_field::Type
 {
+    if( import.package.name.empty( ) )
+    {
+        return resolve_from_message( import.package, field, 0 );
+    }
+
     if( field.type_name.size( ) > import.package.name.size( ) &&
         field.type_name[ import.package.name.size( ) ] == '.' &&
         field.type_name.starts_with( import.package.name ) )
