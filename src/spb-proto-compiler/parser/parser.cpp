@@ -14,8 +14,8 @@
 #include "dumper/header.h"
 #include "options.h"
 #include <array>
-#include <ast/ast.h>
 #include <ast/ast-types.h>
+#include <ast/ast.h>
 #include <cctype>
 #include <cerrno>
 #include <concepts>
@@ -348,9 +348,7 @@ void consume_statement_end( spb::char_stream & stream, proto_comment & comment )
     skip_white_space_until_new_line( stream );
     if( stream.current_char( ) == '/' )
     {
-        stream.consume_current_char( false );
-        auto line_comment = proto_comment( );
-        parse_comment_line( stream, line_comment );
+        const auto line_comment = parse_comment( stream );
         comment.comments.insert( comment.comments.end( ), line_comment.comments.begin( ),
                                  line_comment.comments.end( ) );
     }
