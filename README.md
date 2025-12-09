@@ -77,7 +77,7 @@ spb is an alternative implementation of [protobuf](https://github.com/protocolbu
 # add this repo to your project
 add_subdirectory(external/spb-proto)
 # compile proto files to C++
-spb_protobuf_generate(PROTO_SRCS PROTO_HDRS ${CMAKE_SOURCE_DIR}/proto/person.proto)
+spb_protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${CMAKE_SOURCE_DIR}/proto/person.proto)
 # add generated files to your project
 add_executable(myapp ${PROTO_SRCS} ${PROTO_HDRS})
 # `spb-proto` is an interface library 
@@ -115,7 +115,7 @@ message Person {
 2. compile `person.proto` with `spb-protoc` into `person.pb.h` and `person.pb.cc`
 
 ```cmake
-spb_protobuf_generate(PROTO_SRCS PROTO_HDRS ${CMAKE_SOURCE_DIR}/proto/person.proto)
+spb_protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${CMAKE_SOURCE_DIR}/proto/person.proto)
 ```
 
 *observe the beautifully generated `person.pb.h` and `person.pb.cc`*
