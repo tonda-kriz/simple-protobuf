@@ -221,7 +221,7 @@ message CommandQueue {
 2. compile `etl.proto` with `spb-protoc` into `etl.pb.h` and `etl.pb.cc`
 
 ```cmake
-spb_protobuf_generate(PROTO_SRCS PROTO_HDRS ${CMAKE_SOURCE_DIR}/proto/etl.proto)
+spb_protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS ${CMAKE_SOURCE_DIR}/proto/etl.proto)
 ```
 
 You can combine different types for each container in a single .proto file. *In this example the `string` is represented as `etl::string< 16 >` and `std::array< char, 8 >`.*

@@ -76,13 +76,10 @@ spb is an alternative implementation of [protobuf](https://github.com/protocolbu
 ```cmake
 # add this repo to your project
 add_subdirectory(external/spb-proto)
-# compile proto files to C++
-spb_protobuf_generate(PROTO_SRCS PROTO_HDRS ${CMAKE_SOURCE_DIR}/proto/person.proto)
-# add generated files to your project
-add_executable(myapp ${PROTO_SRCS} ${PROTO_HDRS})
-# `spb-proto` is an interface library 
-# the main purpose is to update include path of `myapp`
-target_link_libraries(myapp PUBLIC spb-proto)
+# add .proto files to some `target`
+add_executable(myapp myapp.cc proto/person.proto)
+# compile proto files to C++ and add them to myapp
+spb_protobuf_generate(TARGET myapp)
 ```
 
 ### how to use
@@ -115,10 +112,15 @@ message Person {
 2. compile `person.proto` with `spb-protoc` into `person.pb.h` and `person.pb.cc`
 
 ```cmake
-spb_protobuf_generate(PROTO_SRCS PROTO_HDRS ${CMAKE_SOURCE_DIR}/proto/person.proto)
+spb_protobuf_generate(TARGET myapp proto/person.proto)
+```
+or
+```cmake
+spb_protobuf_generate_cpp(PROTO_SRCS PROTO_HDRS proto/person.proto)
+target_sources(myapp PRIVATE ${PROTO_SRCS} ${PROTO_HDRS})
 ```
 
-*observe the beautifully generated `person.pb.h` and `person.pb.cc`*
+*for a brief moment... observe the beautifully generated `person.pb.h` and `person.pb.cc`*
 
 ```C++
 namespace PhoneBook
@@ -147,7 +149,7 @@ struct Person {
 3. use `Person` struct natively and de/serialize to/from json/pb
 
 ```CPP
-#include <person.pb.h>
+#include <proto/person.pb.h>
 
 auto john = PhoneBook::Person{
         .name  = "John Doe",
