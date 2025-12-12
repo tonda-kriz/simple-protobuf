@@ -80,6 +80,7 @@ void process_file( const fs::path & input_file, std::span< const fs::path > impo
     const auto output_cpp        = cpp_file_name_from_proto( input_file, ".pb.cc" );
     const auto rel_output_dir    = get_relative_output_dir( input_file, import_paths );
 
+    fs::create_directories( output_dir / rel_output_dir );
     auto cpp_header_stream = std::ofstream( output_dir / rel_output_dir / output_cpp_header );
     dump_cpp_header( parsed_file, cpp_header_stream );
 
