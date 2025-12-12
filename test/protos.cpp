@@ -1,6 +1,6 @@
-#include "mesos.pb.h"
 #include <cstdio>
 #include <filesystem>
+#include <proto/mesos.pb.h>
 #include <type_traits>
 
 static auto load_file( const std::filesystem::path & file_path ) -> std::string

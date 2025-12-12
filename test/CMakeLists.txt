@@ -192,4 +192,4 @@ endif()
   spb_disable_warnings(spb-json-fuzzer)
 endif()
 
-
+add_subdirectory(custom-output-dir)
