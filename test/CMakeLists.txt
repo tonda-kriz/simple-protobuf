@@ -135,6 +135,7 @@ if(SPB_PROTO_BUILD_COMPATIBILITY_TESTS)
     FetchContent_MakeAvailable(etl)
 
     add_executable(etl-compatibility-test etl-compatibility.cpp ${SPB_PROTO_ETL_SCALAR_SRC} ${SPB_PROTO_ETL_PERSON_SRC})
+    spb_set_compile_options(etl-compatibility-test)
     spb_enable_warnings(etl-compatibility-test)
     target_link_libraries(etl-compatibility-test PUBLIC spb-proto gpb-proto etl::etl)
     add_dependencies(unit_tests etl-compatibility-test)
