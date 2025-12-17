@@ -1,6 +1,6 @@
 #include "spb/pb.hpp"
-#include <etl.pb.h>
 #include <iostream>
+#include <proto/etl.pb.h>
 
 auto create_command( uint8_t arg ) -> ETL::Example::Command
 {

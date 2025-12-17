@@ -2,10 +2,10 @@
 #include "spb/pb/wire-types.h"
 #include <array>
 #include <cstdint>
-#include <enum.pb.h>
 #include <name.pb.h>
 #include <optional>
 #include <person.pb.h>
+#include <proto/enum.pb.h>
 #include <scalar.pb.h>
 #include <span>
 #include <spb/pb.hpp>
