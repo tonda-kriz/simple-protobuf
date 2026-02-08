@@ -88,6 +88,11 @@ jobs:
         sudo apt-get install -y               \
           build-essential cmake ninja-build \
           unzip curl git zlib1g-dev
+
+    - name: Install protoc
+      uses: arduino/setup-protoc@v3
+      with:
+        version: '29.x'
     
     - name: Install gcc
       if: matrix.compiler == 'gcc'
