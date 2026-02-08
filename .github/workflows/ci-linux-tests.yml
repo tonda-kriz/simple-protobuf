@@ -93,15 +93,18 @@ jobs:
       run: |
         set -e
         sudo apt-get update
-        sudo apt-get install -y cmake build-essential libabsl-dev zlib1g-dev git
+        sudo apt-get install -y cmake git zlib1g-dev
 
         git clone --depth 1 --branch v29.6 https://github.com/protocolbuffers/protobuf.git
         cd protobuf
+        git submodule update --init --recursive
+
         mkdir build && cd build
-        cmake .. -DCMAKE_BUILD_TYPE=Release \
-                 -Dprotobuf_BUILD_TESTS=OFF \
-                 -Dprotobuf_ABSL_PROVIDER=package \
-                 -Dprotobuf_BUILD_SHARED_LIBS=ON
+        cmake .. \
+          -DCMAKE_BUILD_TYPE=Release \
+          -Dprotobuf_BUILD_TESTS=OFF \
+          -Dprotobuf_BUILD_SHARED_LIBS=ON \
+          -Dprotobuf_ABSL_PROVIDER=module
         cmake --build . -j$(nproc)
         sudo cmake --install .
         cd ../..
