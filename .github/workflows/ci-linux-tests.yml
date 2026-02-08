@@ -89,13 +89,22 @@ jobs:
           build-essential cmake ninja-build \
           unzip curl git zlib1g-dev
 
-    - name: Install modern protobuf via PPA
+    - name: Setup Miniconda
+      uses: conda-incubator/setup-miniconda@v3
+      with:
+        auto-update-conda: true
+        python-version: "3.11"
+
+    - name: Install Protobuf from conda-forge
+      shell: bash -l {0}
       run: |
-        sudo apt-get update
-        sudo apt-get install -y software-properties-common
-        sudo add-apt-repository ppa:maarten-fonville/protobuf -y
-        sudo apt-get update
-        sudo apt-get install -y protobuf-compiler libprotobuf-dev
+        conda install -c conda-forge protobuf protobuf-compiler -y
+
+    - name: Verify installation
+      shell: bash -l {0}
+      run: |
+        protoc --version
+        ls $CONDA_PREFIX/lib | grep protobuf  # should show libprotobuf.so / .a
     
     - name: Install gcc
       if: matrix.compiler == 'gcc'
