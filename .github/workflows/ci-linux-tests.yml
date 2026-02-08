@@ -82,29 +82,11 @@ jobs:
       run: |
         echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
 
-    - name: Install build essential
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y               \
-          build-essential cmake ninja-build \
-          unzip curl git zlib1g-dev
-
-    - name: Setup Miniconda
-      uses: conda-incubator/setup-miniconda@v3
-      with:
-        auto-update-conda: true
-        python-version: "3.11"
-
-    - name: Install Protobuf from conda-forge
-      shell: bash -l {0}
-      run: |
-        conda install -c conda-forge protobuf protobuf-compiler -y
-
-    - name: Verify installation
-      shell: bash -l {0}
-      run: |
-        protoc --version
-        ls $CONDA_PREFIX/lib | grep protobuf  # should show libprotobuf.so / .a
+    - name: Install Linux dependencies
+      run: >
+          sudo apt-get install
+          protobuf-compiler
+          ninja-build
     
     - name: Install gcc
       if: matrix.compiler == 'gcc'
