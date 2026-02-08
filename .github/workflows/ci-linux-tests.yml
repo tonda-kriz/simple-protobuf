@@ -85,8 +85,18 @@ jobs:
     - name: Install Linux dependencies
       run: >
           sudo apt-get install
-          protobuf-compiler
           ninja-build
+    - name: Install latest Protocol Buffers (protoc)
+      run: |
+        PB_VERSION=29.3
+        curl -LO "https://github.com/protocolbuffers/protobuf/releases/download/v${PB_VERSION}/protoc-${PB_VERSION}-linux-x86_64.zip"
+        unzip -q protoc-${PB_VERSION}-linux-x86_64.zip -d protoc_install
+        sudo cp protoc_install/bin/protoc /usr/local/bin/
+        sudo chmod +x /usr/local/bin/protoc
+
+        # Optional – also copy well-known types
+        sudo mkdir -p /usr/local/include/google/protobuf
+        sudo cp -r protoc_install/include/google/protobuf/* /usr/local/include/google/protobuf/
     - name: Install gcc
       if: matrix.compiler == 'gcc'
       run: |
