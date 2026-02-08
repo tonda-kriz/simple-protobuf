@@ -82,22 +82,24 @@ jobs:
       run: |
         echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
 
-    - name: Install Linux dependencies
-      run: >
-          sudo apt-get install
-          protobuf-compiler
-          ninja-build
-    - name: Install latest Protocol Buffers (protoc)
+    - name: Install latest protoc + headers
       run: |
-        PB_VERSION=29.3
+        sudo apt-get update
+        sudo apt-get install -y               \
+          build-essential cmake ninja-build \
+          unzip curl
+
+        PB_VERSION=29.6
         curl -LO "https://github.com/protocolbuffers/protobuf/releases/download/v${PB_VERSION}/protoc-${PB_VERSION}-linux-x86_64.zip"
-        unzip -q protoc-${PB_VERSION}-linux-x86_64.zip -d protoc_install
-        sudo cp protoc_install/bin/protoc /usr/local/bin/
+        unzip -q protoc-${PB_VERSION}-linux-x86_64.zip -d protoc_tmp
+
+        sudo cp protoc_tmp/bin/protoc /usr/local/bin/
         sudo chmod +x /usr/local/bin/protoc
 
-        # Optional – also copy well-known types
         sudo mkdir -p /usr/local/include/google/protobuf
-        sudo cp -r protoc_install/include/google/protobuf/* /usr/local/include/google/protobuf/
+        sudo cp -r protoc_tmp/include/google/protobuf/* /usr/local/include/google/protobuf/
+
+        rm -rf protoc_tmp *.zip
     - name: Install gcc
       if: matrix.compiler == 'gcc'
       run: |
