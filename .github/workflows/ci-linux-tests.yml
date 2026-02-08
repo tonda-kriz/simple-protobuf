@@ -87,28 +87,8 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y               \
           build-essential cmake ninja-build \
-          unzip curl
-
-    - name: Install latest protobuf from source
-      run: |
-        set -e
-        sudo apt-get update
-        sudo apt-get install -y cmake git zlib1g-dev
-
-        git clone --depth 1 --branch v29.6 https://github.com/protocolbuffers/protobuf.git
-        cd protobuf
-        git submodule update --init --recursive
-
-        mkdir build && cd build
-        cmake .. \
-          -DCMAKE_BUILD_TYPE=Release \
-          -Dprotobuf_BUILD_TESTS=OFF \
-          -Dprotobuf_BUILD_SHARED_LIBS=ON \
-          -Dprotobuf_ABSL_PROVIDER=module
-        cmake --build . -j$(nproc)
-        sudo cmake --install .
-        cd ../..
-        rm -rf protobuf
+          unzip curl git zlib1g-dev
+    
     - name: Install gcc
       if: matrix.compiler == 'gcc'
       run: |
