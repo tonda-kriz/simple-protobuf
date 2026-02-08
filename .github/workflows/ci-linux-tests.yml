@@ -82,24 +82,30 @@ jobs:
       run: |
         echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
 
-    - name: Install latest protoc + headers
+    - name: Install build essential
       run: |
         sudo apt-get update
         sudo apt-get install -y               \
           build-essential cmake ninja-build \
           unzip curl
 
-        PB_VERSION=29.6
-        curl -LO "https://github.com/protocolbuffers/protobuf/releases/download/v${PB_VERSION}/protoc-${PB_VERSION}-linux-x86_64.zip"
-        unzip -q protoc-${PB_VERSION}-linux-x86_64.zip -d protoc_tmp
+    - name: Install latest protobuf from source
+      run: |
+        set -e
+        sudo apt-get update
+        sudo apt-get install -y cmake build-essential libabsl-dev zlib1g-dev git
 
-        sudo cp protoc_tmp/bin/protoc /usr/local/bin/
-        sudo chmod +x /usr/local/bin/protoc
-
-        sudo mkdir -p /usr/local/include/google/protobuf
-        sudo cp -r protoc_tmp/include/google/protobuf/* /usr/local/include/google/protobuf/
-
-        rm -rf protoc_tmp *.zip
+        git clone --depth 1 --branch v29.6 https://github.com/protocolbuffers/protobuf.git
+        cd protobuf
+        mkdir build && cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release \
+                 -Dprotobuf_BUILD_TESTS=OFF \
+                 -Dprotobuf_ABSL_PROVIDER=package \
+                 -Dprotobuf_BUILD_SHARED_LIBS=ON
+        cmake --build . -j$(nproc)
+        sudo cmake --install .
+        cd ../..
+        rm -rf protobuf
     - name: Install gcc
       if: matrix.compiler == 'gcc'
       run: |
