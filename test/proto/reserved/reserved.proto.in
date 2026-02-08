@@ -1,0 +1,13 @@
+syntax = "proto2";
+
+package UnitTest@PB_PACKAGE@.cpp_keywords.private.public.int.while.do;
+
+message public {
+    message private { 
+        optional int32 for = 1;
+        required bool bool = 2;
+        repeated int32 int = 3;
+    }
+    optional private p = 1;
+    optional bool while = 2;
+}

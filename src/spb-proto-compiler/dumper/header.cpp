@@ -363,7 +363,7 @@ auto convert_to_ctype( const proto_file & file, const proto_field & field,
         switch( field.bit_type )
         {
         case proto_field::BitType::NONE:
-            throw_parse_error( file, field.type_name, "invalid type" );
+            throw_parse_error( file, field.type_name.proto_name, "invalid type" );
         case proto_field::BitType::INT8:
             return "int8_t";
         case proto_field::BitType::INT16:
@@ -386,7 +386,7 @@ auto convert_to_ctype( const proto_file & file, const proto_field & field,
     switch( field.type )
     {
     case proto_field::Type::NONE:
-        throw_parse_error( file, field.type_name, "invalid type" );
+        throw_parse_error( file, field.type_name.proto_name, "invalid type" );
 
     case proto_field::Type::STRING:
         return get_container_type( field.options, message.options, file.options, option_string_type,
@@ -396,7 +396,7 @@ auto convert_to_ctype( const proto_file & file, const proto_field & field,
                                    "std::byte", "std::vector<$>" );
     case proto_field::Type::ENUM:
     case proto_field::Type::MESSAGE:
-        return replace( field.type_name, ".", "::" );
+        return replace( field.type_name.get_name( ), ".", "::" );
 
     case proto_field::Type::FLOAT:
         return "float";
@@ -420,7 +420,7 @@ auto convert_to_ctype( const proto_file & file, const proto_field & field,
         return "uint64_t";
     }
 
-    throw_parse_error( file, field.type_name, "invalid type" );
+    throw_parse_error( file, field.type_name.proto_name, "invalid type" );
 }
 
 void dump_field_type_and_name( std::ostream & stream, const proto_field & field,
@@ -431,7 +431,7 @@ void dump_field_type_and_name( std::ostream & stream, const proto_field & field,
     switch( field.label )
     {
     case proto_field::Label::NONE:
-        stream << ctype << ' ' << field.name << get_field_bits( field );
+        stream << ctype << ' ' << field.name.get_name( ) << get_field_bits( field );
         return;
     case proto_field::Label::OPTIONAL:
         stream << get_container_type( field.options, message.options, file.options,
@@ -450,14 +450,14 @@ void dump_field_type_and_name( std::ostream & stream, const proto_field & field,
     {
         throw_parse_error( file, bitfield, "bitfield can be used only with `required` label" );
     }
-    stream << ' ' << field.name;
+    stream << ' ' << field.name.get_name( );
 }
 
 void dump_enum_field( std::ostream & stream, const proto_base & field )
 {
     dump_comment( stream, field.comment );
 
-    stream << field.name << " = " << field.number << ",\n";
+    stream << field.name.get_name( ) << " = " << field.number << ",\n";
 }
 
 void dump_enum( std::ostream & stream, const proto_enum & my_enum, const proto_message & message,
@@ -465,7 +465,7 @@ void dump_enum( std::ostream & stream, const proto_enum & my_enum, const proto_m
 {
     dump_comment( stream, my_enum.comment );
 
-    stream << "enum class " << my_enum.name << " : "
+    stream << "enum class " << my_enum.name.get_name( ) << " : "
            << get_enum_type( file, my_enum.options, message.options, file.options, "int32_t" )
            << "\n{\n";
     for( const auto & field : my_enum.fields )
@@ -491,7 +491,7 @@ void dump_message_oneof( std::ostream & stream, const proto_oneof & oneof, const
         stream << convert_to_ctype( file, field );
         put_comma = true;
     }
-    stream << " > " << oneof.name << ";\n";
+    stream << " > " << oneof.name.get_name( ) << ";\n";
 }
 
 void dump_message_map( std::ostream & stream, const proto_map & map, const proto_file & file )
@@ -500,7 +500,7 @@ void dump_message_map( std::ostream & stream, const proto_map & map, const proto
 
     stream << "std::map< " << convert_to_ctype( file, map.key ) << ", "
            << convert_to_ctype( file, map.value ) << " > ";
-    stream << map.name << ";\n";
+    stream << map.name.get_name( ) << ";\n";
 }
 
 void dump_default_value( std::ostream & stream, const proto_field & field )
@@ -509,7 +509,8 @@ void dump_default_value( std::ostream & stream, const proto_field & field )
     {
         if( field.type == proto_field::Type::ENUM )
         {
-            stream << " = " << replace( field.type_name, ".", "::" ) << "::" << p_index->second;
+            stream << " = " << replace( field.type_name.get_name( ), ".", "::" )
+                   << "::" << p_index->second;
         }
         else if( field.type == proto_field::Type::STRING &&
                  ( p_index->second.size( ) < 2 || p_index->second.front( ) != '"' ||
@@ -559,7 +560,7 @@ void dump_message( std::ostream & stream, const proto_message & message, const p
 {
     dump_comment( stream, message.comment );
 
-    stream << "struct " << message.name << "\n{\n";
+    stream << "struct " << message.name.get_name( ) << "\n{\n";
 
     dump_forwards( stream, message.forwards );
     for( const auto & sub_enum : message.enums )
@@ -614,17 +615,17 @@ void dump_enums( std::ostream & stream, const proto_file & file )
 void dump_package_begin( std::ostream & stream, const proto_file & file )
 {
     dump_comment( stream, file.package.comment );
-    if( !file.package.name.empty( ) )
+    if( !file.package.name.get_name( ).empty( ) )
     {
-        stream << "namespace " << replace( file.package.name, ".", "::" ) << "\n{\n";
+        stream << "namespace " << replace( file.package.name.get_name( ), ".", "::" ) << "\n{\n";
     }
 }
 
 void dump_package_end( std::ostream & stream, const proto_file & file )
 {
-    if( !file.package.name.empty( ) )
+    if( !file.package.name.get_name( ).empty( ) )
     {
-        stream << "}// namespace " << replace( file.package.name, ".", "::" ) << "\n\n";
+        stream << "}// namespace " << replace( file.package.name.get_name( ), ".", "::" ) << "\n\n";
     }
 }
 }// namespace

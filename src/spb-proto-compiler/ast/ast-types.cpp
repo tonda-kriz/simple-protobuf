@@ -44,12 +44,12 @@ using scalar_encoder = spb::pb::detail::scalar_encoder;
 
 [[nodiscard]] auto is_last_part( const proto_field & field, size_t type_part ) -> bool
 {
-    return type_part == type_parts( field.type_name );
+    return type_part == type_parts( field.type_name.proto_name );
 }
 
 [[nodiscard]] auto get_type_part( const proto_field & field, size_t type_part ) -> std::string_view
 {
-    auto type_name = field.type_name;
+    auto type_name = field.type_name.proto_name;
     for( ; type_part > 0; type_part-- )
     {
         const auto dot_index = type_name.find( '.' );
@@ -181,7 +181,7 @@ using scalar_encoder = spb::pb::detail::scalar_encoder;
 [[nodiscard]] auto get_field_type( const proto_file & file, const proto_field & field )
     -> std::pair< proto_field::Type, proto_field::BitType >
 {
-    const auto type = get_scalar_proto_type( field.type_name );
+    const auto type = get_scalar_proto_type( field.type_name.proto_name );
     if( type == proto_field::Type::NONE )
         return { };
 
@@ -193,7 +193,7 @@ using scalar_encoder = spb::pb::detail::scalar_encoder;
         {
             throw_parse_error( file, p_name->second,
                                std::string( "incompatible int type: " ) +
-                                   std::string( field.type_name ) + " and " +
+                                   std::string( field.type_name.proto_name ) + " and " +
                                    std::string( p_name->second ) );
         }
         return { type, field_type };
@@ -218,7 +218,7 @@ using scalar_encoder = spb::pb::detail::scalar_encoder;
     const auto type_name = get_type_part( field, type_part );
     const auto index     = std::find_if( message.messages.begin( ), message.messages.end( ),
                                          [ type_name ]( const auto & sub_message ) -> bool
-                                         { return type_name == sub_message.name; } );
+                                         { return type_name == sub_message.name.proto_name; } );
     return ( index != message.messages.end( ) ) ? &*index : nullptr;
 }
 
@@ -232,7 +232,7 @@ using scalar_encoder = spb::pb::detail::scalar_encoder;
 
     return std::any_of( message.enums.begin( ), message.enums.end( ),
                         [ type_name ]( const auto & enum_ ) -> bool
-                        { return type_name == enum_.name; } )
+                        { return type_name == enum_.name.proto_name; } )
         ? proto_field::Type::ENUM
         : proto_field::Type::NONE;
 }
@@ -266,16 +266,17 @@ using scalar_encoder = spb::pb::detail::scalar_encoder;
 [[nodiscard]] auto resolve_from_import( const proto_file & import, const proto_field & field )
     -> proto_field::Type
 {
-    if( import.package.name.empty( ) )
+    if( import.package.name.proto_name.empty( ) )
     {
         return resolve_from_message( import.package, field, 0 );
     }
 
-    if( field.type_name.size( ) > import.package.name.size( ) &&
-        field.type_name[ import.package.name.size( ) ] == '.' &&
-        field.type_name.starts_with( import.package.name ) )
+    if( field.type_name.proto_name.size( ) > import.package.name.proto_name.size( ) &&
+        field.type_name.proto_name[ import.package.name.proto_name.size( ) ] == '.' &&
+        field.type_name.proto_name.starts_with( import.package.name.proto_name ) )
     {
-        return resolve_from_message( import.package, field, type_parts( import.package.name ) + 1 );
+        return resolve_from_message( import.package, field,
+                                     type_parts( import.package.name.proto_name ) + 1 );
     }
 
     return proto_field::Type::NONE;
@@ -311,7 +312,7 @@ auto resolve_type( const search_ctx & self, const proto_field & field, size_t ty
     if( const auto type = resolve_from_imports( self, field, type_part ); type )
         return { type, proto_field::BitType::NONE };
 
-    throw_parse_error( self.file, field.type_name, "type can't be resolved" );
+    throw_parse_error( self.file, field.type_name.proto_name, "type can't be resolved" );
 }
 
 void resolve_types( const search_ctx & self, proto_field & field )

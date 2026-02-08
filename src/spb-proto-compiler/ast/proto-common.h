@@ -13,6 +13,7 @@
 
 #include "proto-comment.h"
 #include <cstdint>
+#include <string>
 #include <string_view>
 #include <unordered_map>
 #include <unordered_set>
@@ -28,14 +29,28 @@ struct proto_reserved
     proto_reserved_name reserved_name;
 };
 
+struct cpp_ident
+{
+    //- points to .proto file
+    std::string_view proto_name;
+
+    //- cpp compatible identifier in case that `proto_name` can't be used in cpp directly
+    //- ('private' -> 'private_')
+    std::string cpp_name;
+
+    auto get_name( ) const -> std::string_view
+    {
+        return cpp_name.empty( ) ? proto_name : std::string_view( cpp_name );
+    }
+};
+
 /**
  * @brief base attributes for most proto types
  *
  */
 struct proto_base
 {
-    //- points to .proto file
-    std::string_view name;
+    cpp_ident name;
 
     //- field number
     int32_t number;

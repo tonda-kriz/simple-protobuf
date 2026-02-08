@@ -6,6 +6,7 @@
 #include <optional>
 #include <person.pb.h>
 #include <proto/enum.pb.h>
+#include <reserved.pb.h>
 #include <scalar.pb.h>
 #include <span>
 #include <spb/pb.hpp>
@@ -80,6 +81,20 @@ auto operator==( const Simple & lhs, const Simple & rhs ) noexcept -> bool
     return lhs.value == rhs.value;
 }
 }// namespace Test::Scalar
+
+namespace reserved = UnitTest::cpp_keywords::private_::public_::int_::while_::do_;
+namespace UnitTest::cpp_keywords::private_::public_::int_::while_::do_
+{
+auto operator==( const public_::private_ & lhs, const public_::private_ & rhs ) noexcept -> bool
+{
+    return lhs.for_ == rhs.for_ && lhs.bool_ == rhs.bool_ && lhs.int_ == rhs.int_;
+}
+
+auto operator==( const public_ & lhs, const public_ & rhs ) noexcept -> bool
+{
+    return lhs.p == rhs.p && lhs.while_ == rhs.while_;
+}
+}
 
 namespace
 {
@@ -1664,6 +1679,12 @@ TEST_CASE( "protobuf" )
     SUBCASE( "name" )
     {
         pb_json_test( Test::Name{ }, "", "{}" );
+    }
+    SUBCASE( "reserved" )
+    {
+        pb_json_test( reserved::public_{.p = reserved::public_::private_{.for_ = 3, .bool_ = true} },
+            "\x0a\x04\x08\x03\x10\x01", 
+            R"({"p":{"for":3,"bool":true}})" );
     }
     SUBCASE( "ignore" )
     {

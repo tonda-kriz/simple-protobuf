@@ -289,8 +289,41 @@ auto parse_comment( spb::char_stream & stream ) -> proto_comment
 }
 
 [[nodiscard]] auto parse_ident( spb::char_stream & stream, bool skip_last_white_space = true )
-    -> std::string_view
+    -> cpp_ident
 {
+    constexpr auto cpp_reserved_keywords =
+        std::array< std::string_view, 92 >{ "alignas",       "alignof",     "and",
+                                            "and_eq",        "asm",         "auto",
+                                            "bitand",        "bitor",       "bool",
+                                            "break",         "case",        "catch",
+                                            "char",          "char8_t",     "char16_t",
+                                            "char32_t",      "class",       "compl",
+                                            "concept",       "const",       "consteval",
+                                            "constexpr",     "constinit",   "const_cast",
+                                            "continue",      "co_await",    "co_return",
+                                            "co_yield",      "decltype",    "default",
+                                            "delete",        "do",          "double",
+                                            "dynamic_cast",  "else",        "enum",
+                                            "explicit",      "export",      "extern",
+                                            "false",         "float",       "for",
+                                            "friend",        "goto",        "if",
+                                            "inline",        "int",         "long",
+                                            "mutable",       "namespace",   "new",
+                                            "noexcept",      "not",         "not_eq",
+                                            "nullptr",       "operator",    "or",
+                                            "or_eq",         "private",     "protected",
+                                            "public",        "register",    "reinterpret_cast",
+                                            "requires",      "return",      "short",
+                                            "signed",        "sizeof",      "static",
+                                            "static_assert", "static_cast", "struct",
+                                            "switch",        "template",    "this",
+                                            "thread_local",  "throw",       "true",
+                                            "try",           "typedef",     "typeid",
+                                            "typename",      "union",       "unsigned",
+                                            "using",         "virtual",     "void",
+                                            "volatile",      "wchar_t",     "while",
+                                            "xor",           "xor_eq" };
+
     const auto * start = stream.begin( );
 
     if( isalpha( stream.current_char( ) ) == 0 )
@@ -312,24 +345,41 @@ auto parse_comment( spb::char_stream & stream ) -> proto_comment
     {
         stream.consume_space( );
     }
-    return result;
+
+    for( const auto keyword : cpp_reserved_keywords )
+    {
+        if( keyword == result )
+        {
+            return cpp_ident{ .proto_name = result, .cpp_name = std::string( result ) + "_" };
+        }
+    }
+
+    return cpp_ident{ .proto_name = result };
 }
 
-[[nodiscard]] auto parse_full_ident( spb::char_stream & stream ) -> std::string_view
+[[nodiscard]] auto parse_full_ident( spb::char_stream & stream ) -> cpp_ident
 {
     const auto * start = stream.begin( );
+    auto cpp_name      = std::string( );
 
     for( ;; )
     {
-        ( void ) parse_ident( stream, false );
+        cpp_name += parse_ident( stream, false ).get_name( );
         if( stream.current_char( ) != '.' )
-        {
             break;
-        }
+
+        cpp_name += '.';
         stream.consume_current_char( false );
     }
-    auto result = std::string_view{ start, static_cast< size_t >( stream.begin( ) - start ) };
+
+    const auto proto_name =
+        std::string_view{ start, static_cast< size_t >( stream.begin( ) - start ) };
     stream.consume_space( );
+
+    auto result = cpp_ident{ .proto_name = proto_name, .cpp_name = std::move( cpp_name ) };
+    if( result.cpp_name == result.proto_name )
+        result.cpp_name.clear( );
+
     return result;
 }
 
@@ -423,18 +473,18 @@ void parse_top_level_package( spb::char_stream & stream, proto_base & package,
     parse_comment( stream );
     if( stream.consume( '(' ) )
     {
-        ident = parse_full_ident( stream );
+        ident = parse_full_ident( stream ).proto_name;
         consume_or_fail( stream, ')' );
     }
     else
     {
-        ident = parse_ident( stream );
+        ident = parse_ident( stream ).proto_name;
     }
     auto ident2 = std::string_view{ };
 
     while( stream.consume( '.' ) )
     {
-        ident2 = parse_ident( stream );
+        ident2 = parse_ident( stream ).proto_name;
     }
 
     if( ident2.empty( ) )
@@ -467,7 +517,7 @@ void parse_top_level_package( spb::char_stream & stream, proto_base & package,
     {
         return parse_int_or_float( stream );
     }
-    return parse_full_ident( stream );
+    return parse_full_ident( stream ).proto_name;
 }
 
 void parse_option_body( spb::char_stream & stream, proto_options & options )
@@ -619,7 +669,9 @@ void parse_reserved_ranges( spb::char_stream & stream, proto_reserved_range & ra
 
 void parse_enum_field( spb::char_stream & stream, proto_enum & new_enum, proto_comment && comment )
 {
-    //- enumField = ident "=" [ "-" ] intLit [ "[" enumValueOption { ","  enumValueOption } "]" ]";"
+    //- enumField = ident "=" [ "-" ] intLit [ "[" enumValueOption { ","  enumValueOption }
+    //"]"
+    //]";"
     //- enumValueOption = optionName "=" constant
     auto field =
         proto_base{ .name    = parse_ident( stream ),
@@ -722,8 +774,8 @@ void parse_field( spb::char_stream & stream, proto_fields & fields, proto_commen
 
 auto parse_map_key_type( spb::char_stream & stream ) -> std::string_view
 {
-    //- keyType = "int32" | "int64" | "uint32" | "uint64" | "sint32" | "sint64" | "fixed32" |
-    //"fixed64" | "sfixed32" | "sfixed64" | "bool" | "string"
+    // keyType = "int32" | "int64" | "uint32" | "uint64" | "sint32" | "sint64" | "fixed32" |
+    // "fixed64" | "sfixed32" | "sfixed64" | "bool" | "string"
     constexpr auto key_types =
         std::array< std::string_view, 12 >{ { "int32", "int64", "uint32", "uint64", "sint32",
                                               "sint64", "fixed32", "fixed64", "sfixed32",
@@ -743,7 +795,7 @@ auto parse_map_body( spb::char_stream & stream, proto_comment && comment ) -> pr
     //- "map" "<" keyType "," type ">" mapName "=" fieldNumber [ "[" fieldOptions "]" ] ";"
 
     auto new_map = proto_map{
-        .key   = proto_field{ .type_name = parse_map_key_type( stream ) },
+        .key   = proto_field{ .type_name = { .proto_name = parse_map_key_type( stream ) } },
         .value = proto_field{ .type_name =
                                   ( consume_or_fail( stream, ',' ), parse_full_ident( stream ) ) },
     };
@@ -826,7 +878,7 @@ void parse_oneof_field( spb::char_stream & stream, proto_fields & fields, proto_
 void parse_message_body( spb::char_stream & stream, proto_messages & messages,
                          proto_comment && message_comment )
 {
-    //- messageBody = messageName "{" { field | enum | message | extend | extensions | group |
+    // messageBody = messageName "{" { field | enum | message | extend | extensions | group |
     // option | oneof | mapField | reserved | emptyStatement } "}"
     auto new_message = proto_message{ proto_base{
         .name    = parse_ident( stream ),

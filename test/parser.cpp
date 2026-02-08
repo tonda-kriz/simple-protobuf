@@ -512,6 +512,18 @@ TEST_CASE( "protoc-parser" )
         };
         test_files( tests );
     }
+    SUBCASE( "cpp_keywords" )
+    {
+        constexpr proto_file_test tests[] = {
+            { R"(package UnitTest;
+            message private {
+                int32 public = 1;
+                int32 while = 2;
+            })",
+              0 },
+        };
+        test_files( tests );
+    }
     SUBCASE( "map" )
     {
         constexpr proto_file_test tests[] = {

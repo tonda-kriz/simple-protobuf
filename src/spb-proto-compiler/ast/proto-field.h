@@ -12,9 +12,9 @@
 #pragma once
 
 #include "proto-common.h"
+#include <spb/pb/wire-types.h>
 #include <string_view>
 #include <vector>
-#include <spb/pb/wire-types.h>
 
 struct proto_field : public proto_base
 {
@@ -68,8 +68,7 @@ struct proto_field : public proto_base
     Type type   = Type::NONE;
     Label label = Label::OPTIONAL;
 
-    //- points to .proto file
-    std::string_view type_name;
+    cpp_ident type_name;
 
     BitType bit_type = BitType::NONE;
     std::string_view bit_field;

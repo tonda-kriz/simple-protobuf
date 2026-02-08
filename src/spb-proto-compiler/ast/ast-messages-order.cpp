@@ -66,13 +66,13 @@ auto type_parts( std::string_view type_name ) -> size_t
 [[nodiscard]]
 auto is_last_part( const proto_field & field, size_t type_part ) -> bool
 {
-    return type_part == type_parts( field.type_name );
+    return type_part == type_parts( field.type_name.proto_name );
 }
 
 [[nodiscard]]
 auto get_type_part( const proto_field & field, size_t type_part ) -> std::string_view
 {
-    auto type_name = field.type_name;
+    auto type_name = field.type_name.proto_name;
     for( ; type_part > 0; type_part-- )
     {
         const auto dot_index = type_name.find( '.' );
@@ -102,14 +102,14 @@ auto is_self( const search_ctx & ctx, proto_field & field, size_t type_part ) ->
     if( !is_last_part( field, type_part ) )
         return false;
 
-    if( get_type_part( field, type_part ) != ctx.message.name )
+    if( get_type_part( field, type_part ) != ctx.message.name.proto_name )
         return false;
 
     switch( field.label )
     {
     case proto_field::Label::NONE:
-        throw_parse_error( ctx.state.file, field.name,
-                           "Field '" + std::string( field.name ) +
+        throw_parse_error( ctx.state.file, field.name.proto_name,
+                           "Field '" + std::string( field.name.proto_name ) +
                                "' cannot be self-referencing (make it optional)" );
     case proto_field::Label::OPTIONAL:
         field.label = proto_field::Label::PTR;
@@ -131,7 +131,7 @@ auto is_self( const search_ctx & ctx, const proto_field & field, size_t type_par
     if( !is_last_part( field, type_part ) )
         return false;
 
-    if( get_type_part( field, type_part ) != ctx.message.name )
+    if( get_type_part( field, type_part ) != ctx.message.name.proto_name )
         return false;
 
     switch( field.label )
@@ -163,7 +163,7 @@ auto is_forwarded( search_ctx & ctx, proto_field & field, size_t type_part ) -> 
 
     for( const auto & message : ctx.p_parent->message.messages )
     {
-        if( get_type_part( field, type_part ) != message.name )
+        if( get_type_part( field, type_part ) != message.name.proto_name )
             continue;
 
         switch( field.label )
@@ -187,7 +187,7 @@ auto is_forwarded( search_ctx & ctx, proto_field & field, size_t type_part ) -> 
             [[fallthrough]];
         case proto_field::Label::REPEATED:
         case proto_field::Label::PTR:
-            ctx.p_parent->message.forwards.insert( message.name );
+            ctx.p_parent->message.forwards.insert( message.name.proto_name );
             return true;
         }
     }
@@ -199,10 +199,10 @@ auto get_sub_message( const proto_message & message, const proto_field & field, 
     -> const proto_message *
 {
     const auto type_name = get_type_part( field, type_part );
-    const auto index =
-        std::find_if( message.messages.begin( ), message.messages.end( ),
-                      [ type_name ]( const auto & sub_message ) -> bool
-                      { return type_name == sub_message.name && sub_message.resolved > 0; } );
+    const auto index     = std::find_if(
+        message.messages.begin( ), message.messages.end( ),
+        [ type_name ]( const auto & sub_message ) -> bool
+        { return type_name == sub_message.name.proto_name && sub_message.resolved > 0; } );
     return ( index != message.messages.end( ) ) ? &*index : nullptr;
 }
 
@@ -230,7 +230,7 @@ auto is_enum( const proto_message & message, const proto_field & field, size_t t
 
     return std::any_of( message.enums.begin( ), message.enums.end( ),
                         [ type_name ]( const auto & enum_ ) -> bool
-                        { return type_name == enum_.name; } );
+                        { return type_name == enum_.name.proto_name; } );
 }
 
 [[nodiscard]]
@@ -279,16 +279,17 @@ auto resolve_from_parent( const search_ctx & self, const proto_field & field, si
 [[nodiscard]]
 auto resolve_from_import( const proto_file & import, const proto_field & field ) -> bool
 {
-    if( import.package.name.empty( ) )
+    if( import.package.name.proto_name.empty( ) )
     {
         return resolve_from_message( import.package, field, 0 );
     }
 
-    if( field.type_name.size( ) > import.package.name.size( ) &&
-        field.type_name[ import.package.name.size( ) ] == '.' &&
-        field.type_name.starts_with( import.package.name ) )
+    if( field.type_name.proto_name.size( ) > import.package.name.proto_name.size( ) &&
+        field.type_name.proto_name[ import.package.name.proto_name.size( ) ] == '.' &&
+        field.type_name.proto_name.starts_with( import.package.name.proto_name ) )
     {
-        return resolve_from_message( import.package, field, type_parts( import.package.name ) + 1 );
+        return resolve_from_message( import.package, field,
+                                     type_parts( import.package.name.proto_name ) + 1 );
     }
 
     return false;
@@ -398,7 +399,7 @@ void resolve_message_dependencies( search_ctx & ctx )
     {
         if( message.resolved == 0 )
         {
-            throw_parse_error( file, message.name, "type dependency can't be resolved" );
+            throw_parse_error( file, message.name.proto_name, "type dependency can't be resolved" );
         }
     }
     throw_parse_error( file, file.content, "type dependency can't be resolved" );
