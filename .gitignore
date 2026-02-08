@@ -36,3 +36,4 @@ build/
 .vscode/
 coverage/
 
+test/custom-output-dir/proto/*.pb.*
