@@ -2,13 +2,15 @@
 
 #if __has_include( <simd>)
 #include <simd>
-namespace simd_ns = std;
+template < class Tp, int Np >
+using my_fixed_size_simd = std::fixed_size_simd< Tp, Np >;
 #elif __has_include( <experimental/simd>)
 #include <experimental/simd>
-namespace simd_ns = std::experimental;
-#else
-#error "No SIMD implementation found"
-#endif
-
 template < class Tp, int Np >
-using my_fixed_size_simd = simd_ns::fixed_size_simd< Tp, Np >;
+using my_fixed_size_simd = std::experimental::fixed_size_simd< Tp, Np >;
+#else
+//- no simd, use fixed-size-array instead to satisfy the unit tests
+#include <array>
+template < class Tp, int Np >
+using my_fixed_size_simd = std::array< Tp, Np >;
+#endif
