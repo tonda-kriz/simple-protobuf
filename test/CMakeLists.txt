@@ -1,5 +1,7 @@
 include(cmake/doctest.cmake)
 
+include_directories(${CMAKE_SOURCE_DIR}/test/include)
+
 FILE(GLOB protos ${CMAKE_CURRENT_SOURCE_DIR}/proto/*.proto)
 
 SET(PB_PACKAGE "")
