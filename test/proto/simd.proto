@@ -4,7 +4,7 @@ package UnitTest.simd;
 
 
 message Data {
-    //[[ repeated.type = "std::fixed_size_simd<$, 4>" ]]
+    //[[ repeated.type = "my_fixed_size_simd<$, 4>" ]]
     //[[ repeated.include = "<my_simd.h>" ]]
     repeated float coordinates = 1;
 }

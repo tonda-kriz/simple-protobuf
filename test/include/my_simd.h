@@ -1,14 +1,14 @@
 #pragma once
 
-#include <version>
-
-#if __cpp_lib_simd >= 202411L
+#if __has_include( <simd>)
 #include <simd>
-#else
+namespace simd_ns = std;
+#elif __has_include( <experimental/simd>)
 #include <experimental/simd>
-namespace std
-{
-template < class Tp, int Np >
-using fixed_size_simd = experimental::fixed_size_simd< Tp, Np >;
-}
+namespace simd_ns = std::experimental;
+#else
+#error "No SIMD implementation found"
 #endif
+
+template < class Tp, int Np >
+using my_fixed_size_simd = simd_ns::fixed_size_simd< Tp, Np >;
