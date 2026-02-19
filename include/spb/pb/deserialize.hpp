@@ -577,6 +577,50 @@ static inline void deserialize_as( istream & stream, C & value, wire_type type )
     }
 }
 
+template < scalar_encoder encoder, spb::detail::proto_label_repeated_nested C >
+static inline void deserialize_as( istream & stream, C & value, wire_type type )
+{
+    check_wire_type( type, wire_type::length_delimited );
+
+    auto& v = value.emplace_back();
+    while( !stream.empty( ) )
+    {
+        const auto tag        = read_varint< uint32_t >( stream );
+        const auto field_type = wire_type_from_tag( tag );
+        const auto field_number = field_from_tag( tag );
+
+        if (field_number != 1) { continue; }
+        check_wire_type( field_type, wire_type::length_delimited );
+
+        const auto size = read_varint< uint32_t >( stream );
+        auto substream  = stream.sub_stream( size );
+        deserialize_as<encoder>( substream, v, field_type );
+        check_if_empty( substream );
+    }
+}
+
+static inline void deserialize( istream & stream, spb::detail::proto_label_repeated_nested auto & value,
+                                wire_type type )
+{
+    check_wire_type( type, wire_type::length_delimited );
+
+    auto& v = value.emplace_back();
+    while( !stream.empty( ) )
+    {
+        const auto tag        = read_varint< uint32_t >( stream );
+        const auto field_type = wire_type_from_tag( tag );
+        const auto field_number = field_from_tag( tag );
+
+        if (field_number != 1) { continue; }
+        check_wire_type( field_type, wire_type::length_delimited );
+
+        const auto size = read_varint< uint32_t >( stream );
+        auto substream  = stream.sub_stream( size );
+        deserialize( substream, v, field_type );
+        check_if_empty( substream );
+    }
+}
+
 template < scalar_encoder encoder, typename keyT, typename valueT >
 static inline void deserialize_as( istream & stream, std::map< keyT, valueT > & value,
                                    wire_type type )

@@ -216,7 +216,7 @@ static inline void serialize( ostream & stream, std::string_view key,
 static inline void serialize( ostream & stream, std::string_view key,
                               const spb::detail::proto_field_bytes auto & value );
 static inline void serialize( ostream & stream, std::string_view key,
-                              const spb::detail::proto_label_repeated auto & value );
+                              const spb::detail::proto_label_repeated_general auto & value );
 static inline void serialize( ostream & stream, std::string_view key,
                               const spb::detail::proto_label_repeated_fixed_size auto & value );
 template < typename keyT, typename valueT >
@@ -289,7 +289,7 @@ static inline void serialize( ostream & stream, std::string_view key,
     }
 }
 static inline void serialize( ostream & stream, std::string_view key,
-                              const spb::detail::proto_label_repeated auto & value )
+                              const spb::detail::proto_label_repeated_general auto & value)
 {
     if( value.empty( ) )
     {

@@ -498,7 +498,7 @@ static inline void deserialize( istream & stream, std::map< keyT, valueT > & val
 
 static inline void deserialize( istream & stream, spb::detail::proto_label_optional auto & value );
 
-template < spb::detail::proto_label_repeated C >
+template < spb::detail::proto_label_repeated_general C >
 static inline void deserialize( istream & stream, C & value )
 {
     if( stream.consume( "null"sv ) )

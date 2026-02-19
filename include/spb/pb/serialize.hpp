@@ -349,6 +349,42 @@ static inline void serialize( ostream & stream, uint32_t field_number,
     }
 }
 
+template < scalar_encoder encoder, spb::detail::proto_label_repeated_nested C >
+static inline void serialize_as( ostream & stream, uint32_t field_number, const C & value )
+{
+    if( value.size() > 0 )
+    {
+        for( const auto & v : value )
+        {
+            auto size_stream = ostream( );
+            serialize_as<encoder>( size_stream, 1, v );
+            const auto size = size_stream.size( );
+            
+            serialize_tag( stream, field_number, wire_type::length_delimited );
+            serialize_varint( stream, size );
+            serialize_as<encoder>( stream, 1, v );
+        }
+    }
+}
+
+static inline void serialize( ostream & stream, uint32_t field_number,
+                              const spb::detail::proto_label_repeated_nested auto & value )
+{
+    if( value.size() > 0 )
+    {
+        for( const auto & v : value )
+        {
+            auto size_stream = ostream( );
+            serialize( size_stream, 1, v );
+            const auto size = size_stream.size( );
+            
+            serialize_tag( stream, field_number, wire_type::length_delimited );
+            serialize_varint( stream, size );
+            serialize( stream, 1, v );
+        }
+    }
+}
+
 static inline void serialize( ostream & stream, uint32_t field_number,
                               const spb::detail::proto_label_optional auto & p_value )
 {

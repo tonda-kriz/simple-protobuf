@@ -29,3 +29,17 @@
  *
  */
 void resolve_messages( proto_file & file );
+
+/**
+ * @brief finds a message given its name by recursively checking
+ *        the children of a parent message
+ * 
+ */
+const proto_message* find_message(const proto_message& parent, const std::string_view& proto_name);
+
+/**
+ * @brief finds a message given its name by calling find_message()
+ *        on the package struct of the file and its file imports
+ * 
+ */
+const proto_message* find_message(const proto_file& file, const std::string_view& proto_name);

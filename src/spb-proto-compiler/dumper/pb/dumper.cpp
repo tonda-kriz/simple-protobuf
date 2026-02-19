@@ -9,10 +9,12 @@
 \***************************************************************************/
 
 #include "dumper.h"
+#include "ast/ast.h"
 #include "ast/ast-types.h"
 #include "ast/proto-field.h"
 #include "ast/proto-file.h"
 #include "template-h.h"
+#include "parser/options.h"
 #include <iterator>
 #include <sstream>
 #include <stdexcept>
@@ -98,7 +100,16 @@ void dump_cpp_open_namespace( std::ostream & stream, std::string_view name )
 
 auto encoder_type_str( const proto_file & file, const proto_field & field ) -> std::string
 {
-    switch( field.type )
+    const proto_field* pfield = &field;
+    // For nested repeated fields we have to eliminate the intermediary types
+    auto p_name = pfield->options.find(option_repeated_nested);
+    while (p_name != pfield->options.end() && p_name->second == "true")
+    {
+        pfield = & (find_message(file, pfield->type_name.proto_name)->fields[0]);
+        p_name = pfield->options.find(option_repeated_nested);
+    }
+    
+    switch( pfield->type )
     {
     case proto_field::Type::NONE:
     case proto_field::Type::BYTES:
@@ -112,24 +123,24 @@ auto encoder_type_str( const proto_file & file, const proto_field & field ) -> s
     case proto_field::Type::UINT32:
     case proto_field::Type::INT64:
     case proto_field::Type::UINT64:
-        return is_packed_array( file, field ) ? "scalar_encoder::varint | scalar_encoder::packed"
+        return is_packed_array( file, *pfield ) ? "scalar_encoder::varint | scalar_encoder::packed"
                                               : "scalar_encoder::varint";
 
     case proto_field::Type::SINT32:
     case proto_field::Type::SINT64:
-        return is_packed_array( file, field ) ? "scalar_encoder::svarint | scalar_encoder::packed"
+        return is_packed_array( file, *pfield ) ? "scalar_encoder::svarint | scalar_encoder::packed"
                                               : "scalar_encoder::svarint";
 
     case proto_field::Type::FLOAT:
     case proto_field::Type::FIXED32:
     case proto_field::Type::SFIXED32:
-        return is_packed_array( file, field ) ? "scalar_encoder::i32 | scalar_encoder::packed"
+        return is_packed_array( file, *pfield ) ? "scalar_encoder::i32 | scalar_encoder::packed"
                                               : "scalar_encoder::i32";
 
     case proto_field::Type::DOUBLE:
     case proto_field::Type::FIXED64:
     case proto_field::Type::SFIXED64:
-        return is_packed_array( file, field ) ? "scalar_encoder::i64 | scalar_encoder::packed"
+        return is_packed_array( file, *pfield ) ? "scalar_encoder::i64 | scalar_encoder::packed"
                                               : "scalar_encoder::i64";
     }
     return { };

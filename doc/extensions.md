@@ -203,6 +203,64 @@ struct Device{
 }
 ```
 
+#### nested containers
+
+Protobuf itself does not support nested repeated fields, instead wrapper messages need to be used. Using the option `repeated.nested = "true"` on a field the generated C++ code creates nested container types dropping the wrapper message.\
+A valid wrapper message must fulfill these requirements:
++ Contain exactly one field
++ The field must have the label `repeated`
++ The field must have the field number `1`
+
+For example the following protobuf
+```protobuf
+message Data {
+    required float x = 1;
+    required float y = 2;
+}
+
+message Wrapper1 {
+    repeated Data stub = 1;
+}
+
+message Wrapper2 {
+    //[[ repeated.nested = "true" ]]
+    //[[ repeated.type = "std::deque<$>" ]]
+    //[[ repeated.include = "<deque>" ]]
+    repeated Wrapper1 stub = 1;
+}
+
+message Wrapper3 {
+    //[[ repeated.nested = "true" ]]
+    repeated Wrapper2 stub = 1;
+}
+
+message Nested {
+    //[[ repeated.nested = "true" ]]
+    //[[ repeated.type = "std::deque<$>" ]]
+    //[[ repeated.include = "<deque>" ]]
+    repeated Wrapper4 values = 1;
+}
+```
+results in this C++ code
+```cpp
+struct Data {
+    float x;
+    float y;
+};
+struct Wrapper1 {
+    std::vector<Data> stub;
+};
+struct Wrapper2 {
+    std::deque<std::vector<Data>> stub;
+};
+struct Wrapper3 {
+    std::vector<std::deque<std::vector<Data>>> stub;
+};
+struct Deep {
+    std::deque<std::vector<std::deque<std::vector<Data>>>> values;
+};
+```
+
 ### integration with [etl library](https://github.com/ETLCPP/etl)
 
 *the whole code is in [examples](../example/)*

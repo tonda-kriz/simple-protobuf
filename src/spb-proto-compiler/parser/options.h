@@ -19,6 +19,7 @@ const auto option_optional_include = "optional.include"sv;
 
 const auto option_repeated_type    = "repeated.type"sv;
 const auto option_repeated_include = "repeated.include"sv;
+const auto option_repeated_nested = "repeated.nested"sv;
 
 const auto option_pointer_type    = "pointer.type"sv;
 const auto option_pointer_include = "pointer.include"sv;

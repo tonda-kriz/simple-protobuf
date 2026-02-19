@@ -72,13 +72,19 @@ concept proto_field_string_resizable = proto_field_string< T > && requires( T ob
 };
 
 template < class T >
-concept proto_label_repeated = requires( T container ) {
+concept proto_label_repeated_general = requires( T container ) {
     { container.emplace_back( ) };
     { container.begin( ) };
     { container.end( ) };
     { container.clear( ) };
     typename T::value_type;
 } && !proto_field_string< T > && !proto_field_bytes< T >;
+
+template < class T >
+concept proto_label_repeated = proto_label_repeated_general< T > && !proto_label_repeated_general< typename T::value_type >;
+
+template < class T >
+concept proto_label_repeated_nested = proto_label_repeated_general< T > && proto_label_repeated_general< typename T::value_type >;
 
 template < class T >
 concept proto_label_repeated_fixed_size = requires( T container ) {
@@ -98,7 +104,7 @@ concept proto_label_optional = requires( T container ) {
 
 template < class T >
 concept proto_message = std::is_class_v< T > && !proto_field_string< T > &&
-    !proto_field_bytes< T > && !proto_label_repeated< T > &&
+    !proto_field_bytes< T > && !proto_label_repeated< T > && !proto_label_repeated_nested< T > &&
     !proto_label_repeated_fixed_size< T > && !proto_label_optional< T >;
 
 }// namespace detail
