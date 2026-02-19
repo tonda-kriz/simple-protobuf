@@ -1,0 +1,46 @@
+syntax = "proto3";
+
+package UnitTest.nested_repeated;
+
+message Data {
+    required float x = 1;
+    required float y = 2;
+}
+
+message Wrapper2 {
+    //[[ field.type = "int16"]]
+    repeated int32 stub = 1;
+}
+
+message Wrapper1 {
+    repeated Data stub = 1;
+}
+
+message Wrapper3 {
+    //[[ repeated.nested = "true" ]]
+    //[[ repeated.type = "std::deque<$>" ]]
+    //[[ repeated.include = "<deque>" ]]
+    repeated Wrapper1 stub = 1;
+}
+
+message Wrapper4 {
+    //[[ repeated.nested = "true" ]]
+    repeated Wrapper3 stub = 1;
+}
+
+message ShallowMessage {
+    //[[ repeated.nested = "true" ]]
+    repeated Wrapper1 values = 1;
+}
+
+message ShallowScalar {
+    //[[ repeated.nested = "true" ]]
+    repeated Wrapper2 values = 1;
+}
+
+message Deep {
+    //[[ repeated.nested = "true" ]]
+    //[[ repeated.type = "std::deque<$>" ]]
+    //[[ repeated.include = "<deque>" ]]
+    repeated Wrapper4 values = 1;
+}

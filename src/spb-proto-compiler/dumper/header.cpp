@@ -438,9 +438,29 @@ void dump_field_type_and_name( std::ostream & stream, const proto_field & field,
                                       option_optional_type, ctype, "std::optional<$>" );
         break;
     case proto_field::Label::REPEATED:
+    {
+        std::string ctype_builder = "$";
+        std::string ctype_innermost = ctype;
+        const proto_field* field_stub = &field;
+        auto p_name = field_stub->options.find(option_repeated_nested);
+        while(p_name != field_stub->options.end() && p_name->second == "true")
+        {
+            const proto_message* field_type_message = find_message(file, field_stub->type_name.proto_name);
+            assert(field_type_message != nullptr);
+            // Grab the first field as new field
+            field_stub = &field_type_message->fields[0];
+
+            std::string ctype_container = get_container_type( field_stub->options, field_type_message->options, file.options, 
+                option_repeated_type, "$", "std::vector<$>" );
+            ctype_builder = replace(ctype_builder, "$", ctype_container);
+            ctype_innermost =  convert_to_ctype( file, *field_stub, *field_type_message );
+            p_name = field_stub->options.find(option_repeated_nested);
+        }
+        ctype_builder = replace(ctype_builder, "$", ctype_innermost);
         stream << get_container_type( field.options, message.options, file.options,
-                                      option_repeated_type, ctype, "std::vector<$>" );
+                                      option_repeated_type, ctype_builder, "std::vector<$>" );
         break;
+    }
     case proto_field::Label::PTR:
         stream << get_container_type( field.options, message.options, file.options,
                                       option_pointer_type, ctype, "std::unique_ptr<$>" );

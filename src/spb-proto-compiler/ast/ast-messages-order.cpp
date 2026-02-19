@@ -18,6 +18,7 @@
 #include <cerrno>
 #include <cstddef>
 #include <parser/char_stream.h>
+#include <parser/options.h>
 #include <string_view>
 
 namespace
@@ -242,8 +243,21 @@ auto resolve_from_message( const proto_message & message, const proto_field & fi
 
     if( const auto * sub_message = get_sub_message( message, field, type_part ); sub_message )
     {
+        if( auto p_name = field.options.find(option_repeated_nested); p_name != field.options.end() && p_name->second == "true")
+        {
+            if( sub_message->fields.size() != 1
+             || sub_message->fields[0].label != proto_field::Label::REPEATED
+             || sub_message->fields[0].number != 1)
+            {
+                throw std::runtime_error(std::format("{}.{} cannot be nested because {} is not a nestable message.",
+                    message.name.proto_name, field.name.proto_name, sub_message->name.proto_name));
+            }
+        }
+
         if( is_last_part( field, type_part ) )
+        {
             return true;
+        }
 
         return resolve_from_message( *sub_message, field, type_part + 1 );
     }

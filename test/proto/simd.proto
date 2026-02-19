@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+package UnitTest.simd;
+
+
+message Data {
+    //[[ repeated.type = "my_fixed_size_simd<$, 4>" ]]
+    //[[ repeated.include = "<my_simd.h>" ]]
+    repeated float coordinates = 1;
+}

@@ -5,7 +5,10 @@
 #include <name.pb.h>
 #include <optional>
 #include <person.pb.h>
+#include <proto/array.pb.h>
 #include <proto/enum.pb.h>
+#include <proto/simd.pb.h>
+#include <proto/nested_repeated.pb.h>
 #include <reserved.pb.h>
 #include <scalar.pb.h>
 #include <span>
@@ -94,7 +97,44 @@ auto operator==( const public_ & lhs, const public_ & rhs ) noexcept -> bool
 {
     return lhs.p == rhs.p && lhs.while_ == rhs.while_;
 }
+}// namespace UnitTest::cpp_keywords::private_::public_::int_::while_::do_
+
+namespace UnitTest::simd
+{
+auto operator==( const Data & lhs, const Data & rhs ) noexcept -> bool
+{
+    return lhs.coordinates[ 0 ] == rhs.coordinates[ 0 ] &&
+        lhs.coordinates[ 1 ] == rhs.coordinates[ 1 ] &&
+        lhs.coordinates[ 2 ] == rhs.coordinates[ 2 ] &&
+        lhs.coordinates[ 3 ] == rhs.coordinates[ 3 ];
 }
+}// namespace UnitTest::simd
+
+namespace UnitTest::array
+{
+auto operator==( const Data & lhs, const Data & rhs ) noexcept -> bool
+{
+    return lhs.words[ 0 ] == rhs.words[ 0 ] && lhs.words[ 1 ] == rhs.words[ 1 ] &&
+        lhs.words[ 2 ] == rhs.words[ 2 ] && lhs.words[ 3 ] == rhs.words[ 3 ];
+}
+}// namespace UnitTest::array
+
+namespace UnitTest::nested_repeated
+{
+auto operator==( const Data & lhs, const Data & rhs ) noexcept -> bool
+{
+    return (lhs.x == rhs.x) && (lhs.y == lhs.y);
+}
+
+template < class T >
+concept TopLevelMessage = requires( T message ) {
+    { message.values };
+};
+auto operator==( const TopLevelMessage auto & lhs, const TopLevelMessage auto & rhs ) noexcept -> bool
+{
+    return lhs.values == rhs.values;
+}
+} // namespace UnitTest::nested_repeated
 
 namespace
 {
@@ -1682,9 +1722,92 @@ TEST_CASE( "protobuf" )
     }
     SUBCASE( "reserved" )
     {
-        pb_json_test( reserved::public_{.p = reserved::public_::private_{.for_ = 3, .bool_ = true} },
-            "\x0a\x04\x08\x03\x10\x01", 
-            R"({"p":{"for":3,"bool":true}})" );
+        pb_json_test(
+            reserved::public_{ .p = reserved::public_::private_{ .for_ = 3, .bool_ = true } },
+            "\x0a\x04\x08\x03\x10\x01", R"({"p":{"for":3,"bool":true}})" );
+    }
+    SUBCASE( "simd" )
+    {
+        auto data             = UnitTest::simd::Data{ };
+        data.coordinates[ 0 ] = 0;
+        data.coordinates[ 1 ] = 1;
+        data.coordinates[ 2 ] = 2;
+        data.coordinates[ 3 ] = 3;
+        pb_json_test( data,
+                      "\x0a\x10\x00\x00\x00\x00\x00\x00\x80\x3f\x00\x00\x00\x40\x00\x00\x40\x40"sv,
+                      R"({"coordinates":[0,1,2,3]})" );
+        CHECK_THROWS( ( void ) spb::pb::deserialize< UnitTest::simd::Data >(
+            "\x0a\x0c\x00\x00\x00\x00\x00\x00\x80\x3f\x00\x00\x00\x40"sv ) );
+        CHECK_THROWS( ( void ) spb::pb::deserialize< UnitTest::simd::Data >(
+            "\x0a\x11\x00\x00\x00\x00\x00\x00\x80\x3f\x00\x00\x00\x40\x00\x00\x40\x40\x50"sv ) );
+        CHECK_THROWS( ( void ) spb::json::deserialize< UnitTest::simd::Data >(
+            R"({"coordinates":[0,1,2]})"sv ) );
+        CHECK_THROWS( ( void ) spb::json::deserialize< UnitTest::simd::Data >(
+            R"({"coordinates":[0,1,2,3,4]})"sv ) );
+    }
+    SUBCASE( "fixed size array" )
+    {
+        pb_json_test( UnitTest::array::Data{ .words = { 0, 1, 2, 3 } },
+                      "\x0a\x04\x00\x01\x02\x03"sv, R"({"words":[0,1,2,3]})" );
+        CHECK_THROWS(
+            ( void ) spb::pb::deserialize< UnitTest::array::Data >( "\x0a\x03\x00\x01\x02"sv ) );
+        CHECK_THROWS( ( void ) spb::pb::deserialize< UnitTest::array::Data >(
+            "\x0a\x05\x00\x01\x02\x03\x04"sv ) );
+        CHECK_THROWS(
+            ( void ) spb::json::deserialize< UnitTest::array::Data >( R"({"words":[0,1,2]})"sv ) );
+        CHECK_THROWS( ( void ) spb::json::deserialize< UnitTest::array::Data >(
+            R"({"words":[0,1,2,3,4]})"sv ) );
+    }
+    SUBCASE("nested repeated")
+    {
+        SUBCASE( "shallow scalar" )
+        {
+            const auto& value = UnitTest::nested_repeated::ShallowScalar {
+                .values = {
+                    { 0, 1, 2 },
+                    { 3, 4 } 
+                } 
+            };
+            pb_json_test(value,
+                "\x0a\x05\x0a\x03\x00\x01\x02\x0a\x04\x0a\x02\x03\x04"sv,
+                R"({"values":[[0,1,2],[3,4]]})"
+            );
+        }
+
+        SUBCASE( "shallow message" )
+        {
+            const auto& value = UnitTest::nested_repeated::ShallowMessage {
+                .values = {
+                    { { 0.0, 1.0 }, { 2.0, 3.0 }, { 4.0, 5.0 } },
+                    { { 6.0, 7.0 }, { 8.0, 9.0 } }
+                }
+            };
+            pb_json_test(value,
+                "\x0a\x24\x0a\x0a\x0d\x00\x00\x00\x00\x15\x00\x00\x80\x3f\x0a\x0a\x0d\x00\x00\x00\x40\x15\x00\x00\x40\x40\x0a\x0a\x0d\x00\x00\x80\x40\x15\x00\x00\xa0\x40\x0a\x18\x0a\x0a\x0d\x00\x00\xc0\x40\x15\x00\x00\xe0\x40\x0a\x0a\x0d\x00\x00\x00\x41\x15\x00\x00\x10\x41"sv,
+                R"({"values":[[{"x":0,"y":1},{"x":2,"y":3},{"x":4,"y":5}],[{"x":6,"y":7},{"x":8,"y":9}]]})"
+            );
+        }
+        SUBCASE( "deep" )
+        {
+            const auto& value = UnitTest::nested_repeated::Deep {{
+                {
+                    {
+                        { { 0.0, 1.0 }, { 2.0, 3.0 }, { 4.0, 5.0 } },
+                        { { 6.0, 7.0 }, { 8.0, 9.0 } }
+                    }
+                },
+                {
+                    {
+                        { { 10.0, 11.0 }, { 12.0, 13.0 } },
+                        { { 14.0, 15.0 }, { 16.0, 17.0 }, {18.0, 19.0} }
+                    }
+                }
+            }};
+            pb_json_test(value,
+                "\x0a\x42\x0a\x40\x0a\x24\x0a\x0a\x0d\x00\x00\x00\x00\x15\x00\x00\x80\x3f\x0a\x0a\x0d\x00\x00\x00\x40\x15\x00\x00\x40\x40\x0a\x0a\x0d\x00\x00\x80\x40\x15\x00\x00\xa0\x40\x0a\x18\x0a\x0a\x0d\x00\x00\xc0\x40\x15\x00\x00\xe0\x40\x0a\x0a\x0d\x00\x00\x00\x41\x15\x00\x00\x10\x41\x0a\x42\x0a\x40\x0a\x18\x0a\x0a\x0d\x00\x00\x20\x41\x15\x00\x00\x30\x41\x0a\x0a\x0d\x00\x00\x40\x41\x15\x00\x00\x50\x41\x0a\x24\x0a\x0a\x0d\x00\x00\x60\x41\x15\x00\x00\x70\x41\x0a\x0a\x0d\x00\x00\x80\x41\x15\x00\x00\x88\x41\x0a\x0a\x0d\x00\x00\x90\x41\x15\x00\x00\x98\x41"sv,
+                R"({"values":[[[[{"x":0,"y":1},{"x":2,"y":3},{"x":4,"y":5}],[{"x":6,"y":7},{"x":8,"y":9}]]],[[[{"x":10,"y":11},{"x":12,"y":13}],[{"x":14,"y":15},{"x":16,"y":17},{"x":18,"y":19}]]]]})"
+            );
+        }
     }
     SUBCASE( "ignore" )
     {

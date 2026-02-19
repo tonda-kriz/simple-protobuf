@@ -448,7 +448,7 @@ static inline void deserialize( istream & stream, spb::detail::proto_field_strin
         auto utf8_size = unescape( stream, utf8_buffer );
         append_to_value( utf8_buffer, utf8_size );
     }
-    spb::detail::utf8::validate( std::string_view( value.data( ), value.size( ) ) );
+    // spb::detail::utf8::validate( std::string_view( value.data( ), value.size( ) ) );
 }
 
 static inline void deserialize( istream & stream,
@@ -498,7 +498,7 @@ static inline void deserialize( istream & stream, std::map< keyT, valueT > & val
 
 static inline void deserialize( istream & stream, spb::detail::proto_label_optional auto & value );
 
-template < spb::detail::proto_label_repeated C >
+template < spb::detail::proto_label_repeated_general C >
 static inline void deserialize( istream & stream, C & value )
 {
     if( stream.consume( "null"sv ) )
@@ -537,6 +537,42 @@ static inline void deserialize( istream & stream, C & value )
     }
 }
 
+template < spb::detail::proto_label_repeated_fixed_size C >
+static inline void deserialize( istream & stream, C & value )
+{
+    if( stream.consume( "null"sv ) )
+    {
+        typename C::value_type tmp = { };
+        for( size_t i = 0; i < value.size( ); i++ )
+        {
+            value[ i ] = tmp;
+        }
+        return;
+    }
+
+    if( !stream.consume( '[' ) )
+    {
+        throw std::runtime_error( "expecting '['" );
+    }
+
+    for( size_t i = 0; i < value.size( ); i++ )
+    {
+        typename C::value_type tmp;
+        deserialize( stream, tmp );
+        value[ i ] = tmp;
+        if( i + 1 >= value.size( ) )
+            break;
+
+        while( stream.consume( ',' ) )
+            ;
+    }
+
+    if( !stream.consume( ']' ) )
+    {
+        throw std::runtime_error( "expecting ']'" );
+    }
+}
+
 static inline void deserialize( istream & stream, spb::detail::proto_field_bytes auto & value )
 {
     if( stream.consume( "null"sv ) )
@@ -555,18 +591,21 @@ void deserialize_map_key( istream & stream, T & map_key )
     {
         return deserialize( stream, map_key );
     }
-    auto str_key_map = deserialize_string_view( stream, 1, UINT32_MAX );
-    auto reader = [ ptr = str_key_map.data( ), end = str_key_map.data( ) + str_key_map.size( ) ](
-                      void * data, size_t size ) mutable -> size_t
+    else
     {
-        size_t bytes_left = end - ptr;
-        size              = std::min( size, bytes_left );
-        memcpy( data, ptr, size );
-        ptr += size;
-        return size;
-    };
-    auto key_stream = istream( reader );
-    deserialize( key_stream, map_key );
+        auto str_key_map = deserialize_string_view( stream, 1, UINT32_MAX );
+        auto reader = [ ptr = str_key_map.data( ), end = str_key_map.data( ) + str_key_map.size( ) ](
+                        void * data, size_t size ) mutable -> size_t
+        {
+            size_t bytes_left = end - ptr;
+            size              = std::min( size, bytes_left );
+            memcpy( data, ptr, size );
+            ptr += size;
+            return size;
+        };
+        auto key_stream = istream( reader );
+        deserialize( key_stream, map_key );
+    }
 }
 
 template < typename keyT, typename valueT >
