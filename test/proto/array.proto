@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package UnitTest.array;
+
+message Data {
+    //[[ repeated.type = "std::array<$, 4>" ]]
+    //[[ repeated.include = "<array>" ]]
+    repeated int32 words = 1;
+}

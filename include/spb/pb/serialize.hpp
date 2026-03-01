@@ -16,9 +16,9 @@
 #include <cctype>
 #include <cstddef>
 #include <cstdint>
-#include <memory>
 #include <cstring>
 #include <map>
+#include <memory>
 #include <spb/io/io.hpp>
 #include <sys/types.h>
 #include <type_traits>
@@ -105,6 +105,9 @@ static inline void serialize( ostream & stream, uint32_t field_number,
                               const spb::detail::proto_label_repeated auto & value );
 
 template < scalar_encoder encoder, spb::detail::proto_label_repeated C >
+static inline void serialize_as( ostream & stream, uint32_t field_number, const C & value );
+
+template < scalar_encoder encoder, spb::detail::proto_label_repeated_fixed_size C >
 static inline void serialize_as( ostream & stream, uint32_t field_number, const C & value );
 
 template < scalar_encoder encoder, typename keyT, typename valueT >
@@ -248,6 +251,22 @@ static inline void serialize_as( ostream & stream, uint32_t field_number,
     serialize_as< encoder >( stream, value );
 }
 
+template < scalar_encoder encoder, spb::detail::proto_label_repeated_fixed_size C >
+static inline void serialize_packed_as( ostream & stream, const C & container )
+{
+    for( size_t i = 0; i < container.size( ); i++ )
+    {
+        if constexpr( std::is_same_v< typename C::value_type, bool > )
+        {
+            serialize_as< encoder >( stream, bool( container[ i ] ) );
+        }
+        else
+        {
+            serialize_as< encoder >( stream, container[ i ] );
+        }
+    }
+}
+
 template < scalar_encoder encoder, spb::detail::proto_label_repeated C >
 static inline void serialize_packed_as( ostream & stream, const C & container )
 {
@@ -296,6 +315,21 @@ static inline void serialize_as( ostream & stream, uint32_t field_number, const 
             }
         }
     }
+}
+
+template < scalar_encoder encoder, spb::detail::proto_label_repeated_fixed_size C >
+static inline void serialize_as( ostream & stream, uint32_t field_number, const C & value )
+{
+    static_assert( scalar_encoder_is_packed( encoder ),
+                   "repeated field with fixed size has to have attribute 'packed'" );
+
+    auto size_stream = ostream( );
+    serialize_packed_as< encoder >( size_stream, value );
+    const auto size = size_stream.size( );
+
+    serialize_tag( stream, field_number, wire_type::length_delimited );
+    serialize_varint( stream, size );
+    serialize_packed_as< encoder >( stream, value );
 }
 
 static inline void serialize( ostream & stream, uint32_t field_number,

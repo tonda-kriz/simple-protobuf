@@ -537,6 +537,42 @@ static inline void deserialize( istream & stream, C & value )
     }
 }
 
+template < spb::detail::proto_label_repeated_fixed_size C >
+static inline void deserialize( istream & stream, C & value )
+{
+    if( stream.consume( "null"sv ) )
+    {
+        typename C::value_type tmp = { };
+        for( size_t i = 0; i < value.size( ); i++ )
+        {
+            value[ i ] = tmp;
+        }
+        return;
+    }
+
+    if( !stream.consume( '[' ) )
+    {
+        throw std::runtime_error( "expecting '['" );
+    }
+
+    for( size_t i = 0; i < value.size( ); i++ )
+    {
+        typename C::value_type tmp;
+        deserialize( stream, tmp );
+        value[ i ] = tmp;
+        if( i + 1 >= value.size( ) )
+            break;
+
+        while( stream.consume( ',' ) )
+            ;
+    }
+
+    if( !stream.consume( ']' ) )
+    {
+        throw std::runtime_error( "expecting ']'" );
+    }
+}
+
 static inline void deserialize( istream & stream, spb::detail::proto_field_bytes auto & value )
 {
     if( stream.consume( "null"sv ) )

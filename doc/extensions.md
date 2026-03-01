@@ -10,7 +10,7 @@ Example:
 
 ## int types
 
-You can use also **8** and **16** bit ints (`int8`, `uint8`, `int16`, `uint16`) for fields and for enums. Warning: due to compatibility with GPB, always use types with the same sign, like `int32` and `int8`, combinations like `int32` and `uint8` are invalid.
+You can use also **8** and **16** bit ints (`int8`, `uint8`, `int16`, `uint16`) for fields and for enums. **Warning:** due to compatibility with GPB, always use types with the same sign, like `int32` and `int8`, combinations like `int32` and `uint8` are invalid.
 
 ### how to use int types
 
@@ -136,33 +136,70 @@ Defaults are set to:
 
 - for `string`, `$` (if specified) will be replaced by `char`.
 - for `bytes`, `$` (if specified) will be replaced by `std::byte`.
-- for `repeated` and `optional`, `$` will be replaced by a `field type` specified in .proto
+- for `repeated` and `optional`, `$` will be replaced by a `field.type` specified in .proto
 
 You can use those attributes ...
 
-- before `package`, means its set for the **whole .proto file**
-- before `message`, means its set for one **message only**
-- before `field`, means its set for one **field only**
+- before `package`, for the **whole .proto file**
+- before `message`, for one **message only**
+- before `field`, for one **field only**
 
 you can combine them as you want, the more specific ones will be preferred.
 
-#### fixed size bytes, string
+#### fixed size repeated fields
 
-You can use **fixed size** containers for `bytes` and `string`. They needs to satisfy concept [proto_field_bytes](../include/spb/concepts.h) or [proto_field_string](../include/spb/concepts.h)
+You can use **fixed size** container for repeated fields with simple type (integers, floating points).
+Field has to be `repeated` with `packed` attribute (which is a default in proto version 3, for proto version 2 use `[packed = true]`). The container needs to satisfy concept [proto_label_repeated_fixed_size](../include/spb/concepts.h). 
+**Warning:** Deserialization will return `false` if the repeated field has a different length than expected.
 
 ```proto
-message Person{
-    //[[ string.type = "std::array<$,4>" ]]
-    //[[ string.include = "<array>" ]]
-    optional string id = 1;
+message Data{
+    //[[ repeated.type = "std::fixed_size_simd<$,4>" ]]
+    //[[ repeated.include = "<simd>" ]]
+    repeated float coordinates = 1;
+
+    //[[ repeated.type = "std::array<$,32>" ]]
+    //[[ repeated.include = "<array>" ]]
+    repeated int32 fields = 2;
 }
 ```
 
 will be translated into...
 
 ```CPP
-struct Person{
+struct Data{
+    std::fixed_size_simd<float, 4> coordinates;
+    std::array<int32_t, 32> fields;
+}
+```
+
+#### fixed size bytes, string
+
+You can use **fixed size** containers for `bytes` and `string`. They needs to satisfy concept [proto_field_bytes](../include/spb/concepts.h) or [proto_field_string](../include/spb/concepts.h)
+
+```proto
+message Device{
+    //[[ string.type = "std::array<$,4>" ]]
+    //[[ string.include = "<array>" ]]
+    optional string id = 1;
+
+    //[[ bytes.type = "std::array<$,32>" ]]
+    //[[ bytes.include = "<array>" ]]
+    optional bytes sha256 = 2;
+
+    //[[ bytes.type = "std::array<uint8_t,16>" ]]
+    //[[ bytes.include = "<array>" ]]
+    optional bytes md5 = 3;
+}
+```
+
+will be translated into...
+
+```CPP
+struct Device{
     std::optional< std::array< char, 4 > > id;
+    std::optional< std::array< std::byte, 32 > > sha256;
+    std::optional< std::array< uint8_t, 16 > > md5;
 }
 ```
 
