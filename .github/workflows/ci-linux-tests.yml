@@ -83,15 +83,12 @@ jobs:
         echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
 
     - name: Install Linux dependencies
-      run: >
-          sudo apt-get install
-          protobuf-compiler
-          ninja-build
-    
+      run: |
+          sudo add-apt-repository ppa:ubuntu-toolchain-r/test
+          sudo apt-get install protobuf-compiler ninja-build
     - name: Install gcc
       if: matrix.compiler == 'gcc'
       run: |
-          sudo add-apt-repository ppa:ubuntu-toolchain-r/test
           sudo apt-get install g++-${{ matrix.version }}
           sudo apt-get install gcc-${{ matrix.version }}
           echo "CXX=g++-${{ matrix.version }}" >> ${GITHUB_ENV}
