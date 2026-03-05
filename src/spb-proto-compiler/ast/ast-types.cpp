@@ -288,7 +288,7 @@ using scalar_encoder = spb::pb::detail::scalar_encoder;
     if( type_part > 0 )
         return proto_field::Type::NONE;
 
-    for( const auto & import : self.file.file_imports )
+    for( const auto & import : self.file.imports )
     {
         if( const auto type = resolve_from_import( import, field ); type )
             return type;

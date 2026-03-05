@@ -34,12 +34,16 @@ namespace
 namespace fs       = std::filesystem;
 using parsed_files = std::set< std::string >;
 
-[[nodiscard]] auto parse_proto_file( fs::path file, parsed_files &,
-                                     std::span< const fs::path > import_paths,
-                                     const fs::path & base_dir ) -> proto_file;
+struct parsing_ctx
+{
+    const fs::path & base_dir;
+    parsed_files & already_parsed;
+    std::span< const fs::path > import_paths;
+};
 
-auto find_file_in_paths( const fs::path & file_name, std::span< const fs::path > import_paths,
-                         const fs::path & base_dir ) -> fs::path
+[[nodiscard]] auto parse_proto_file( const fs::path & file, parsing_ctx & ctx ) -> proto_file;
+
+auto find_file_in_paths( const fs::path & file_name, const parsing_ctx & ctx ) -> fs::path
 {
     if( file_name.has_root_path( ) )
     {
@@ -50,15 +54,15 @@ auto find_file_in_paths( const fs::path & file_name, std::span< const fs::path >
     }
     else
     {
-        if( fs::exists( base_dir / file_name ) )
+        if( fs::exists( ctx.base_dir / file_name ) )
         {
-            return base_dir / file_name;
+            return ctx.base_dir / file_name;
         }
 
-        for( const auto & import_path : import_paths )
+        for( const auto & import_path : ctx.import_paths )
         {
             auto file_path = import_path.has_root_path( ) ? import_path / file_name
-                                                          : base_dir / import_path / file_name;
+                                                          : ctx.base_dir / import_path / file_name;
             if( fs::exists( file_path ) )
             {
                 return file_path;
@@ -67,30 +71,6 @@ auto find_file_in_paths( const fs::path & file_name, std::span< const fs::path >
     }
 
     throw std::runtime_error( strerror( ENOENT ) );
-}
-
-[[nodiscard]] auto parse_all_imports( const proto_file & file, parsed_files & already_parsed,
-                                      std::span< const fs::path > import_paths,
-                                      const fs::path & base_dir ) -> proto_files
-{
-    proto_files result;
-    result.reserve( file.imports.size( ) );
-    for( const auto & import : file.imports )
-    {
-        if( !already_parsed.contains( std::string( import.file_name ) ) )
-        {
-            try
-            {
-                result.emplace_back(
-                    parse_proto_file( import.file_name, already_parsed, import_paths, base_dir ) );
-            }
-            catch( const std::runtime_error & error )
-            {
-                throw_parse_error( file, import.file_name, error.what( ) );
-            }
-        }
-    }
-    return result;
 }
 
 void parse_or_throw( bool parsed, spb::char_stream & stream, std::string_view message )
@@ -444,15 +424,35 @@ void parse_top_level_syntax_or_service( spb::char_stream & stream, proto_file & 
     stream.throw_parse_error( "expecting syntax or service" );
 }
 
-void parse_top_level_import( spb::char_stream & stream, proto_imports & imports,
+void parse_top_level_import( spb::char_stream & stream, proto_file & file, parsing_ctx & ctx,
                              proto_comment && comment )
 {
     // "import" [ "weak" | "public" ] strLit ";"
     consume_or_fail( stream, "import" );
     stream.consume( "weak" ) || stream.consume( "public" );
-    imports.emplace_back( proto_import{ .file_name = parse_string_literal( stream ),
-                                        .comments  = std::move( comment ) } );
-    consume_statement_end( stream, imports.back( ).comments );
+    const auto import_name = parse_string_literal( stream );
+    auto import_comment    = std::move( comment );
+    consume_statement_end( stream, import_comment );
+    try
+    {
+        const auto base_dir = file.path.parent_path( );
+        auto import_ctx     = parsing_ctx{
+                .base_dir       = base_dir,
+                .already_parsed = ctx.already_parsed,
+                .import_paths   = ctx.import_paths,
+        };
+
+        const auto import_file_path = find_file_in_paths( import_name, import_ctx );
+        if( !ctx.already_parsed.insert( import_file_path.string( ) ).second )
+            return;
+
+        file.imports.emplace_back( parse_proto_file( import_file_path, import_ctx ) ).comment =
+            std::move( import_comment );
+    }
+    catch( const std::runtime_error & error )
+    {
+        throw_parse_error( file, import_name, error.what( ) );
+    }
 }
 
 void parse_top_level_package( spb::char_stream & stream, proto_base & package,
@@ -768,10 +768,6 @@ void parse_field( spb::char_stream & stream, proto_fields & fields, proto_commen
     fields.push_back( new_field );
 }
 
-//[[nodiscard]] auto parse_extend( spb::char_stream & stream, proto_ast & ) -> bool;
-//[[nodiscard]] auto parse_extensions( spb::char_stream & stream, proto_fields & ) -> bool;
-//[[nodiscard]] auto parse_oneof( spb::char_stream & stream, proto_ast & ) -> bool;
-
 auto parse_map_key_type( spb::char_stream & stream ) -> std::string_view
 {
     // keyType = "int32" | "int64" | "uint32" | "uint64" | "sint32" | "sint64" | "fixed32" |
@@ -899,7 +895,7 @@ void parse_message_body( spb::char_stream & stream, proto_messages & messages,
         if( !parse_empty_statement( stream ) &&
             !parse_enum( stream, new_message.enums, std::move( comment ) ) &&
             !parse_message( stream, new_message.messages, std::move( comment ) ) &&
-            //! parse_extend( stream, new_message.extends ) &&
+            //! parse_extend( stream, new_message.extends, std::move( comment ) ) &&
             !parse_extensions( stream, new_message.extensions, std::move( comment ) ) &&
             !parse_oneof( stream, new_message.oneofs, std::move( comment ) ) &&
             !parse_map_field( stream, new_message.maps, std::move( comment ) ) &&
@@ -945,7 +941,8 @@ void parse_top_level_enum( spb::char_stream & stream, proto_enums & enums,
     parse_or_throw( parse_enum( stream, enums, std::move( comment ) ), stream, "expecting enum" );
 }
 
-void parse_top_level( spb::char_stream & stream, proto_file & file, proto_comment && comment )
+void parse_top_level( spb::char_stream & stream, proto_file & file, parsing_ctx & ctx,
+                      proto_comment && comment )
 {
     switch( stream.current_char( ) )
     {
@@ -954,7 +951,7 @@ void parse_top_level( spb::char_stream & stream, proto_file & file, proto_commen
     case 's':
         return parse_top_level_syntax_or_service( stream, file, std::move( comment ) );
     case 'i':
-        return parse_top_level_import( stream, file.imports, std::move( comment ) );
+        return parse_top_level_import( stream, file, ctx, std::move( comment ) );
     case 'p':
         return parse_top_level_package( stream, file.package, std::move( comment ) );
     case 'o':
@@ -991,23 +988,30 @@ void set_default_options( proto_file & file )
     file.options[ option_enum_type ] = "int32";
 }
 
-[[nodiscard]] auto parse_proto_file( fs::path file, parsed_files & already_parsed,
-                                     std::span< const fs::path > import_paths,
-                                     const fs::path & base_dir ) -> proto_file
+void parse_proto_file_content( proto_file & file, parsing_ctx & ctx )
+{
+    set_default_options( file );
+
+    auto stream = spb::char_stream( file.content );
+
+    while( !stream.empty( ) )
+    {
+        auto comment = parse_comment( stream );
+        parse_options_from_comments( stream, file.options, comment );
+        parse_top_level( stream, file, ctx, std::move( comment ) );
+    }
+}
+
+[[nodiscard]] auto parse_proto_file( const fs::path & file, parsing_ctx & ctx ) -> proto_file
 {
     try
     {
-        file = find_file_in_paths( file, import_paths, base_dir );
-
         auto result = proto_file{
             .path    = file,
             .content = load_file( file ),
         };
 
-        parse_proto_file_content( result );
-        already_parsed.insert( file.string( ) );
-        result.file_imports =
-            parse_all_imports( result, already_parsed, import_paths, file.parent_path( ) );
+        parse_proto_file_content( result, ctx );
         resolve_messages( result );
         return result;
     }
@@ -1019,25 +1023,18 @@ void set_default_options( proto_file & file )
 
 }// namespace
 
-void parse_proto_file_content( proto_file & file )
-{
-    set_default_options( file );
-
-    auto stream = spb::char_stream( file.content );
-
-    while( !stream.empty( ) )
-    {
-        auto comment = parse_comment( stream );
-        parse_options_from_comments( stream, file.options, comment );
-        parse_top_level( stream, file, std::move( comment ) );
-    }
-}
-
 auto parse_proto_file( const fs::path & file, std::span< const fs::path > import_paths,
                        const fs::path & base_dir ) -> proto_file
 {
     auto already_parsed = parsed_files( );
-    return parse_proto_file( file, already_parsed, import_paths, base_dir );
+    auto ctx            = parsing_ctx{
+                   .base_dir       = base_dir,
+                   .already_parsed = already_parsed,
+                   .import_paths   = import_paths,
+    };
+    const auto file_path = find_file_in_paths( file, ctx );
+    already_parsed.insert( file_path.string( ) );
+    return parse_proto_file( file_path, ctx );
 }
 
 [[nodiscard]] auto cpp_file_name_from_proto( const fs::path & proto_file_path,

@@ -13,7 +13,6 @@
 
 #include "proto-comment.h"
 #include "proto-common.h"
-#include "proto-import.h"
 #include "proto-message.h"
 #include "proto-service.h"
 #include "proto-syntax.h"
@@ -31,10 +30,9 @@ struct proto_file
     std::string content;
     proto_syntax syntax;
     proto_comment comment;
-    proto_imports imports;
+    proto_files imports;
     proto_message package;
     proto_options options;
 
     proto_services services;
-    proto_files file_imports;
 };

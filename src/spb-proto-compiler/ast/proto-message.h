@@ -27,6 +27,7 @@ using forwarded_declarations = std::set< std::string_view >;
 struct proto_message : public proto_base
 {
     proto_fields fields;
+    proto_fields extends;
     proto_reserved_range extensions;
     proto_messages messages;
     proto_maps maps;
@@ -36,7 +37,8 @@ struct proto_message : public proto_base
 
     //- this will be used for type dependency checking
     //- its an "resolved order" of the message in the .proto file
-    //- so we can later call std::sort on `.messages`
+    //- so we can later sort messages based on their dependencies
+    //- on other messages
     size_t resolved = 0;
     //- forwarded declarations needed for type dependency checking
     forwarded_declarations forwards;

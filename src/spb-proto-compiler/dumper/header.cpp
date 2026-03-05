@@ -14,7 +14,6 @@
 #include "ast/proto-common.h"
 #include "ast/proto-field.h"
 #include "ast/proto-file.h"
-#include "ast/proto-import.h"
 #include "ast/proto-message.h"
 #include "io/file.h"
 #include "parser/options.h"
@@ -234,7 +233,7 @@ void get_user_includes( cpp_includes & includes, const proto_file & file )
 
 void get_imports( cpp_includes & includes, const proto_file & file )
 {
-    for( const auto & import : file.file_imports )
+    for( const auto & import : file.imports )
     {
         includes.insert( "\"" + cpp_file_name_from_proto( import.path, ".pb.h" ).string( ) + "\"" );
     }

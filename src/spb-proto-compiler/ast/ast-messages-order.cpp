@@ -36,7 +36,6 @@ struct search_state
 
     resolve_mode mode        = dependencies_only;
     size_t resolved_messages = 0;
-    const proto_files & imports;
     const proto_file & file;
 };
 
@@ -302,7 +301,7 @@ auto resolve_from_imports( const search_ctx & self, const proto_field & field, s
     if( type_part > 0 )
         return false;
 
-    for( const auto & import : self.state.imports )
+    for( const auto & import : self.state.file.imports )
     {
         if( resolve_from_import( import, field ) )
             return true;
@@ -423,7 +422,6 @@ void resolve_messages_order( proto_file & file )
     auto state = search_state{
         .mode              = search_state::dependencies_only,
         .resolved_messages = 0,
-        .imports           = file.file_imports,
         .file              = file,
     };
 
