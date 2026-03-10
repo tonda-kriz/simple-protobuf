@@ -271,7 +271,7 @@ auto parse_comment( spb::char_stream & stream ) -> proto_comment
 [[nodiscard]] auto parse_ident( spb::char_stream & stream, bool skip_last_white_space = true )
     -> cpp_ident
 {
-    constexpr auto cpp_reserved_keywords =
+    static constexpr auto cpp_reserved_keywords =
         std::array< std::string_view, 92 >{ "alignas",       "alignof",     "and",
                                             "and_eq",        "asm",         "auto",
                                             "bitand",        "bitor",       "bool",
@@ -745,7 +745,6 @@ void parse_enum_field( spb::char_stream & stream, proto_enum & new_enum, proto_c
     }
 
     return proto_field::Label::OPTIONAL;
-    // stream.throw_parse_error( "expecting label" );
 }
 
 void parse_field( spb::char_stream & stream, proto_fields & fields, proto_comment && comment )
@@ -921,6 +920,98 @@ void parse_message_body( spb::char_stream & stream, proto_messages & messages,
     return true;
 }
 
+auto find_extendable_message_recursive( proto_file & file, std::string_view package,
+                                        std::string_view extend ) -> proto_message *
+{
+    if( file.package.name.proto_name == package )
+    {
+        for( auto & message : file.package.messages )
+        {
+            if( message.name.proto_name == extend )
+                return &message;
+        }
+    }
+
+    for( auto & import : file.imports )
+    {
+        if( auto message = find_extendable_message_recursive( import, package, extend ); message )
+            return message;
+    }
+
+    return nullptr;
+}
+
+auto find_extendable_message( proto_file & file, std::string_view extend ) -> proto_message &
+{
+    auto package                           = "google.protobuf."sv;
+    static constexpr auto extendee_options = std::array< std::string_view, 9 >{
+        "FileOptions",      "MessageOptions",        "FieldOptions",
+        "OneofOptions",     "ExtensionRangeOptions", "EnumOptions",
+        "EnumValueOptions", "ServiceOptions",        "MethodOptions"
+    };
+
+    if( !extend.starts_with( package ) )
+        throw_parse_error( file, extend, "Extendee has to be one of `google.protobuf.*Options`" );
+
+    auto found = false;
+    extend.remove_prefix( package.size( ) );
+    for( const auto name : extendee_options )
+    {
+        found |= extend == name;
+    }
+
+    if( !found )
+        throw_parse_error( file, extend, "Extendee has to be one of `google.protobuf.*Options`" );
+
+    package.remove_suffix( 1 );
+    auto * extendee = find_extendable_message_recursive( file, package, extend );
+    if( !extendee )
+        throw_parse_error( file, extend, "Extendee not found in `descriptor.proto`" );
+
+    return *extendee;
+}
+
+void parse_extend_body( spb::char_stream & stream, proto_file & file )
+{
+    // extendBody = ExtendedMessage "{" { field } "}"
+    const auto extend_name = parse_full_ident( stream );
+
+    auto & message = find_extendable_message( file, extend_name.proto_name );
+
+    consume_or_fail( stream, '{' );
+
+    while( !stream.consume( '}' ) )
+    {
+        auto comment = parse_comment( stream );
+        if( stream.consume( '}' ) )
+            break;
+
+        parse_field( stream, message.extends, std::move( comment ) );
+    }
+}
+
+[[nodiscard]] auto parse_extend( spb::char_stream & stream, proto_file & file ) -> bool
+{
+    //- "extend" messageName messageBody
+    if( !stream.consume( "extend" ) )
+        return false;
+
+    parse_extend_body( stream, file );
+    return true;
+}
+
+void parse_top_level_enum_or_extend( spb::char_stream & stream, proto_file & file,
+                                     proto_comment && comment )
+{
+    if( parse_enum( stream, file.package.enums, std::move( comment ) ) )
+        return;
+
+    if( parse_extend( stream, file ) )
+        return;
+
+    stream.throw_parse_error( "expecting enum or extend" );
+}
+
 void parse_top_level_option( spb::char_stream & stream, proto_options & options,
                              proto_comment && comment )
 {
@@ -933,12 +1024,6 @@ void parse_top_level_message( spb::char_stream & stream, proto_messages & messag
 {
     parse_or_throw( parse_message( stream, messages, std::move( comment ) ), stream,
                     "expecting message" );
-}
-
-void parse_top_level_enum( spb::char_stream & stream, proto_enums & enums,
-                           proto_comment && comment )
-{
-    parse_or_throw( parse_enum( stream, enums, std::move( comment ) ), stream, "expecting enum" );
 }
 
 void parse_top_level( spb::char_stream & stream, proto_file & file, parsing_ctx & ctx,
@@ -959,7 +1044,7 @@ void parse_top_level( spb::char_stream & stream, proto_file & file, parsing_ctx 
     case 'm':
         return parse_top_level_message( stream, file.package.messages, std::move( comment ) );
     case 'e':
-        return parse_top_level_enum( stream, file.package.enums, std::move( comment ) );
+        return parse_top_level_enum_or_extend( stream, file, std::move( comment ) );
     case ';':
         return ( void ) parse_empty_statement( stream );
 
