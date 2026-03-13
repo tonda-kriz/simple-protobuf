@@ -9,6 +9,7 @@
 \***************************************************************************/
 
 #include "dumper.h"
+#include "../header.h"
 #include "ast/ast.h"
 #include "ast/proto-field.h"
 #include "ast/proto-file.h"
@@ -32,33 +33,14 @@ using namespace std::literals;
 namespace
 {
 
-auto replace( std::string_view input, std::string_view what, std::string_view with ) -> std::string
-{
-    auto result = std::string( input );
-    auto pos    = size_t{ };
-
-    while( ( pos = result.find( what, pos ) ) != std::string::npos )
-    {
-        result.replace( pos, what.size( ), with );
-        pos += with.size( );
-    }
-
-    return result;
-}
-
 void dump_prototypes( std::ostream & stream, std::string_view type )
 {
     stream << replace( file_json_header_template, "$", type );
 }
 
-auto json_name_from_options( const proto_options & options ) -> std::string_view
+auto json_name_from_options( const spb_options & options ) -> std::string_view
 {
-    if( auto p_option = options.find( "json_name" ); p_option != options.end( ) )
-    {
-        return p_option->second;
-    }
-
-    return ""sv;
+    return options.json_name;
 }
 
 auto convert_to_camelCase( std::string_view input ) -> std::string
@@ -95,7 +77,7 @@ auto convert_to_camelCase( std::string_view input ) -> std::string
 
 auto json_field_name( const proto_base & field ) -> std::string
 {
-    if( const auto result = json_name_from_options( field.options ); !result.empty( ) )
+    if( const auto result = json_name_from_options( field.spb_options ); !result.empty( ) )
     {
         return std::string( result );
     }
@@ -105,7 +87,7 @@ auto json_field_name( const proto_base & field ) -> std::string
 
 auto json_field_name_or_camelCase( const proto_base & field ) -> std::string
 {
-    if( const auto result = json_name_from_options( field.options ); !result.empty( ) )
+    if( const auto result = json_name_from_options( field.spb_options ); !result.empty( ) )
     {
         return std::string( result );
     }
@@ -171,7 +153,7 @@ void dump_prototypes( std::ostream & stream, const proto_file & file )
 {
     const auto package_name = file.package.name.get_name( ).empty( )
         ? std::string( )
-        : "::" + replace( file.package.name.get_name( ), ".", "::" );
+        : "::" + std::string( file.package.name.get_name( ) );
     dump_prototypes( stream, file.package.messages, package_name );
     dump_prototypes( stream, file.package.enums, package_name );
 }
@@ -527,7 +509,7 @@ void dump_cpp( std::ostream & stream, const proto_file & file )
 {
     const auto str_namespace = file.package.name.get_name( ).empty( )
         ? std::string( )
-        : "::" + replace( file.package.name.get_name( ), ".", "::" );
+        : "::" + std::string( file.package.name.get_name( ) );
     dump_cpp_enums( stream, file.package.enums, str_namespace );
     dump_cpp_messages( stream, file.package.messages, str_namespace );
 }

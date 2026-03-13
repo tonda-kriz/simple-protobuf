@@ -51,7 +51,7 @@ struct search_state
 struct search_ctx
 {
     proto_message & message;
-    //- parent message (can be null for top level)
+    //- parent message (is null for top level)
     search_ctx * p_parent;
     search_state & state;
 };

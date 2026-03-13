@@ -11,7 +11,6 @@
 #include "ast/proto-oneof.h"
 
 #include "../dumper/header.h"
-#include "../parser/options.h"
 #include "proto-field.h"
 #include "proto-file.h"
 #include "proto-message.h"
@@ -185,16 +184,15 @@ using scalar_encoder = spb::pb::detail::scalar_encoder;
     if( type == proto_field::Type::NONE )
         return { };
 
-    if( const auto p_name = field.options.find( option_field_type );
-        p_name != field.options.end( ) )
+    if( const auto name = field.spb_options.type; !name.empty( ) )
     {
-        const auto field_type = get_scalar_bit_type( remove_bitfield( p_name->second ) );
+        const auto field_type = get_scalar_bit_type( remove_bitfield( name ) );
         if( !convertible_types( type, field_type ) )
         {
-            throw_parse_error( file, p_name->second,
+            throw_parse_error( file, name,
                                std::string( "incompatible int type: " ) +
                                    std::string( field.type_name.proto_name ) + " and " +
-                                   std::string( p_name->second ) );
+                                   std::string( name ) );
         }
         return { type, field_type };
     }

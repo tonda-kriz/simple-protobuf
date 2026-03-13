@@ -12,7 +12,6 @@
 #include "ast/proto-field.h"
 #include "ast/proto-file.h"
 #include "dumper/header.h"
-#include "options.h"
 #include <array>
 #include <ast/ast-types.h>
 #include <ast/ast.h>
@@ -31,6 +30,7 @@
 
 namespace
 {
+using namespace std::literals;
 namespace fs       = std::filesystem;
 using parsed_files = std::set< std::string >;
 
@@ -348,7 +348,7 @@ auto parse_comment( spb::char_stream & stream ) -> proto_comment
         if( stream.current_char( ) != '.' )
             break;
 
-        cpp_name += '.';
+        cpp_name += "::";
         stream.consume_current_char( false );
     }
 
@@ -356,11 +356,10 @@ auto parse_comment( spb::char_stream & stream ) -> proto_comment
         std::string_view{ start, static_cast< size_t >( stream.begin( ) - start ) };
     stream.consume_space( );
 
-    auto result = cpp_ident{ .proto_name = proto_name, .cpp_name = std::move( cpp_name ) };
-    if( result.cpp_name == result.proto_name )
-        result.cpp_name.clear( );
+    if( cpp_name == proto_name )
+        cpp_name.clear( );
 
-    return result;
+    return { .proto_name = proto_name, .cpp_name = std::move( cpp_name ) };
 }
 
 void parse_top_level_service_body( spb::char_stream & stream, proto_file &, proto_comment && )
@@ -1055,22 +1054,12 @@ void parse_top_level( spb::char_stream & stream, proto_file & file, parsing_ctx 
 
 void set_default_options( proto_file & file )
 {
-    file.options[ option_optional_type ]    = "std::optional<$>";
-    file.options[ option_optional_include ] = "<optional>";
-
-    file.options[ option_repeated_type ]    = "std::vector<$>";
-    file.options[ option_repeated_include ] = "<vector>";
-
-    file.options[ option_string_type ]    = "std::string";
-    file.options[ option_string_include ] = "<string>";
-
-    file.options[ option_bytes_type ]    = "std::vector<$>";
-    file.options[ option_bytes_include ] = "<vector>";
-
-    file.options[ option_pointer_type ]    = "std::unique_ptr<$>";
-    file.options[ option_pointer_include ] = "<memory>";
-
-    file.options[ option_enum_type ] = "int32";
+    file.spb_options.optional = "std::optional<$>";
+    file.spb_options.repeated = "std::vector<$>";
+    file.spb_options.string   = "std::string";
+    file.spb_options.bytes    = "std::vector<$>";
+    file.spb_options.pointer  = "std::unique_ptr<$>";
+    file.spb_options.enum_    = "int32";
 }
 
 void parse_proto_file_content( proto_file & file, parsing_ctx & ctx )

@@ -14,6 +14,7 @@
 #include "proto-comment.h"
 #include "proto-common.h"
 #include "proto-message.h"
+#include "proto-option.h"
 #include "proto-service.h"
 #include "proto-syntax.h"
 #include <filesystem>
@@ -33,6 +34,7 @@ struct proto_file
     proto_files imports;
     proto_message package;
     proto_options options;
+    spb_options spb_options;
 
     proto_services services;
 };

@@ -166,6 +166,7 @@ if(SPB_PROTO_BUILD_COMPILER_TESTS)
       ../../src/spb-proto-compiler/io/file.cpp
       ../../src/spb-proto-compiler/ast/ast.cpp
       ../../src/spb-proto-compiler/ast/ast-types.cpp
+      ../../src/spb-proto-compiler/ast/ast-options.cpp
       ../../src/spb-proto-compiler/ast/ast-messages-order.cpp
       )
   target_include_directories(spb-protoc-test PUBLIC ${CMAKE_SOURCE_DIR}/src/spb-proto-compiler)

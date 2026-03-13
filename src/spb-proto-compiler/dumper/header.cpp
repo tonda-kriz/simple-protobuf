@@ -16,7 +16,6 @@
 #include "ast/proto-file.h"
 #include "ast/proto-message.h"
 #include "io/file.h"
-#include "parser/options.h"
 #include "parser/parser.h"
 #include <algorithm>
 #include <array>
@@ -136,99 +135,20 @@ void get_std_includes( cpp_includes & includes, const proto_file & file )
     includes.insert( "<spb/pb.hpp>" );
     includes.insert( "<cstdint>" );
     includes.insert( "<cstddef>" );
+    includes.insert( "<vector>" );
+    includes.insert( "<optional>" );
+    includes.insert( "<memory>" );
 
     if( contains_map( file.package.messages ) )
-    {
         includes.insert( "<map>" );
-    }
+
     if( contains_oneof( file.package.messages ) )
-    {
         includes.insert( "<variant>" );
-    }
-}
-
-void get_include_from_options( cpp_includes & includes, const proto_options & options,
-                               const proto_options & message_options,
-                               const proto_options & file_options, std::string_view option_include )
-{
-    if( auto include = options.find( option_include ); include != options.end( ) )
-    {
-        includes.insert( std::string( include->second ) );
-        return;
-    }
-    if( auto include = message_options.find( option_include ); include != message_options.end( ) )
-    {
-        includes.insert( std::string( include->second ) );
-        return;
-    }
-    if( auto include = file_options.find( option_include ); include != file_options.end( ) )
-    {
-        includes.insert( std::string( include->second ) );
-        return;
-    }
-}
-
-void get_includes_from_field( cpp_includes & includes, const proto_field & field,
-                              const proto_message & message, const proto_file & file )
-{
-    if( field.label == proto_field::Label::OPTIONAL )
-    {
-        get_include_from_options( includes, field.options, message.options, file.options,
-                                  option_optional_include );
-    }
-    if( field.label == proto_field::Label::REPEATED )
-    {
-        get_include_from_options( includes, field.options, message.options, file.options,
-                                  option_repeated_include );
-    }
-    if( field.label == proto_field::Label::PTR )
-    {
-        get_include_from_options( includes, field.options, message.options, file.options,
-                                  option_pointer_include );
-    }
-    if( field.type == proto_field::Type::STRING )
-    {
-        get_include_from_options( includes, field.options, message.options, file.options,
-                                  option_string_include );
-    }
-    if( field.type == proto_field::Type::BYTES )
-    {
-        get_include_from_options( includes, field.options, message.options, file.options,
-                                  option_bytes_include );
-    }
-}
-
-void get_message_includes( cpp_includes & includes, const proto_message & message,
-                           const proto_file & file )
-{
-    for( const auto & field : message.fields )
-    {
-        get_includes_from_field( includes, field, message, file );
-    }
-
-    for( const auto & oneof : message.oneofs )
-    {
-        for( const auto & field : oneof.fields )
-        {
-            get_includes_from_field( includes, field, message, file );
-        }
-    }
-
-    for( const auto & map : message.maps )
-    {
-        get_includes_from_field( includes, map.key, message, file );
-        get_includes_from_field( includes, map.value, message, file );
-    }
-
-    for( const auto & m : message.messages )
-    {
-        get_message_includes( includes, m, file );
-    }
 }
 
 void get_user_includes( cpp_includes & includes, const proto_file & file )
 {
-    get_message_includes( includes, file.package, file );
+    includes.insert( file.spb_options.include.begin( ), file.spb_options.include.end( ) );
 }
 
 void get_imports( cpp_includes & includes, const proto_file & file )
@@ -276,9 +196,9 @@ auto type_literal_suffix( proto_field::Type type ) -> std::string_view
 
 auto get_field_bits( const proto_field & field ) -> std::string_view
 {
-    if( auto p_name = field.options.find( option_field_type ); p_name != field.options.end( ) )
+    if( auto name = field.spb_options.type; !name.empty( ) )
     {
-        auto bitfield = p_name->second;
+        auto bitfield = name;
         if( auto index = bitfield.find( ':' ); index != std::string_view::npos )
         {
             const_cast< proto_field & >( field ).bit_field = bitfield.substr( index + 1 );
@@ -288,31 +208,26 @@ auto get_field_bits( const proto_field & field ) -> std::string_view
     return { };
 }
 
-auto get_container_type( const proto_options & options, const proto_options & message_options,
-                         const proto_options & file_options, std::string_view option,
-                         std::string_view ctype, std::string_view default_type = { } )
-    -> std::string
+auto get_container_type( std::string_view options, std::string_view message_options,
+                         std::string_view file_options, std::string_view ctype,
+                         std::string_view default_type = { } ) -> std::string
 {
-    if( auto p_name = options.find( option ); p_name != options.end( ) )
-    {
-        return replace( p_name->second, "$", ctype );
-    }
+    if( !options.empty( ) )
+        return replace( options, "$", ctype );
 
-    if( auto p_name = message_options.find( option ); p_name != message_options.end( ) )
-    {
-        return replace( p_name->second, "$", ctype );
-    }
+    if( !message_options.empty( ) )
+        return replace( message_options, "$", ctype );
 
-    if( auto p_name = file_options.find( option ); p_name != file_options.end( ) )
+    if( !file_options.empty( ) )
     {
-        return replace( p_name->second, "$", ctype );
+        return replace( file_options, "$", ctype );
     }
 
     return replace( default_type, "$", ctype );
 }
 
-auto get_enum_type( const proto_file & file, const proto_options & options,
-                    const proto_options & message_options, const proto_options & file_options,
+auto get_enum_type( const proto_file & file, const spb_options & options,
+                    const spb_options & message_options, const spb_options & file_options,
                     std::string_view default_type ) -> std::string_view
 {
     static constexpr auto type_map =
@@ -336,20 +251,14 @@ auto get_enum_type( const proto_file & file, const proto_options & options,
         throw_parse_error( file, type, "invalid enum type: " + std::string( type ) );
     };
 
-    if( auto p_name = options.find( option_enum_type ); p_name != options.end( ) )
-    {
-        return ctype_from_pb( p_name->second );
-    }
+    if( auto name = options.enum_; !name.empty( ) )
+        return ctype_from_pb( name );
 
-    if( auto p_name = message_options.find( option_enum_type ); p_name != message_options.end( ) )
-    {
-        return ctype_from_pb( p_name->second );
-    }
+    if( auto name = message_options.enum_; !name.empty( ) )
+        return ctype_from_pb( name );
 
-    if( auto p_name = file_options.find( option_enum_type ); p_name != file_options.end( ) )
-    {
-        return ctype_from_pb( p_name->second );
-    }
+    if( auto name = file_options.enum_; !name.empty( ) )
+        return ctype_from_pb( name );
 
     return default_type;
 }
@@ -388,14 +297,14 @@ auto convert_to_ctype( const proto_file & file, const proto_field & field,
         throw_parse_error( file, field.type_name.proto_name, "invalid type" );
 
     case proto_field::Type::STRING:
-        return get_container_type( field.options, message.options, file.options, option_string_type,
-                                   "char", "std::string" );
+        return get_container_type( field.spb_options.string, message.spb_options.string,
+                                   file.spb_options.string, "char", "std::string" );
     case proto_field::Type::BYTES:
-        return get_container_type( field.options, message.options, file.options, option_bytes_type,
-                                   "std::byte", "std::vector<$>" );
+        return get_container_type( field.spb_options.bytes, message.spb_options.bytes,
+                                   file.spb_options.bytes, "std::byte", "std::vector<$>" );
     case proto_field::Type::ENUM:
     case proto_field::Type::MESSAGE:
-        return replace( field.type_name.get_name( ), ".", "::" );
+        return std::string( field.type_name.get_name( ) );
 
     case proto_field::Type::FLOAT:
         return "float";
@@ -433,16 +342,16 @@ void dump_field_type_and_name( std::ostream & stream, const proto_field & field,
         stream << ctype << ' ' << field.name.get_name( ) << get_field_bits( field );
         return;
     case proto_field::Label::OPTIONAL:
-        stream << get_container_type( field.options, message.options, file.options,
-                                      option_optional_type, ctype, "std::optional<$>" );
+        stream << get_container_type( field.spb_options.optional, message.spb_options.optional,
+                                      file.spb_options.optional, ctype, "std::optional<$>" );
         break;
     case proto_field::Label::REPEATED:
-        stream << get_container_type( field.options, message.options, file.options,
-                                      option_repeated_type, ctype, "std::vector<$>" );
+        stream << get_container_type( field.spb_options.repeated, message.spb_options.repeated,
+                                      file.spb_options.repeated, ctype, "std::vector<$>" );
         break;
     case proto_field::Label::PTR:
-        stream << get_container_type( field.options, message.options, file.options,
-                                      option_pointer_type, ctype, "std::unique_ptr<$>" );
+        stream << get_container_type( field.spb_options.pointer, message.spb_options.pointer,
+                                      file.spb_options.pointer, ctype, "std::unique_ptr<$>" );
         break;
     }
     if( auto bitfield = get_field_bits( field ); !bitfield.empty( ) )
@@ -465,7 +374,8 @@ void dump_enum( std::ostream & stream, const proto_enum & my_enum, const proto_m
     dump_comment( stream, my_enum.comment );
 
     stream << "enum class " << my_enum.name.get_name( ) << " : "
-           << get_enum_type( file, my_enum.options, message.options, file.options, "int32_t" )
+           << get_enum_type( file, my_enum.spb_options, message.spb_options, file.spb_options,
+                             "int32_t" )
            << "\n{\n";
     for( const auto & field : my_enum.fields )
     {
@@ -508,8 +418,7 @@ void dump_default_value( std::ostream & stream, const proto_field & field )
     {
         if( field.type == proto_field::Type::ENUM )
         {
-            stream << " = " << replace( field.type_name.get_name( ), ".", "::" )
-                   << "::" << p_index->second;
+            stream << " = " << field.type_name.get_name( ) << "::" << p_index->second;
         }
         else if( field.type == proto_field::Type::STRING &&
                  ( p_index->second.size( ) < 2 || p_index->second.front( ) != '"' ||
@@ -526,11 +435,8 @@ void dump_default_value( std::ostream & stream, const proto_field & field )
 
 void dump_deprecated_attribute( std::ostream & stream, const proto_field & field )
 {
-    if( auto p_index = field.options.find( "deprecated" );
-        p_index != field.options.end( ) && p_index->second == "true" )
-    {
+    if( field.spb_options.deprecated )
         stream << "[[deprecated]] ";
-    }
 }
 
 void dump_message_field( std::ostream & stream, const proto_field & field,
@@ -616,7 +522,7 @@ void dump_package_begin( std::ostream & stream, const proto_file & file )
     dump_comment( stream, file.package.comment );
     if( !file.package.name.get_name( ).empty( ) )
     {
-        stream << "namespace " << replace( file.package.name.get_name( ), ".", "::" ) << "\n{\n";
+        stream << "namespace " << file.package.name.get_name( ) << "\n{\n";
     }
 }
 
@@ -624,7 +530,7 @@ void dump_package_end( std::ostream & stream, const proto_file & file )
 {
     if( !file.package.name.get_name( ).empty( ) )
     {
-        stream << "}// namespace " << replace( file.package.name.get_name( ), ".", "::" ) << "\n\n";
+        stream << "}// namespace " << file.package.name.get_name( ) << "\n\n";
     }
 }
 }// namespace
