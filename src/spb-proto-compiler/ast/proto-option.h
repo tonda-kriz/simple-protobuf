@@ -18,7 +18,19 @@
 #include <variant>
 #include <vector>
 
-using proto_options = std::unordered_map< std::string_view, std::string_view >;
+using proto_option_name  = std::string_view;
+using proto_option_value = std::string_view;
+
+struct proto_option_variant;
+
+using proto_options       = std::unordered_map< proto_option_name, proto_option_variant >;
+using proto_option_values = std::vector< proto_option_variant >;
+
+struct proto_option_variant
+{
+    proto_option_value value;
+    proto_options options;
+};
 
 struct enum_options
 {
@@ -29,6 +41,8 @@ struct enum_options
 
 struct spb_options
 {
+    // default field value
+    std::string_view default_;
     // maximum size for `repeated`, `string` or `bytes`
     // de/serialize will return false if `real_size > max_size`
     std::optional< uint32_t > max_size;
@@ -79,12 +93,3 @@ struct spb_options
     // default: true
     std::optional< bool > pb_serialize;
 };
-
-/*
-using option_name = std::string_view;
-using proto_value =
-    std::variant< std::nullptr_t, bool, double, int64_t, std::string_view,
-                  std::vector< proto_value >, std::unordered_map< option_name, proto_value > >;
-
-using proto_struct = std::unordered_map< option_name, proto_value >;
-*/

@@ -464,35 +464,39 @@ void parse_top_level_package( spb::char_stream & stream, proto_base & package,
     consume_statement_end( stream, package.comment );
 }
 
-[[nodiscard]] auto parse_option_name( spb::char_stream & stream ) -> std::string_view
+[[nodiscard]] auto parse_option_name( spb::char_stream & stream, proto_options & options )
+    -> proto_option_variant &
 {
-    auto ident = std::string_view{ };
+    auto * current = ( proto_option_variant * ) nullptr;
 
     //- ( ident | "(" fullIdent ")" ) { "." ident }
     parse_comment( stream );
-    if( stream.consume( '(' ) )
+    do
     {
-        ident = parse_full_ident( stream ).proto_name;
-        consume_or_fail( stream, ')' );
-    }
-    else
-    {
-        ident = parse_ident( stream ).proto_name;
-    }
-    auto ident2 = std::string_view{ };
+        if( stream.consume( '(' ) )
+        {
+            do
+            {
+                const auto ident = parse_ident( stream, false ).proto_name;
 
-    while( stream.consume( '.' ) )
-    {
-        ident2 = parse_ident( stream ).proto_name;
-    }
+                auto & option = current ? current->options : options;
+                current       = &option.insert( std::make_pair( ident, proto_option_variant{ } ) )
+                               .first->second;
+            } while( stream.consume( '.' ) );
+            consume_or_fail( stream, ')' );
+        }
+        else
+        {
+            const auto ident = parse_ident( stream, false ).proto_name;
 
-    if( ident2.empty( ) )
-    {
-        return ident;
-    }
+            auto & option = current ? current->options : options;
+            current =
+                &option.insert( std::make_pair( ident, proto_option_variant{ } ) ).first->second;
+        }
+    } while( stream.consume( '.' ) );
 
-    return { ident.data( ),
-             static_cast< size_t >( ident2.data( ) + ident2.size( ) - ident.data( ) ) };
+    stream.consume_space( );
+    return *current;
 }
 
 [[nodiscard]] auto parse_constant( spb::char_stream & stream ) -> std::string_view
@@ -519,11 +523,48 @@ void parse_top_level_package( spb::char_stream & stream, proto_base & package,
     return parse_full_ident( stream ).proto_name;
 }
 
+void parse_option_value( spb::char_stream & stream, proto_option_variant & value );
+void parse_option_array( spb::char_stream & stream, proto_option_variant & value )
+{
+    consume_or_fail( stream, "[" );
+    while( !stream.consume( "]" ) )
+    {
+        parse_option_value( stream, value );
+        stream.consume( "," );
+    }
+}
+
+void parse_option_struct( spb::char_stream & stream, proto_option_variant & value )
+{
+    consume_or_fail( stream, "{" );
+    while( !stream.consume( "}" ) )
+    {
+        const auto option_name = parse_ident( stream );
+        consume_or_fail( stream, ':' );
+        parse_option_value( stream, value.options[ option_name.proto_name ] );
+        stream.consume( "," );
+    }
+}
+
+void parse_option_value( spb::char_stream & stream, proto_option_variant & value )
+{
+    switch( stream.current_char( ) )
+    {
+    case '{':
+        return parse_option_struct( stream, value );
+
+    case '[':
+        return parse_option_array( stream, value );
+    default:
+        value.value = parse_constant( stream );
+    }
+}
+
 void parse_option_body( spb::char_stream & stream, proto_options & options )
 {
-    const auto option_name = parse_option_name( stream );
+    auto & option_value = parse_option_name( stream, options );
     consume_or_fail( stream, '=' );
-    options[ option_name ] = parse_constant( stream );
+    parse_option_value( stream, option_value );
 }
 
 void parse_option_from_comment( const spb::char_stream & stream, proto_options & options,
@@ -561,7 +602,7 @@ void parse_options_from_comments( const spb::char_stream & stream, proto_options
 [[nodiscard]] auto parse_option( spb::char_stream & stream, proto_options & options,
                                  proto_comment && comment ) -> bool
 {
-    //- "option" optionName  "=" constant ";"
+    //- "option" optionName  "=" optionValue ";"
     if( !stream.consume( "option" ) )
     {
         return false;
@@ -585,6 +626,8 @@ void parse_reserved_names( spb::char_stream & stream, proto_reserved_name & name
     consume_statement_end( stream, comment );
     comment.comments.clear( );
 }
+
+[[nodiscard]] auto parse_field_options( spb::char_stream & stream ) -> proto_options;
 
 void parse_reserved_ranges( spb::char_stream & stream, proto_reserved_range & range,
                             proto_comment && comment )
@@ -611,6 +654,7 @@ void parse_reserved_ranges( spb::char_stream & stream, proto_reserved_range & ra
         range.emplace_back( number, number2 );
     } while( stream.consume( ',' ) );
 
+    ( void ) parse_field_options( stream );
     consume_statement_end( stream, comment );
     comment.comments.clear( );
 }
@@ -618,7 +662,7 @@ void parse_reserved_ranges( spb::char_stream & stream, proto_reserved_range & ra
 [[nodiscard]] auto parse_extensions( spb::char_stream & stream, proto_reserved_range & extensions,
                                      proto_comment && comment ) -> bool
 {
-    //- extensions = "extensions" ranges ";"
+    //- extensions = "extensions" ranges [ "[" fieldOptions "]" ] ";"
     if( !stream.consume( "extensions" ) )
     {
         return false;
@@ -1101,10 +1145,11 @@ auto parse_proto_file( const fs::path & file, std::span< const fs::path > import
                        const fs::path & base_dir ) -> proto_file
 {
     auto already_parsed = parsed_files( );
-    auto ctx            = parsing_ctx{
-                   .base_dir       = base_dir,
-                   .already_parsed = already_parsed,
-                   .import_paths   = import_paths,
+
+    auto ctx = parsing_ctx{
+        .base_dir       = base_dir,
+        .already_parsed = already_parsed,
+        .import_paths   = import_paths,
     };
     const auto file_path = find_file_in_paths( file, ctx );
     already_parsed.insert( file_path.string( ) );

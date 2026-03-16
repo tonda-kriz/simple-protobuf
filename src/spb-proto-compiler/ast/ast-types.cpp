@@ -370,16 +370,7 @@ auto is_packed_array( const proto_file & file, const proto_field & field ) -> bo
     if( field.label != proto_field::Label::REPEATED )
         return { };
 
-    if( file.syntax.version < 3 )
-    {
-        const auto p_packed = field.options.find( "packed" );
-        return p_packed != field.options.end( ) && p_packed->second == "true";
-    }
-    else
-    {
-        const auto p_packed = field.options.find( "packed" );
-        return p_packed == field.options.end( ) || p_packed->second != "false";
-    }
+    return field.spb_options.packed.value_or( file.syntax.version >= 3 );
 }
 
 auto is_scalar( const proto_field::Type & type ) -> bool

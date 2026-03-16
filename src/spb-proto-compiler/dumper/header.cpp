@@ -414,22 +414,23 @@ void dump_message_map( std::ostream & stream, const proto_map & map, const proto
 
 void dump_default_value( std::ostream & stream, const proto_field & field )
 {
-    if( auto p_index = field.options.find( "default" ); p_index != field.options.end( ) )
+    auto default_value = field.spb_options.default_;
+    if( default_value.empty( ) )
+        return;
+
+    if( field.type == proto_field::Type::ENUM )
     {
-        if( field.type == proto_field::Type::ENUM )
-        {
-            stream << " = " << field.type_name.get_name( ) << "::" << p_index->second;
-        }
-        else if( field.type == proto_field::Type::STRING &&
-                 ( p_index->second.size( ) < 2 || p_index->second.front( ) != '"' ||
-                   p_index->second.back( ) != '"' ) )
-        {
-            stream << " = \"" << p_index->second << "\"";
-        }
-        else
-        {
-            stream << " = " << p_index->second << type_literal_suffix( field.type );
-        }
+        stream << " = " << field.type_name.get_name( ) << "::" << default_value;
+    }
+    else if( field.type == proto_field::Type::STRING &&
+             ( default_value.size( ) < 2 || default_value.front( ) != '"' ||
+               default_value.back( ) != '"' ) )
+    {
+        stream << " = \"" << default_value << "\"";
+    }
+    else
+    {
+        stream << " = " << default_value << type_literal_suffix( field.type );
     }
 }
 

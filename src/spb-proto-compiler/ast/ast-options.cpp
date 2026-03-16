@@ -10,23 +10,50 @@
 
 #include "ast-options.h"
 #include "dumper/header.h"
+#include <initializer_list>
+#include <span>
 #include <spb/to_from_chars.h>
-#include <string_view>
 
 namespace
 {
-auto option_value( std::string_view name, const proto_options & options ) -> std::string_view
+auto option_variant( std::string_view name, const proto_options & options )
+    -> const proto_option_variant *
 {
-    if( auto option = options.find( name ); option != options.end( ) )
-        return option->second;
+    auto option = options.find( name );
+    return ( option != options.end( ) ) ? &option->second : nullptr;
+}
+
+auto option_value( std::initializer_list< const std::string_view > full_name,
+                   const proto_options & options ) -> std::string_view
+{
+    auto * p_variant = ( const proto_option_variant * ) nullptr;
+    auto * p_options = &options;
+
+    for( auto name : full_name )
+    {
+        p_variant = option_variant( name, *p_options );
+        if( !p_variant )
+            return { };
+
+        p_options = &p_variant->options;
+    }
+
+    if( p_variant && p_variant->options.empty( ) )
+        return p_variant->value;
 
     return { };
 }
 
-auto option_value_bool( const proto_file & file, std::string_view name,
+auto option_value( std::string_view name, const proto_options & options ) -> std::string_view
+{
+    return option_value( { name }, options );
+}
+
+auto option_value_bool( const proto_file & file,
+                        std::initializer_list< const std::string_view > full_name,
                         const proto_options & options ) -> std::optional< bool >
 {
-    auto option = option_value( name, options );
+    auto option = option_value( full_name, options );
     if( option.empty( ) )
         return { };
 
@@ -40,10 +67,11 @@ auto option_value_bool( const proto_file & file, std::string_view name,
 }
 
 template < typename T >
-auto option_value_int( const proto_file & file, std::string_view name,
+auto option_value_int( const proto_file & file,
+                       std::initializer_list< const std::string_view > full_name,
                        const proto_options & options ) -> std::optional< T >
 {
-    auto option = option_value( name, options );
+    auto option = option_value( full_name, options );
     if( option.empty( ) )
         return { };
 
@@ -58,62 +86,65 @@ auto option_value_int( const proto_file & file, std::string_view name,
 void convert_gpb_options( const proto_file & file, spb_options & options_out,
                           const proto_options & options_in )
 {
-    if( auto value = option_value_bool( file, "deprecated", options_in ); value.has_value( ) )
+    if( auto value = option_value( "default", options_in ); !value.empty( ) )
+        options_out.default_ = value;
+
+    if( auto value = option_value_bool( file, { "deprecated" }, options_in ); value.has_value( ) )
         options_out.deprecated = *value;
 
-    if( auto value = option_value_bool( file, "packed", options_in ); value.has_value( ) )
+    if( auto value = option_value_bool( file, { "packed" }, options_in ); value.has_value( ) )
         options_out.packed = *value;
 
-    if( auto value = option_value( "json_name", options_in ); !value.empty( ) )
+    if( auto value = option_value( { "json_name" }, options_in ); !value.empty( ) )
         options_out.json_name = value;
 }
 
 void convert_spb_options( const proto_file & file, spb_options & options_out,
                           const proto_options & options_in )
 {
-    if( auto value = option_value( "field.type", options_in ); !value.empty( ) )
+    if( auto value = option_value( { "field", "type" }, options_in ); !value.empty( ) )
         options_out.type = value;
 
-    if( auto value = option_value( "(spb).type", options_in ); !value.empty( ) )
+    if( auto value = option_value( { "(spb)", "type" }, options_in ); !value.empty( ) )
         options_out.type = value;
 
-    if( auto value = option_value( "enum.type", options_in ); !value.empty( ) )
+    if( auto value = option_value( { "enum", "type" }, options_in ); !value.empty( ) )
         options_out.enum_ = value;
 
-    if( auto value = option_value( "(spb).enum", options_in ); !value.empty( ) )
+    if( auto value = option_value( { "(spb)", "enum" }, options_in ); !value.empty( ) )
         options_out.enum_ = value;
 
-    if( auto value = option_value( "optional.type", options_in ); !value.empty( ) )
+    if( auto value = option_value( { "optional", "type" }, options_in ); !value.empty( ) )
         options_out.optional = value;
 
-    if( auto value = option_value( "(spb).optional", options_in ); !value.empty( ) )
+    if( auto value = option_value( { "(spb)", "optional" }, options_in ); !value.empty( ) )
         options_out.optional = value;
 
-    if( auto value = option_value( "repeated.type", options_in ); !value.empty( ) )
+    if( auto value = option_value( { "repeated", "type" }, options_in ); !value.empty( ) )
         options_out.repeated = value;
 
-    if( auto value = option_value( "(spb).repeated", options_in ); !value.empty( ) )
+    if( auto value = option_value( { "(spb)", "repeated" }, options_in ); !value.empty( ) )
         options_out.repeated = value;
 
-    if( auto value = option_value( "pointer.type", options_in ); !value.empty( ) )
+    if( auto value = option_value( { "pointer", "type" }, options_in ); !value.empty( ) )
         options_out.pointer = value;
 
-    if( auto value = option_value( "(spb).pointer", options_in ); !value.empty( ) )
+    if( auto value = option_value( { "(spb)", "pointer" }, options_in ); !value.empty( ) )
         options_out.pointer = value;
 
-    if( auto value = option_value( "bytes.type", options_in ); !value.empty( ) )
+    if( auto value = option_value( { "bytes", "type" }, options_in ); !value.empty( ) )
         options_out.bytes = value;
 
-    if( auto value = option_value( "(spb).bytes", options_in ); !value.empty( ) )
+    if( auto value = option_value( { "(spb)", "bytes" }, options_in ); !value.empty( ) )
         options_out.bytes = value;
 
-    if( auto value = option_value( "string.type", options_in ); !value.empty( ) )
+    if( auto value = option_value( { "string", "type" }, options_in ); !value.empty( ) )
         options_out.string = value;
 
-    if( auto value = option_value( "(spb).string", options_in ); !value.empty( ) )
+    if( auto value = option_value( { "(spb)", "string" }, options_in ); !value.empty( ) )
         options_out.string = value;
 
-    if( auto value = option_value_int< uint32_t >( file, "(spb).max_size", options_in );
+    if( auto value = option_value_int< uint32_t >( file, { "(spb)", "max_size" }, options_in );
         value.has_value( ) )
     {
         options_out.max_size = value;
@@ -122,34 +153,36 @@ void convert_spb_options( const proto_file & file, spb_options & options_out,
 
 void convert_include_options( spb_options & options_out, const proto_options & options_in )
 {
-    if( auto value = option_value( "(spb).include", options_in ); !value.empty( ) )
+    if( auto value = option_value( { "(spb)", "include" }, options_in ); !value.empty( ) )
         options_out.include.insert( value );
 
-    if( auto value = option_value( "(nanopb_fileopt).include", options_in ); !value.empty( ) )
+    if( auto value = option_value( { "(nanopb_fileopt)", "include" }, options_in );
+        !value.empty( ) )
         options_out.include.insert( value );
 
-    if( auto value = option_value( "(nanopb_msgopt).include", options_in ); !value.empty( ) )
+    if( auto value = option_value( { "(nanopb_msgopt)", "include" }, options_in ); !value.empty( ) )
         options_out.include.insert( value );
 
-    if( auto value = option_value( "(nanopb_enumopt).include", options_in ); !value.empty( ) )
+    if( auto value = option_value( { "(nanopb_enumopt)", "include" }, options_in );
+        !value.empty( ) )
         options_out.include.insert( value );
 
-    if( auto value = option_value( "(nanopb).include", options_in ); !value.empty( ) )
+    if( auto value = option_value( { "(nanopb)", "include" }, options_in ); !value.empty( ) )
         options_out.include.insert( value );
 
-    if( auto value = option_value( "repeated.include", options_in ); !value.empty( ) )
+    if( auto value = option_value( { "repeated", "include" }, options_in ); !value.empty( ) )
         options_out.include.insert( value );
 
-    if( auto value = option_value( "optional.include", options_in ); !value.empty( ) )
+    if( auto value = option_value( { "optional", "include" }, options_in ); !value.empty( ) )
         options_out.include.insert( value );
 
-    if( auto value = option_value( "pointer.include", options_in ); !value.empty( ) )
+    if( auto value = option_value( { "pointer", "include" }, options_in ); !value.empty( ) )
         options_out.include.insert( value );
 
-    if( auto value = option_value( "bytes.include", options_in ); !value.empty( ) )
+    if( auto value = option_value( { "bytes", "include" }, options_in ); !value.empty( ) )
         options_out.include.insert( value );
 
-    if( auto value = option_value( "string.include", options_in ); !value.empty( ) )
+    if( auto value = option_value( { "string", "include" }, options_in ); !value.empty( ) )
         options_out.include.insert( value );
 }
 
