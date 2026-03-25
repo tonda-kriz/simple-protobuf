@@ -10,26 +10,24 @@
 #pragma once
 
 #include <cstdint>
+#include <map>
 #include <optional>
 #include <set>
 #include <string>
 #include <string_view>
-#include <unordered_map>
 #include <variant>
 #include <vector>
 
+struct proto_option;
 using proto_option_name  = std::string_view;
 using proto_option_value = std::string_view;
 
-struct proto_option_variant;
+using proto_options = std::map< proto_option_name, proto_option >;
 
-using proto_options       = std::unordered_map< proto_option_name, proto_option_variant >;
-using proto_option_values = std::vector< proto_option_variant >;
-
-struct proto_option_variant
+struct proto_option
 {
-    proto_option_value value;
-    proto_options options;
+    std::set< proto_option_value > value;
+    std::vector< proto_options > options;
 };
 
 struct enum_options

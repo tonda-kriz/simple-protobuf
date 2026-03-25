@@ -16,37 +16,47 @@
 
 namespace
 {
-auto option_variant( std::string_view name, const proto_options & options )
-    -> const proto_option_variant *
+using namespace std::literals;
+
+auto option_value( std::span< const std::string_view > path, const proto_option & option )
+    -> const proto_option *;
+
+auto option_value( std::span< const std::string_view > path, const proto_options & options )
+    -> const proto_option *
 {
-    auto option = options.find( name );
-    return ( option != options.end( ) ) ? &option->second : nullptr;
+    if( path.empty( ) )
+        return nullptr;
+
+    auto p_option = options.find( path.front( ) );
+    if( p_option == options.end( ) )
+        return nullptr;
+
+    if( auto result = option_value( path.subspan( 1 ), p_option->second ); result )
+        return result;
+
+    return nullptr;
 }
 
-auto option_value( std::initializer_list< const std::string_view > full_name,
-                   const proto_options & options ) -> std::string_view
+auto option_value( std::span< const std::string_view > path, const proto_option & option )
+    -> const proto_option *
 {
-    auto * p_variant = ( const proto_option_variant * ) nullptr;
-    auto * p_options = &options;
+    if( path.empty( ) )
+        return &option;
 
-    for( auto name : full_name )
+    for( const auto & options : option.options )
     {
-        p_variant = option_variant( name, *p_options );
-        if( !p_variant )
-            return { };
-
-        p_options = &p_variant->options;
+        if( auto result = option_value( path, options ); result )
+            return result;
     }
 
-    if( p_variant && p_variant->options.empty( ) )
-        return p_variant->value;
-
-    return { };
+    return nullptr;
 }
 
-auto option_value( std::string_view name, const proto_options & options ) -> std::string_view
+auto option_value( std::initializer_list< const std::string_view > path,
+                   const proto_options & options ) -> std::string_view
 {
-    return option_value( { name }, options );
+    auto option = option_value( std::span( path.begin( ), path.size( ) ), options );
+    return option && !option->value.empty( ) ? *option->value.begin( ) : std::string_view{ };
 }
 
 auto option_value_bool( const proto_file & file,
@@ -86,7 +96,7 @@ auto option_value_int( const proto_file & file,
 void convert_gpb_options( const proto_file & file, spb_options & options_out,
                           const proto_options & options_in )
 {
-    if( auto value = option_value( "default", options_in ); !value.empty( ) )
+    if( auto value = option_value( { "default" }, options_in ); !value.empty( ) )
         options_out.default_ = value;
 
     if( auto value = option_value_bool( file, { "deprecated" }, options_in ); value.has_value( ) )
