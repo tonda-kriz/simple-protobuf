@@ -1,6 +1,6 @@
 /***************************************************************************\
 * Name        : ast options resolver                                        *
-* Description : map proto_options to spb_options                            *
+* Description : map proto_options to proto_attributes                            *
 * Author      : antonin.kriz@gmail.com                                      *
 * ------------------------------------------------------------------------- *
 * This is free software; you can redistribute it and/or modify it under the *
@@ -56,7 +56,7 @@ auto option_value( std::initializer_list< const std::string_view > path,
                    const proto_options & options ) -> std::string_view
 {
     auto option = option_value( std::span( path.begin( ), path.size( ) ), options );
-    return option && !option->value.empty( ) ? *option->value.begin( ) : std::string_view{ };
+    return option && !option->value.empty( ) ? *option->value.begin( ) : std::string_view{};
 }
 
 auto option_value_bool( const proto_file & file,
@@ -65,7 +65,7 @@ auto option_value_bool( const proto_file & file,
 {
     auto option = option_value( full_name, options );
     if( option.empty( ) )
-        return { };
+        return {};
 
     if( option == "true" )
         return true;
@@ -83,138 +83,138 @@ auto option_value_int( const proto_file & file,
 {
     auto option = option_value( full_name, options );
     if( option.empty( ) )
-        return { };
+        return {};
 
-    auto value  = T{ };
+    auto value  = T{};
     auto result = spb_std_emu::from_chars( option.begin( ), option.end( ), value );
-    if( result.ec == std::errc{ } ) [[likely]]
+    if( result.ec == std::errc{} ) [[likely]]
         return value;
 
     throw_parse_error( file, option, "Expecting integer (1, 3, ...)" );
 }
 
-void convert_gpb_options( const proto_file & file, spb_options & options_out,
+void convert_gpb_options( const proto_file & file, proto_attributes & attributes,
                           const proto_options & options_in )
 {
     if( auto value = option_value( { "default" }, options_in ); !value.empty( ) )
-        options_out.default_ = value;
+        attributes.default_ = value;
 
     if( auto value = option_value_bool( file, { "deprecated" }, options_in ); value.has_value( ) )
-        options_out.deprecated = *value;
+        attributes.deprecated = *value;
 
     if( auto value = option_value_bool( file, { "packed" }, options_in ); value.has_value( ) )
-        options_out.packed = *value;
+        attributes.packed = *value;
 
     if( auto value = option_value( { "json_name" }, options_in ); !value.empty( ) )
-        options_out.json_name = value;
+        attributes.json_name = value;
 }
 
-void convert_spb_options( const proto_file & file, spb_options & options_out,
+void convert_spb_options( const proto_file & file, proto_attributes & attributes,
                           const proto_options & options_in )
 {
     if( auto value = option_value( { "field", "type" }, options_in ); !value.empty( ) )
-        options_out.type = value;
+        attributes.type = value;
 
     if( auto value = option_value( { "(spb)", "type" }, options_in ); !value.empty( ) )
-        options_out.type = value;
+        attributes.type = value;
 
     if( auto value = option_value( { "enum", "type" }, options_in ); !value.empty( ) )
-        options_out.enum_ = value;
+        attributes.enum_ = value;
 
     if( auto value = option_value( { "(spb)", "enum" }, options_in ); !value.empty( ) )
-        options_out.enum_ = value;
+        attributes.enum_ = value;
 
     if( auto value = option_value( { "optional", "type" }, options_in ); !value.empty( ) )
-        options_out.optional = value;
+        attributes.optional = value;
 
     if( auto value = option_value( { "(spb)", "optional" }, options_in ); !value.empty( ) )
-        options_out.optional = value;
+        attributes.optional = value;
 
     if( auto value = option_value( { "repeated", "type" }, options_in ); !value.empty( ) )
-        options_out.repeated = value;
+        attributes.repeated = value;
 
     if( auto value = option_value( { "(spb)", "repeated" }, options_in ); !value.empty( ) )
-        options_out.repeated = value;
+        attributes.repeated = value;
 
     if( auto value = option_value( { "pointer", "type" }, options_in ); !value.empty( ) )
-        options_out.pointer = value;
+        attributes.pointer = value;
 
     if( auto value = option_value( { "(spb)", "pointer" }, options_in ); !value.empty( ) )
-        options_out.pointer = value;
+        attributes.pointer = value;
 
     if( auto value = option_value( { "bytes", "type" }, options_in ); !value.empty( ) )
-        options_out.bytes = value;
+        attributes.bytes = value;
 
     if( auto value = option_value( { "(spb)", "bytes" }, options_in ); !value.empty( ) )
-        options_out.bytes = value;
+        attributes.bytes = value;
 
     if( auto value = option_value( { "string", "type" }, options_in ); !value.empty( ) )
-        options_out.string = value;
+        attributes.string = value;
 
     if( auto value = option_value( { "(spb)", "string" }, options_in ); !value.empty( ) )
-        options_out.string = value;
+        attributes.string = value;
 
     if( auto value = option_value_int< uint32_t >( file, { "(spb)", "max_size" }, options_in );
         value.has_value( ) )
     {
-        options_out.max_size = value;
+        attributes.max_size = value;
     }
 }
 
-void convert_include_options( spb_options & options_out, const proto_options & options_in )
+void convert_include_options( proto_attributes & attributes, const proto_options & options_in )
 {
     if( auto value = option_value( { "(spb)", "include" }, options_in ); !value.empty( ) )
-        options_out.include.insert( value );
+        attributes.include.insert( value );
 
     if( auto value = option_value( { "(nanopb_fileopt)", "include" }, options_in );
         !value.empty( ) )
-        options_out.include.insert( value );
+        attributes.include.insert( value );
 
     if( auto value = option_value( { "(nanopb_msgopt)", "include" }, options_in ); !value.empty( ) )
-        options_out.include.insert( value );
+        attributes.include.insert( value );
 
     if( auto value = option_value( { "(nanopb_enumopt)", "include" }, options_in );
         !value.empty( ) )
-        options_out.include.insert( value );
+        attributes.include.insert( value );
 
     if( auto value = option_value( { "(nanopb)", "include" }, options_in ); !value.empty( ) )
-        options_out.include.insert( value );
+        attributes.include.insert( value );
 
     if( auto value = option_value( { "repeated", "include" }, options_in ); !value.empty( ) )
-        options_out.include.insert( value );
+        attributes.include.insert( value );
 
     if( auto value = option_value( { "optional", "include" }, options_in ); !value.empty( ) )
-        options_out.include.insert( value );
+        attributes.include.insert( value );
 
     if( auto value = option_value( { "pointer", "include" }, options_in ); !value.empty( ) )
-        options_out.include.insert( value );
+        attributes.include.insert( value );
 
     if( auto value = option_value( { "bytes", "include" }, options_in ); !value.empty( ) )
-        options_out.include.insert( value );
+        attributes.include.insert( value );
 
     if( auto value = option_value( { "string", "include" }, options_in ); !value.empty( ) )
-        options_out.include.insert( value );
+        attributes.include.insert( value );
 }
 
-void convert_options( proto_file & file, spb_options & options_out,
+void convert_options( proto_file & file, proto_attributes & attributes,
                       const proto_options & options_in )
 {
-    convert_include_options( file.spb_options, options_in );
-    convert_gpb_options( file, options_out, options_in );
-    convert_spb_options( file, options_out, options_in );
+    convert_include_options( file.attributes, options_in );
+    convert_gpb_options( file, attributes, options_in );
+    convert_spb_options( file, attributes, options_in );
 }
 
 void resolve_options( proto_file & file, proto_enum & enum_ )
 {
-    convert_options( file, enum_.spb_options, enum_.options );
+    convert_options( file, enum_.attributes, enum_.options );
 }
 
 void resolve_options( proto_file & file, proto_message & message )
 {
-    convert_options( file, message.spb_options, message.options );
+    convert_options( file, message.attributes, message.options );
     for( auto & field : message.fields )
     {
-        convert_options( file, field.spb_options, field.options );
+        convert_options( file, field.attributes, field.options );
     }
     for( auto & message : message.messages )
     {
@@ -229,6 +229,6 @@ void resolve_options( proto_file & file, proto_message & message )
 
 void resolve_options( proto_file & file )
 {
-    convert_options( file, file.spb_options, file.options );
+    convert_options( file, file.attributes, file.options );
     resolve_options( file, file.package );
 }

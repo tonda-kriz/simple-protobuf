@@ -53,7 +53,7 @@ using scalar_encoder = spb::pb::detail::scalar_encoder;
     {
         const auto dot_index = type_name.find( '.' );
         if( dot_index == type_name.npos )
-            return { };
+            return {};
 
         type_name.remove_prefix( dot_index + 1 );
     }
@@ -182,9 +182,9 @@ using scalar_encoder = spb::pb::detail::scalar_encoder;
 {
     const auto type = get_scalar_proto_type( field.type_name.proto_name );
     if( type == proto_field::Type::NONE )
-        return { };
+        return {};
 
-    if( const auto name = field.spb_options.type; !name.empty( ) )
+    if( const auto name = field.attributes.type; !name.empty( ) )
     {
         const auto field_type = get_scalar_bit_type( remove_bitfield( name ) );
         if( !convertible_types( type, field_type ) )
@@ -205,7 +205,7 @@ using scalar_encoder = spb::pb::detail::scalar_encoder;
     -> std::pair< proto_field::Type, proto_field::BitType >
 {
     if( type_part != 0 )
-        return { };
+        return {};
 
     return get_field_type( file, field );
 }
@@ -368,9 +368,9 @@ void resolve_types( const search_ctx & parent, proto_message & message )
 auto is_packed_array( const proto_file & file, const proto_field & field ) -> bool
 {
     if( field.label != proto_field::Label::REPEATED )
-        return { };
+        return {};
 
-    return field.spb_options.packed.value_or( file.syntax.version >= 3 );
+    return field.attributes.packed.value_or( file.syntax.version >= 3 );
 }
 
 auto is_scalar( const proto_field::Type & type ) -> bool

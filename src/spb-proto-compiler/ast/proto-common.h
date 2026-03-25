@@ -57,7 +57,7 @@ struct proto_base
 
     proto_options options;
     proto_comment comment;
-    spb_options spb_options;
+    proto_attributes attributes;
 };
 
 using proto_bases = std::vector< proto_base >;

@@ -37,7 +37,7 @@ struct enum_options
     std::string_view type;
 };
 
-struct spb_options
+struct proto_attributes
 {
     // default field value
     std::string_view default_;

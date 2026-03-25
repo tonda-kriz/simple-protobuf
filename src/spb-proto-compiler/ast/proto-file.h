@@ -34,7 +34,7 @@ struct proto_file
     proto_files imports;
     proto_message package;
     proto_options options;
-    spb_options spb_options;
+    proto_attributes attributes;
 
     proto_services services;
 };

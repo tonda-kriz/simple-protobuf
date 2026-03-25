@@ -69,7 +69,7 @@ auto trim_include( std::string_view str ) -> std::string
 
     if( p_begin == p_end )
     {
-        return { };
+        return {};
     }
 
     auto add_prefix  = *p_begin != '"' && *p_begin != '<';
@@ -148,7 +148,7 @@ void get_std_includes( cpp_includes & includes, const proto_file & file )
 
 void get_user_includes( cpp_includes & includes, const proto_file & file )
 {
-    includes.insert( file.spb_options.include.begin( ), file.spb_options.include.end( ) );
+    includes.insert( file.attributes.include.begin( ), file.attributes.include.end( ) );
 }
 
 void get_imports( cpp_includes & includes, const proto_file & file )
@@ -191,12 +191,12 @@ auto type_literal_suffix( proto_field::Type type ) -> std::string_view
         }
     }
 
-    return { };
+    return {};
 }
 
 auto get_field_bits( const proto_field & field ) -> std::string_view
 {
-    if( auto name = field.spb_options.type; !name.empty( ) )
+    if( auto name = field.attributes.type; !name.empty( ) )
     {
         auto bitfield = name;
         if( auto index = bitfield.find( ':' ); index != std::string_view::npos )
@@ -205,12 +205,12 @@ auto get_field_bits( const proto_field & field ) -> std::string_view
             return bitfield.substr( index );
         }
     }
-    return { };
+    return {};
 }
 
 auto get_container_type( std::string_view options, std::string_view message_options,
                          std::string_view file_options, std::string_view ctype,
-                         std::string_view default_type = { } ) -> std::string
+                         std::string_view default_type = {} ) -> std::string
 {
     if( !options.empty( ) )
         return replace( options, "$", ctype );
@@ -226,9 +226,10 @@ auto get_container_type( std::string_view options, std::string_view message_opti
     return replace( default_type, "$", ctype );
 }
 
-auto get_enum_type( const proto_file & file, const spb_options & options,
-                    const spb_options & message_options, const spb_options & file_options,
-                    std::string_view default_type ) -> std::string_view
+auto get_enum_type( const proto_file & file, const proto_attributes & attributes,
+                    const proto_attributes & message_attributes,
+                    const proto_attributes & file_attributes, std::string_view default_type )
+    -> std::string_view
 {
     static constexpr auto type_map =
         std::array< std::pair< std::string_view, std::string_view >, 6 >{ {
@@ -251,20 +252,20 @@ auto get_enum_type( const proto_file & file, const spb_options & options,
         throw_parse_error( file, type, "invalid enum type: " + std::string( type ) );
     };
 
-    if( auto name = options.enum_; !name.empty( ) )
+    if( auto name = attributes.enum_; !name.empty( ) )
         return ctype_from_pb( name );
 
-    if( auto name = message_options.enum_; !name.empty( ) )
+    if( auto name = message_attributes.enum_; !name.empty( ) )
         return ctype_from_pb( name );
 
-    if( auto name = file_options.enum_; !name.empty( ) )
+    if( auto name = file_attributes.enum_; !name.empty( ) )
         return ctype_from_pb( name );
 
     return default_type;
 }
 
 auto convert_to_ctype( const proto_file & file, const proto_field & field,
-                       const proto_message & message = { } ) -> std::string
+                       const proto_message & message = {} ) -> std::string
 {
     if( field.bit_type != proto_field::BitType::NONE )
     {
@@ -297,11 +298,11 @@ auto convert_to_ctype( const proto_file & file, const proto_field & field,
         throw_parse_error( file, field.type_name.proto_name, "invalid type" );
 
     case proto_field::Type::STRING:
-        return get_container_type( field.spb_options.string, message.spb_options.string,
-                                   file.spb_options.string, "char", "std::string" );
+        return get_container_type( field.attributes.string, message.attributes.string,
+                                   file.attributes.string, "char", "std::string" );
     case proto_field::Type::BYTES:
-        return get_container_type( field.spb_options.bytes, message.spb_options.bytes,
-                                   file.spb_options.bytes, "std::byte", "std::vector<$>" );
+        return get_container_type( field.attributes.bytes, message.attributes.bytes,
+                                   file.attributes.bytes, "std::byte", "std::vector<$>" );
     case proto_field::Type::ENUM:
     case proto_field::Type::MESSAGE:
         return std::string( field.type_name.get_name( ) );
@@ -342,16 +343,16 @@ void dump_field_type_and_name( std::ostream & stream, const proto_field & field,
         stream << ctype << ' ' << field.name.get_name( ) << get_field_bits( field );
         return;
     case proto_field::Label::OPTIONAL:
-        stream << get_container_type( field.spb_options.optional, message.spb_options.optional,
-                                      file.spb_options.optional, ctype, "std::optional<$>" );
+        stream << get_container_type( field.attributes.optional, message.attributes.optional,
+                                      file.attributes.optional, ctype, "std::optional<$>" );
         break;
     case proto_field::Label::REPEATED:
-        stream << get_container_type( field.spb_options.repeated, message.spb_options.repeated,
-                                      file.spb_options.repeated, ctype, "std::vector<$>" );
+        stream << get_container_type( field.attributes.repeated, message.attributes.repeated,
+                                      file.attributes.repeated, ctype, "std::vector<$>" );
         break;
     case proto_field::Label::PTR:
-        stream << get_container_type( field.spb_options.pointer, message.spb_options.pointer,
-                                      file.spb_options.pointer, ctype, "std::unique_ptr<$>" );
+        stream << get_container_type( field.attributes.pointer, message.attributes.pointer,
+                                      file.attributes.pointer, ctype, "std::unique_ptr<$>" );
         break;
     }
     if( auto bitfield = get_field_bits( field ); !bitfield.empty( ) )
@@ -374,7 +375,7 @@ void dump_enum( std::ostream & stream, const proto_enum & my_enum, const proto_m
     dump_comment( stream, my_enum.comment );
 
     stream << "enum class " << my_enum.name.get_name( ) << " : "
-           << get_enum_type( file, my_enum.spb_options, message.spb_options, file.spb_options,
+           << get_enum_type( file, my_enum.attributes, message.attributes, file.attributes,
                              "int32_t" )
            << "\n{\n";
     for( const auto & field : my_enum.fields )
@@ -414,7 +415,7 @@ void dump_message_map( std::ostream & stream, const proto_map & map, const proto
 
 void dump_default_value( std::ostream & stream, const proto_field & field )
 {
-    auto default_value = field.spb_options.default_;
+    auto default_value = field.attributes.default_;
     if( default_value.empty( ) )
         return;
 
@@ -436,7 +437,7 @@ void dump_default_value( std::ostream & stream, const proto_field & field )
 
 void dump_deprecated_attribute( std::ostream & stream, const proto_field & field )
 {
-    if( field.spb_options.deprecated )
+    if( field.attributes.deprecated )
         stream << "[[deprecated]] ";
 }
 
@@ -561,7 +562,7 @@ void dump_cpp_definitions( const proto_file & file, std::ostream & stream )
 auto replace( std::string_view input, std::string_view what, std::string_view with ) -> std::string
 {
     auto result = std::string( input );
-    auto pos    = size_t{ };
+    auto pos    = size_t{};
 
     while( ( pos = result.find( what, pos ) ) != std::string::npos )
     {

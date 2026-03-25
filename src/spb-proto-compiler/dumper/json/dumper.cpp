@@ -38,9 +38,9 @@ void dump_prototypes( std::ostream & stream, std::string_view type )
     stream << replace( file_json_header_template, "$", type );
 }
 
-auto json_name_from_options( const spb_options & options ) -> std::string_view
+auto json_name_from_options( const proto_attributes & attributes ) -> std::string_view
 {
-    return options.json_name;
+    return attributes.json_name;
 }
 
 auto convert_to_camelCase( std::string_view input ) -> std::string
@@ -77,7 +77,7 @@ auto convert_to_camelCase( std::string_view input ) -> std::string
 
 auto json_field_name( const proto_base & field ) -> std::string
 {
-    if( const auto result = json_name_from_options( field.spb_options ); !result.empty( ) )
+    if( const auto result = json_name_from_options( field.attributes ); !result.empty( ) )
     {
         return std::string( result );
     }
@@ -87,7 +87,7 @@ auto json_field_name( const proto_base & field ) -> std::string
 
 auto json_field_name_or_camelCase( const proto_base & field ) -> std::string
 {
-    if( const auto result = json_name_from_options( field.spb_options ); !result.empty( ) )
+    if( const auto result = json_name_from_options( field.attributes ); !result.empty( ) )
     {
         return std::string( result );
     }

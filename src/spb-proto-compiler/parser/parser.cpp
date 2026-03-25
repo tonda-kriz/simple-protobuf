@@ -110,7 +110,7 @@ concept int_or_float = std::integral< T > || std::floating_point< T >;
 
 auto consume_number( spb::char_stream & stream, std::integral auto & number ) -> bool
 {
-    number    = { };
+    number    = {};
     auto base = 10;
     if( stream.consume( '0' ) )
     {
@@ -125,7 +125,7 @@ auto consume_number( spb::char_stream & stream, std::integral auto & number ) ->
         }
     }
     auto result = spb_std_emu::from_chars( stream.begin( ), stream.end( ), number, base );
-    if( result.ec == std::errc{ } ) [[likely]]
+    if( result.ec == std::errc{} ) [[likely]]
     {
         stream.skip_to( result.ptr );
         return true;
@@ -136,7 +136,7 @@ auto consume_number( spb::char_stream & stream, std::integral auto & number ) ->
 auto consume_number( spb::char_stream & stream, std::floating_point auto & number ) -> bool
 {
     auto result = spb_std_emu::from_chars( stream.begin( ), stream.end( ), number );
-    if( result.ec == std::errc{ } ) [[likely]]
+    if( result.ec == std::errc{} ) [[likely]]
     {
         stream.skip_to( result.ptr );
         return true;
@@ -157,7 +157,7 @@ auto consume_float( spb::char_stream & stream, std::floating_point auto & number
 template < int_or_float T >
 auto parse_number( spb::char_stream & stream ) -> T
 {
-    auto result = T{ };
+    auto result = T{};
     if( consume_number( stream, result ) )
     {
         return result;
@@ -170,7 +170,7 @@ auto parse_int_or_float( spb::char_stream & stream ) -> std::string_view
     const auto * start = stream.begin( );
     auto number        = double( );
     auto result        = spb_std_emu::from_chars( stream.begin( ), stream.end( ), number );
-    if( result.ec == std::errc{ } ) [[likely]]
+    if( result.ec == std::errc{} ) [[likely]]
     {
         stream.skip_to( result.ptr );
         return { start, static_cast< size_t >( result.ptr - start ) };
@@ -210,7 +210,7 @@ void parse_comment_multiline( spb::char_stream & stream, proto_comment & comment
 //- parse // \n or /**/
 auto parse_comment( spb::char_stream & stream ) -> proto_comment
 {
-    auto result = proto_comment{ };
+    auto result = proto_comment{};
 
     while( stream.current_char( ) == '/' )
     {
@@ -246,7 +246,7 @@ auto parse_comment( spb::char_stream & stream ) -> proto_comment
     if( c != '"' && c != '\'' )
     {
         stream.throw_parse_error( "expecting \" or '" );
-        return { };
+        return {};
     }
 
     stream.consume_current_char( false );
@@ -309,7 +309,7 @@ auto parse_comment( spb::char_stream & stream ) -> proto_comment
     if( isalpha( stream.current_char( ) ) == 0 )
     {
         stream.throw_parse_error( "expecting identifier(a-zA-Z)" );
-        return { };
+        return {};
     }
 
     stream.consume_current_char( false );
@@ -436,9 +436,9 @@ void parse_top_level_import( spb::char_stream & stream, proto_file & file, parsi
     {
         const auto base_dir = file.path.parent_path( );
         auto import_ctx     = parsing_ctx{
-                .base_dir       = base_dir,
-                .already_parsed = ctx.already_parsed,
-                .import_paths   = ctx.import_paths,
+            .base_dir       = base_dir,
+            .already_parsed = ctx.already_parsed,
+            .import_paths   = ctx.import_paths,
         };
 
         const auto import_file_path = find_file_in_paths( import_name, import_ctx );
@@ -683,7 +683,7 @@ void parse_reserved_ranges( spb::char_stream & stream, proto_reserved_range & ra
 
 [[nodiscard]] auto parse_field_options( spb::char_stream & stream ) -> proto_options
 {
-    auto options = proto_options{ };
+    auto options = proto_options{};
     if( stream.consume( '[' ) )
     {
         auto first = true;
@@ -709,7 +709,7 @@ void parse_enum_field( spb::char_stream & stream, proto_enum & new_enum, proto_c
     auto field =
         proto_base{ .name    = parse_ident( stream ),
                     .number  = ( consume_or_fail( stream, '=' ),
-                                parse_number< decltype( proto_field::number ) >( stream ) ),
+                                 parse_number< decltype( proto_field::number ) >( stream ) ),
                     .options = parse_field_options( stream ),
                     .comment = std::move( comment ) };
 
@@ -792,7 +792,7 @@ void parse_field( spb::char_stream & stream, proto_fields & fields, proto_commen
 
     new_field.name    = parse_ident( stream );
     new_field.number  = ( consume_or_fail( stream, '=' ),
-                         parse_number< decltype( proto_field::number ) >( stream ) );
+                          parse_number< decltype( proto_field::number ) >( stream ) );
     new_field.options = parse_field_options( stream );
     new_field.comment = std::move( comment );
     consume_statement_end( stream, new_field.comment );
@@ -856,7 +856,7 @@ void parse_oneof_field( spb::char_stream & stream, proto_fields & fields, proto_
 
     new_field.name    = parse_ident( stream );
     new_field.number  = ( consume_or_fail( stream, '=' ),
-                         parse_number< decltype( proto_field::number ) >( stream ) );
+                          parse_number< decltype( proto_field::number ) >( stream ) );
     new_field.options = parse_field_options( stream );
     new_field.comment = std::move( comment );
     consume_statement_end( stream, new_field.comment );
@@ -1088,12 +1088,12 @@ void parse_top_level( spb::char_stream & stream, proto_file & file, parsing_ctx 
 
 void set_default_options( proto_file & file )
 {
-    file.spb_options.optional = "std::optional<$>";
-    file.spb_options.repeated = "std::vector<$>";
-    file.spb_options.string   = "std::string";
-    file.spb_options.bytes    = "std::vector<$>";
-    file.spb_options.pointer  = "std::unique_ptr<$>";
-    file.spb_options.enum_    = "int32";
+    file.attributes.optional = "std::optional<$>";
+    file.attributes.repeated = "std::vector<$>";
+    file.attributes.string   = "std::string";
+    file.attributes.bytes    = "std::vector<$>";
+    file.attributes.pointer  = "std::unique_ptr<$>";
+    file.attributes.enum_    = "int32";
 }
 
 void parse_proto_file_content( proto_file & file, parsing_ctx & ctx )
