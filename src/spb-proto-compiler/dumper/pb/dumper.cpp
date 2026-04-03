@@ -160,6 +160,15 @@ auto field_max_count( const proto_file & file, const proto_message & message,
     return field.attributes.max_count.value_or(
         message.attributes.max_count.value_or( file.attributes.max_count.value_or( 0 ) ) );
 }
+
+void dump_field_attributes_from_tag( std::ostream & stream, const proto_file & file,
+                                     const proto_message & message, const proto_field & field )
+{
+    stream << "field_attributes{.type = type"
+           << ", .max_count = " << field_max_count( file, message, field )
+           << ", .max_size = " << field_max_size( file, message, field ) << "}";
+}
+
 void dump_field_attributes( std::ostream & stream, const proto_file & file,
                             const proto_message & message, const proto_field & field )
 {
@@ -201,14 +210,15 @@ void dump_cpp_serialize_value( std::ostream & stream, const proto_file & file,
     }
 
     stream << "void serialize( detail::ostream & stream, const " << full_name << " & value )\n{\n";
+
     for( const auto & field : message.fields )
     {
         dump_cpp_serialize_field( stream, file, message, field );
     }
     for( const auto & map : message.maps )
     {
-        stream << "\tstream.serialize" << map_encoder_type( file, map.key, map.value ) << "( {"
-               << map.number << "}, value." << map.name.get_name( ) << " );\n";
+        stream << "\tstream.serialize" << map_encoder_type( file, map.key, map.value )
+               << "( {.number = " << map.number << "}, value." << map.name.get_name( ) << " );\n";
     }
     for( const auto & oneof : message.oneofs )
     {
@@ -224,12 +234,14 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_file & file,
     {
         stream << "void deserialize_value( detail::istream & stream, " << full_name
                << " &, uint32_t tag )\n{\n";
-        stream << "\tstream.skip( tag );\n}\n\n";
+        stream << "\tstream.skip( wire_type_from_tag( tag ) );\n}\n\n";
         return;
     }
 
     stream << "void deserialize_value( detail::istream & stream, " << full_name
-           << " & value, uint32_t tag )\n{\n";
+           << " & value, uint32_t tag )\n{\n"
+           << "\tconst auto type = wire_type_from_tag( tag );\n";
+
     stream << "\tswitch( field_from_tag( tag ) )\n\t{\n";
 
     for( const auto & field : message.fields )
@@ -239,21 +251,26 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_file & file,
         if( !field.bit_field.empty( ) )
         {
             stream << "value." << field.name.get_name( ) << " = stream.deserialize_bitfield"
-                   << bitfield_encoder_type( file, field ) << "( " << field.bit_field
-                   << ", tag );\n";
+                   << bitfield_encoder_type( file, field ) << "( " << field.bit_field << ", ";
+            dump_field_attributes_from_tag( stream, file, message, field );
+            stream << " );\n";
             stream << "\t\t\treturn;\n";
         }
         else
         {
             stream << "return stream.deserialize" << encoder_type( file, field ) << "( value."
-                   << field.name.get_name( ) << ", tag );\n";
+                   << field.name.get_name( ) << ", ";
+            dump_field_attributes_from_tag( stream, file, message, field );
+            stream << " );\n";
         }
     }
     for( const auto & map : message.maps )
     {
         stream << "\t\tcase " << map.number << ":\n\t\t\treturn ";
         stream << "\tstream.deserialize" << map_encoder_type( file, map.key, map.value )
-               << "( value." << map.name.get_name( ) << ", tag );\n";
+               << "( value." << map.name.get_name( ) << ", ";
+        dump_field_attributes_from_tag( stream, file, message, map.value );
+        stream << " );\n";
     }
     for( const auto & oneof : message.oneofs )
     {
@@ -264,18 +281,22 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_file & file,
             if( type.empty( ) )
             {
                 stream << "\tstream.deserialize_variant< " << i << ">( value."
-                       << oneof.name.get_name( ) << ", tag );\n";
+                       << oneof.name.get_name( ) << ", ";
+                dump_field_attributes_from_tag( stream, file, message, oneof.fields[ i ] );
+                stream << " );\n";
             }
             else
             {
                 type.erase( 0, 4 );
                 stream << "\tstream.deserialize_variant_as< " << i << ", " << type << "( value."
-                       << oneof.name.get_name( ) << ", tag );\n";
+                       << oneof.name.get_name( ) << ", ";
+                dump_field_attributes_from_tag( stream, file, message, oneof.fields[ i ] );
+                stream << " );\n";
             }
         }
     }
 
-    stream << "\t\tdefault:\n\t\t\treturn stream.skip( tag );\t\n}\n}\n\n";
+    stream << "\t\tdefault:\n\t\t\treturn stream.skip( type );\t\n}\n}\n\n";
 }
 
 void dump_cpp_messages( std::ostream & stream, const proto_file & file,

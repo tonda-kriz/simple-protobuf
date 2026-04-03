@@ -50,7 +50,11 @@ enum class scalar_encoder : uint8_t
 
 struct field_attributes
 {
-    uint32_t number;
+    union
+    {
+        uint32_t number;
+        wire_type type;
+    };
     size_t max_count = 0;
     size_t max_size  = 0;
 };

@@ -229,19 +229,19 @@ static inline void serialize_as( ostream & stream, const std::map< keyT, valueT 
     {
         if constexpr( std::is_integral_v< keyT > )
         {
-            serialize_as< key_encoder >( stream, field_attributes{ 1 }, k );
+            serialize_as< key_encoder >( stream, field_attributes{ .number = 1 }, k );
         }
         else
         {
-            serialize( stream, field_attributes{ 1 }, k );
+            serialize( stream, field_attributes{ .number = 1 }, k );
         }
         if constexpr( spb::detail::proto_field_number< valueT > )
         {
-            serialize_as< value_encoder >( stream, field_attributes{ 2 }, v );
+            serialize_as< value_encoder >( stream, field_attributes{ .number = 2 }, v );
         }
         else
         {
-            serialize( stream, field_attributes{ 2 }, v );
+            serialize( stream, field_attributes{ .number = 2 }, v );
         }
     }
 }

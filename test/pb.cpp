@@ -152,8 +152,8 @@ template < spb::pb::detail::scalar_encoder encoder, typename T >
 auto pb_serialize_as( const T & value ) -> std::string
 {
     auto size_stream = spb::pb::detail::ostream( nullptr );
-    spb::pb::detail::serialize_as< encoder >( size_stream, spb::pb::detail::field_attributes{ 1 },
-                                              value );
+    spb::pb::detail::serialize_as< encoder >(
+        size_stream, spb::pb::detail::field_attributes{ .number = 1 }, value );
     const auto size = size_stream.size( );
     auto result     = std::string( size, '\0' );
     auto writer     = [ ptr = result.data( ) ]( const void * data, size_t size ) mutable
@@ -162,8 +162,8 @@ auto pb_serialize_as( const T & value ) -> std::string
         ptr += size;
     };
     auto stream = spb::pb::detail::ostream( writer );
-    spb::pb::detail::serialize_as< encoder >( stream, spb::pb::detail::field_attributes{ 1 },
-                                              value );
+    spb::pb::detail::serialize_as< encoder >(
+        stream, spb::pb::detail::field_attributes{ .number = 1 }, value );
     return result;
 }
 
@@ -280,51 +280,77 @@ TEST_CASE( "protobuf" )
     {
         SUBCASE( "max_count" )
         {
+
+            const auto ints_packed = spb::pb::serialize< std::string >(
+                Test::MaxCountIntPacked{ .value = { 0, 1, 2, 3, 4 } } );
+            const auto ints = spb::pb::serialize< std::string >(
+                Test::MaxCountInt{ .value = { 0, 1, 2, 3, 4 } } );
+            const auto strings = spb::pb::serialize< std::string >(
+                Test::MaxCountString{ .value = { "0", "1", "2", "3", "4" } } );
+            const auto bytes = spb::pb::serialize< std::string >(
+                Test::MaxCountBytes{ .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ),
+                                                to_bytes( "3" ), to_bytes( "4" ) } } );
+            const auto person  = Test::TestPerson{ .value = "3" };
+            const auto persons = spb::pb::serialize< std::string >(
+                Test::MaxCountPerson{ .value = { person, person, person, person, person } } );
+
             CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
                 Test::MaxCountFieldIntPacked{ .value = { 0, 1, 2, 3, 4 } } ) );
+            CHECK_THROWS(
+                ( void ) spb::pb::deserialize< Test::MaxCountFieldIntPacked >( ints_packed ) );
             pb_json_test( Test::MaxCountFieldIntPacked{ .value = { 0, 1, 2, 3 } },
                           "\x0a\x04\x00\x01\x02\x03"sv, R"({"value":[0,1,2,3]})" );
 
             CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
                 Test::MaxCountFieldInt{ .value = { 0, 1, 2, 3, 4 } } ) );
+            CHECK_THROWS( ( void ) spb::pb::deserialize< Test::MaxCountFieldInt >( ints ) );
             pb_json_test( Test::MaxCountFieldInt{ .value = { 0, 1, 2, 3 } },
                           "\x08\x00\x08\x01\x08\x02\x08\x03"sv, R"({"value":[0,1,2,3]})" );
 
             CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
                 Test::MaxCountMsgCommentInt{ .value = { 0, 1, 2, 3, 4 } } ) );
+            CHECK_THROWS( ( void ) spb::pb::deserialize< Test::MaxCountMsgCommentInt >( ints ) );
             pb_json_test( Test::MaxCountMsgCommentInt{ .value = { 0, 1, 2, 3 } },
                           "\x08\x00\x08\x01\x08\x02\x08\x03"sv, R"({"value":[0,1,2,3]})" );
 
             CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
                 Test::MaxCountFieldCommentIntPacked{ .value = { 0, 1, 2, 3, 4 } } ) );
+            CHECK_THROWS( ( void ) spb::pb::deserialize< Test::MaxCountFieldCommentIntPacked >(
+                ints_packed ) );
             pb_json_test( Test::MaxCountFieldCommentIntPacked{ .value = { 0, 1, 2, 3 } },
                           "\x0a\x04\x00\x01\x02\x03"sv, R"({"value":[0,1,2,3]})" );
 
             CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
                 Test::MaxCountMsgIntPacked{ .value = { 0, 1, 2, 3, 4 } } ) );
+            CHECK_THROWS(
+                ( void ) spb::pb::deserialize< Test::MaxCountMsgIntPacked >( ints_packed ) );
             pb_json_test( Test::MaxCountMsgIntPacked{ .value = { 0, 1, 2, 3 } },
                           "\x0a\x04\x00\x01\x02\x03"sv, R"({"value":[0,1,2,3]})" );
 
             CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
                 Test::MaxCountFieldString{ .value = { "0", "1", "2", "3", "4" } } ) );
+            CHECK_THROWS( ( void ) spb::pb::deserialize< Test::MaxCountMsgIntPacked >( strings ) );
             pb_json_test( Test::MaxCountFieldString{ .value = { "0", "1", "2", "3" } },
                           "\x0a\x01\x30\x0a\x01\x31\x0a\x01\x32\x0a\x01\x33"sv,
                           R"({"value":["0","1","2","3"]})" );
 
             CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
                 Test::MaxCountMsgCommentString{ .value = { "0", "1", "2", "3", "4" } } ) );
+            CHECK_THROWS( ( void ) spb::pb::deserialize< Test::MaxCountMsgIntPacked >( strings ) );
             pb_json_test( Test::MaxCountMsgCommentString{ .value = { "0", "1", "2", "3" } },
                           "\x0a\x01\x30\x0a\x01\x31\x0a\x01\x32\x0a\x01\x33"sv,
                           R"({"value":["0","1","2","3"]})" );
 
             CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
                 Test::MaxCountMsgString{ .value = { "0", "1", "2", "3", "4" } } ) );
+            CHECK_THROWS( ( void ) spb::pb::deserialize< Test::MaxCountMsgIntPacked >( strings ) );
             pb_json_test( Test::MaxCountMsgString{ .value = { "0", "1", "2", "3" } },
                           "\x0a\x01\x30\x0a\x01\x31\x0a\x01\x32\x0a\x01\x33"sv,
                           R"({"value":["0","1","2","3"]})" );
 
             CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
                 Test::MaxCountFieldCommentString{ .value = { "0", "1", "2", "3", "4" } } ) );
+            CHECK_THROWS( ( void ) spb::pb::deserialize< Test::MaxCountMsgIntPacked >( strings ) );
             pb_json_test( Test::MaxCountFieldCommentString{ .value = { "0", "1", "2", "3" } },
                           "\x0a\x01\x30\x0a\x01\x31\x0a\x01\x32\x0a\x01\x33"sv,
                           R"({"value":["0","1","2","3"]})" );
@@ -332,6 +358,7 @@ TEST_CASE( "protobuf" )
             CHECK_THROWS( ( void ) spb::pb::serialize< std::string >( Test::MaxCountFieldBytes{
                 .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ), to_bytes( "3" ),
                            to_bytes( "4" ) } } ) );
+            CHECK_THROWS( ( void ) spb::pb::deserialize< Test::MaxCountMsgIntPacked >( bytes ) );
             pb_json_test(
                 Test::MaxCountFieldBytes{
                     .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ), to_bytes( "3" ) },
@@ -342,6 +369,7 @@ TEST_CASE( "protobuf" )
             CHECK_THROWS( ( void ) spb::pb::serialize< std::string >( Test::MaxCountMsgCommentBytes{
                 .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ), to_bytes( "3" ),
                            to_bytes( "4" ) } } ) );
+            CHECK_THROWS( ( void ) spb::pb::deserialize< Test::MaxCountMsgIntPacked >( bytes ) );
             pb_json_test(
                 Test::MaxCountMsgCommentBytes{
                     .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ), to_bytes( "3" ) },
@@ -352,6 +380,7 @@ TEST_CASE( "protobuf" )
             CHECK_THROWS( ( void ) spb::pb::serialize< std::string >( Test::MaxCountMsgbytes{
                 .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ), to_bytes( "3" ),
                            to_bytes( "4" ) } } ) );
+            CHECK_THROWS( ( void ) spb::pb::deserialize< Test::MaxCountMsgIntPacked >( bytes ) );
             pb_json_test(
                 Test::MaxCountMsgbytes{
                     .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ), to_bytes( "3" ) },
@@ -363,6 +392,7 @@ TEST_CASE( "protobuf" )
                 ( void ) spb::pb::serialize< std::string >( Test::MaxCountFieldCommentBytes{
                     .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ), to_bytes( "3" ),
                                to_bytes( "4" ) } } ) );
+            CHECK_THROWS( ( void ) spb::pb::deserialize< Test::MaxCountMsgIntPacked >( bytes ) );
             pb_json_test(
                 Test::MaxCountFieldCommentBytes{
                     .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ), to_bytes( "3" ) },
@@ -370,9 +400,9 @@ TEST_CASE( "protobuf" )
                 "\x0a\x01\x30\x0a\x01\x31\x0a\x01\x32\x0a\x01\x33"sv,
                 R"({"value":["MA==","MQ==","Mg==","Mw=="]})" );
 
-            const auto person = Test::TestPerson{ .value = "3" };
             CHECK_THROWS( ( void ) spb::pb::serialize< std::string >( Test::MaxCountFieldPerson{
                 .value = { person, person, person, person, person } } ) );
+            CHECK_THROWS( ( void ) spb::pb::deserialize< Test::MaxCountMsgIntPacked >( persons ) );
             pb_json_test(
                 Test::MaxCountFieldPerson{
                     .value = { person, person, person, person },
@@ -383,6 +413,7 @@ TEST_CASE( "protobuf" )
             CHECK_THROWS(
                 ( void ) spb::pb::serialize< std::string >( Test::MaxCountFieldCommentPerson{
                     .value = { person, person, person, person, person } } ) );
+            CHECK_THROWS( ( void ) spb::pb::deserialize< Test::MaxCountMsgIntPacked >( persons ) );
             pb_json_test(
                 Test::MaxCountFieldCommentPerson{
                     .value = { person, person, person, person },
@@ -392,6 +423,7 @@ TEST_CASE( "protobuf" )
 
             CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
                 Test::MaxCountMsgPerson{ .value = { person, person, person, person, person } } ) );
+            CHECK_THROWS( ( void ) spb::pb::deserialize< Test::MaxCountMsgIntPacked >( persons ) );
             pb_json_test(
                 Test::MaxCountMsgPerson{
                     .value = { person, person, person, person },
@@ -402,6 +434,7 @@ TEST_CASE( "protobuf" )
             CHECK_THROWS(
                 ( void ) spb::pb::serialize< std::string >( Test::MaxCountMsgCommentPerson{
                     .value = { person, person, person, person, person } } ) );
+            CHECK_THROWS( ( void ) spb::pb::deserialize< Test::MaxCountMsgIntPacked >( persons ) );
             pb_json_test(
                 Test::MaxCountMsgCommentPerson{
                     .value = { person, person, person, person },

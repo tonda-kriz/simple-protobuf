@@ -9,6 +9,13 @@ message TestPerson
     optional string value = 1;
 }
 
+message MaxCountInt {
+    repeated int32 value = 1;
+}
+message MaxCountIntPacked {
+    repeated int32 value = 1 [packed = true];
+}
+
 message MaxCountFieldInt {
     repeated int32 value = 1 [(spb).max_count = 4];
 }
@@ -17,12 +24,24 @@ message MaxCountFieldIntPacked {
     repeated int32 value = 1 [(spb).max_count = 4, packed = true];
 }
 
+message MaxCountString {
+    repeated string value = 1;
+}
+
 message MaxCountFieldString {
     repeated string value = 1 [(spb).max_count = 4];
 }
 
+message MaxCountBytes {
+    repeated bytes value = 1;
+}
+
 message MaxCountFieldBytes {
     repeated bytes value = 1 [(spb).max_count = 4];
+}
+
+message MaxCountPerson {
+    repeated TestPerson value = 1;
 }
 
 message MaxCountFieldPerson {

@@ -42,33 +42,33 @@ public:
     {
     }
 
-    void skip( uint32_t tag );
+    void skip( wire_type );
     void read_skip( size_t size );
 
-    void deserialize( auto & value, uint32_t tag );
+    void deserialize( auto & value, const field_attributes & field );
 
     template < scalar_encoder encoder >
-    void deserialize_as( auto & value, uint32_t tag );
+    void deserialize_as( auto & value, const field_attributes & field );
 
     template < size_t ordinal, typename T >
-    void deserialize_variant( T & variant, uint32_t tag );
+    void deserialize_variant( T & variant, const field_attributes & field );
 
     template < size_t ordinal, scalar_encoder encoder, typename T >
-    void deserialize_variant_as( T & variant, uint32_t tag );
+    void deserialize_variant_as( T & variant, const field_attributes & field );
 
     template < scalar_encoder encoder, typename T >
-    auto deserialize_bitfield_as( uint32_t bits, uint32_t tag ) -> T;
+    auto deserialize_bitfield_as( uint32_t bits, const field_attributes & field ) -> T;
 
     [[nodiscard]] auto read_byte( ) -> uint8_t
     {
-        uint8_t result = { };
+        uint8_t result = {};
         read_exact( &result, sizeof( result ) );
         return result;
     }
 
     [[nodiscard]] auto read_byte_or_eof( ) -> int
     {
-        uint8_t result = { };
+        uint8_t result = {};
         if( on_read( &result, sizeof( result ) ) == 0 )
         {
             return -1;
@@ -234,37 +234,38 @@ template < typename T >
 }
 
 static inline void deserialize( istream & stream, spb::detail::proto_message auto & value,
-                                wire_type type );
+                                const field_attributes & field );
 
 template < scalar_encoder encoder >
 static inline void deserialize_as( istream & stream,
                                    spb::detail::proto_field_int_or_float auto & value,
-                                   wire_type type );
+                                   const field_attributes & field );
 static inline void deserialize( istream & stream, spb::detail::proto_field_bytes auto & value,
-                                wire_type type );
+                                const field_attributes & field );
 static inline void deserialize( istream & stream, spb::detail::proto_label_repeated auto & value,
-                                wire_type type );
+                                const field_attributes & field );
 static inline void deserialize( istream & stream, spb::detail::proto_field_string auto & value,
-                                wire_type type );
+                                const field_attributes & field );
 
 template < scalar_encoder encoder, spb::detail::proto_label_repeated C >
-static inline void deserialize_as( istream & stream, C & value, wire_type type );
+static inline void deserialize_as( istream & stream, C & value, const field_attributes & field );
 
 template < scalar_encoder encoder, spb::detail::proto_label_repeated_fixed_size C >
-static inline void deserialize_as( istream & stream, C & value, wire_type type );
+static inline void deserialize_as( istream & stream, C & value, const field_attributes & field );
 
 template < scalar_encoder encoder, typename keyT, typename valueT >
 static inline void deserialize_as( istream & stream, std::map< keyT, valueT > & value,
-                                   wire_type type );
+                                   const field_attributes & field );
 
 static inline void deserialize( istream & stream, spb::detail::proto_label_optional auto & p_value,
-                                wire_type type );
+                                const field_attributes & field );
 
 template < scalar_encoder encoder, spb::detail::proto_label_optional C >
-static inline void deserialize_as( istream & stream, C & p_value, wire_type type );
+static inline void deserialize_as( istream & stream, C & p_value, const field_attributes & field );
 
 template < typename T >
-static inline void deserialize( istream & stream, std::unique_ptr< T > & value, wire_type type );
+static inline void deserialize( istream & stream, std::unique_ptr< T > & value,
+                                const field_attributes & field );
 
 template < typename T, typename signedT, typename unsignedT >
 static auto create_tmp_var( )
@@ -280,26 +281,27 @@ static auto create_tmp_var( )
 }
 
 template < scalar_encoder encoder, typename T >
-static inline auto deserialize_bitfield_as( istream & stream, uint32_t bits, wire_type type ) -> T
+static inline auto deserialize_bitfield_as( istream & stream, uint32_t bits,
+                                            const field_attributes & field ) -> T
 {
     auto value = T( );
     if constexpr( scalar_encoder_type1( encoder ) == scalar_encoder::svarint )
     {
-        check_wire_type( type, wire_type::varint );
+        check_wire_type( field.type, wire_type::varint );
 
         auto tmp = read_varint< std::make_unsigned_t< T > >( stream );
         value    = T( ( tmp >> 1 ) ^ ( ~( tmp & 1 ) + 1 ) );
     }
     else if constexpr( scalar_encoder_type1( encoder ) == scalar_encoder::varint )
     {
-        check_wire_type( type, wire_type::varint );
+        check_wire_type( field.type, wire_type::varint );
         value = read_varint< T >( stream );
     }
     else if constexpr( scalar_encoder_type1( encoder ) == scalar_encoder::i32 )
     {
         static_assert( sizeof( T ) <= sizeof( uint32_t ) );
 
-        check_wire_type( type, wire_type::fixed32 );
+        check_wire_type( field.type, wire_type::fixed32 );
 
         if constexpr( sizeof( value ) == sizeof( uint32_t ) )
         {
@@ -316,7 +318,7 @@ static inline auto deserialize_bitfield_as( istream & stream, uint32_t bits, wir
     else if constexpr( scalar_encoder_type1( encoder ) == scalar_encoder::i64 )
     {
         static_assert( sizeof( T ) <= sizeof( uint64_t ) );
-        check_wire_type( type, wire_type::fixed64 );
+        check_wire_type( field.type, wire_type::fixed64 );
 
         if constexpr( sizeof( value ) == sizeof( uint64_t ) )
         {
@@ -336,14 +338,14 @@ static inline auto deserialize_bitfield_as( istream & stream, uint32_t bits, wir
 
 template < scalar_encoder encoder >
 static inline void deserialize_as( istream & stream, spb::detail::proto_enum auto & value,
-                                   wire_type type )
+                                   const field_attributes & field )
 {
     using T        = std::remove_cvref_t< decltype( value ) >;
     using int_type = std::underlying_type_t< T >;
 
     if constexpr( !scalar_encoder_is_packed( encoder ) )
     {
-        check_wire_type( type, wire_type::varint );
+        check_wire_type( field.type, wire_type::varint );
     }
 
     value = T( read_varint< int_type >( stream ) );
@@ -352,7 +354,7 @@ static inline void deserialize_as( istream & stream, spb::detail::proto_enum aut
 template < scalar_encoder encoder >
 static inline void deserialize_as( istream & stream,
                                    spb::detail::proto_field_int_or_float auto & value,
-                                   wire_type type )
+                                   const field_attributes & field )
 {
     using T = std::remove_cvref_t< decltype( value ) >;
 
@@ -360,7 +362,7 @@ static inline void deserialize_as( istream & stream,
     {
         if constexpr( !scalar_encoder_is_packed( encoder ) )
         {
-            check_wire_type( type, wire_type::varint );
+            check_wire_type( field.type, wire_type::varint );
         }
         auto tmp = read_varint< std::make_unsigned_t< T > >( stream );
         value    = T( ( tmp >> 1 ) ^ ( ~( tmp & 1 ) + 1 ) );
@@ -369,7 +371,7 @@ static inline void deserialize_as( istream & stream,
     {
         if constexpr( !scalar_encoder_is_packed( encoder ) )
         {
-            check_wire_type( type, wire_type::varint );
+            check_wire_type( field.type, wire_type::varint );
         }
         value = read_varint< T >( stream );
     }
@@ -379,7 +381,7 @@ static inline void deserialize_as( istream & stream,
 
         if constexpr( !scalar_encoder_is_packed( encoder ) )
         {
-            check_wire_type( type, wire_type::fixed32 );
+            check_wire_type( field.type, wire_type::fixed32 );
         }
         if constexpr( sizeof( value ) == sizeof( uint32_t ) )
         {
@@ -415,7 +417,7 @@ static inline void deserialize_as( istream & stream,
         static_assert( sizeof( T ) <= sizeof( uint64_t ) );
         if constexpr( !scalar_encoder_is_packed( encoder ) )
         {
-            check_wire_type( type, wire_type::fixed64 );
+            check_wire_type( field.type, wire_type::fixed64 );
         }
         if constexpr( sizeof( value ) == sizeof( uint64_t ) )
         {
@@ -449,23 +451,23 @@ static inline void deserialize_as( istream & stream,
 }
 
 static inline void deserialize( istream & stream, spb::detail::proto_label_optional auto & p_value,
-                                wire_type type )
+                                const field_attributes & field )
 {
     auto & value = p_value.emplace( typename std::decay_t< decltype( p_value ) >::value_type( ) );
-    deserialize( stream, value, type );
+    deserialize( stream, value, field );
 }
 
 template < scalar_encoder encoder, spb::detail::proto_label_optional C >
-static inline void deserialize_as( istream & stream, C & p_value, wire_type type )
+static inline void deserialize_as( istream & stream, C & p_value, const field_attributes & field )
 {
     auto & value = p_value.emplace( typename C::value_type( ) );
-    deserialize_as< encoder >( stream, value, type );
+    deserialize_as< encoder >( stream, value, field );
 }
 
 static inline void deserialize( istream & stream, spb::detail::proto_field_string auto & value,
-                                wire_type type )
+                                const field_attributes & field )
 {
-    check_wire_type( type, wire_type::length_delimited );
+    check_wire_type( field.type, wire_type::length_delimited );
     if constexpr( spb::detail::proto_field_string_resizable< decltype( value ) > )
     {
         value.resize( stream.size( ) );
@@ -482,16 +484,17 @@ static inline void deserialize( istream & stream, spb::detail::proto_field_strin
 }
 
 template < typename T >
-static inline void deserialize( istream & stream, std::unique_ptr< T > & value, wire_type type )
+static inline void deserialize( istream & stream, std::unique_ptr< T > & value,
+                                const field_attributes & field )
 {
     value = std::make_unique< T >( );
-    deserialize( stream, *value, type );
+    deserialize( stream, *value, field );
 }
 
 static inline void deserialize( istream & stream, spb::detail::proto_field_bytes auto & value,
-                                wire_type type )
+                                const field_attributes & field )
 {
-    check_wire_type( type, wire_type::length_delimited );
+    check_wire_type( field.type, wire_type::length_delimited );
     if constexpr( spb::detail::proto_field_bytes_resizable< decltype( value ) > )
     {
         value.resize( stream.size( ) );
@@ -507,29 +510,37 @@ static inline void deserialize( istream & stream, spb::detail::proto_field_bytes
 }
 
 static inline void deserialize( istream & stream, spb::detail::proto_label_repeated auto & value,
-                                wire_type type )
+                                const field_attributes & field )
 {
-    deserialize( stream, value.emplace_back( ), type );
+    if( field.max_count && value.size( ) >= field.max_count )
+        throw std::length_error( "repeated is too large" );
+
+    deserialize( stream, value.emplace_back( ), field );
 }
 
 template < scalar_encoder encoder, spb::detail::proto_label_repeated C >
-static inline void deserialize_packed_as( istream & stream, C & value, wire_type type )
+static inline void deserialize_packed_as( istream & stream, C & value,
+                                          const field_attributes & field )
 {
     while( !stream.empty( ) )
     {
+        if( field.max_count && value.size( ) >= field.max_count )
+            throw std::length_error( "repeated is too large" );
+
         if constexpr( std::is_same_v< typename C::value_type, bool > )
         {
             value.emplace_back( read_varint< bool >( stream ) );
         }
         else
         {
-            deserialize_as< encoder >( stream, value.emplace_back( ), type );
+            deserialize_as< encoder >( stream, value.emplace_back( ), field );
         }
     }
 }
 
 template < scalar_encoder encoder, spb::detail::proto_label_repeated_fixed_size C >
-static inline void deserialize_packed_as( istream & stream, C & value, wire_type type )
+static inline void deserialize_packed_as( istream & stream, C & value,
+                                          const field_attributes & field )
 {
     for( size_t i = 0; i < value.size( ); i++ )
     {
@@ -540,7 +551,7 @@ static inline void deserialize_packed_as( istream & stream, C & value, wire_type
         else
         {
             typename C::value_type tmp;
-            deserialize_as< encoder >( stream, tmp, type );
+            deserialize_as< encoder >( stream, tmp, field );
             value[ i ] = tmp;
         }
     }
@@ -548,59 +559,63 @@ static inline void deserialize_packed_as( istream & stream, C & value, wire_type
 }
 
 template < scalar_encoder encoder, spb::detail::proto_label_repeated_fixed_size C >
-static inline void deserialize_as( istream & stream, C & value, wire_type type )
+static inline void deserialize_as( istream & stream, C & value, const field_attributes & field )
 {
     static_assert( scalar_encoder_is_packed( encoder ),
                    "repeated field with fixed size has to have attribute 'packed'" );
 
-    check_wire_type( type, wire_type::length_delimited );
-    deserialize_packed_as< encoder >( stream, value, wire_type_from_scalar_encoder( encoder ) );
+    check_wire_type( field.type, wire_type::length_delimited );
+    deserialize_packed_as< encoder >( stream, value, field );
 }
 
 template < scalar_encoder encoder, spb::detail::proto_label_repeated C >
-static inline void deserialize_as( istream & stream, C & value, wire_type type )
+static inline void deserialize_as( istream & stream, C & value, const field_attributes & field )
 {
     if constexpr( scalar_encoder_is_packed( encoder ) )
     {
-        deserialize_packed_as< encoder >( stream, value, wire_type_from_scalar_encoder( encoder ) );
+        deserialize_packed_as< encoder >( stream, value, field );
     }
     else
     {
+        if( field.max_count && value.size( ) >= field.max_count )
+            throw std::length_error( "repeated is too large" );
+
         if constexpr( std::is_same_v< typename C::value_type, bool > )
         {
             value.emplace_back( read_varint< bool >( stream ) );
         }
         else
         {
-            deserialize_as< encoder >( stream, value.emplace_back( ), type );
+            deserialize_as< encoder >( stream, value.emplace_back( ), field );
         }
     }
 }
 
 template < scalar_encoder encoder, typename keyT, typename valueT >
 static inline void deserialize_as( istream & stream, std::map< keyT, valueT > & value,
-                                   wire_type type )
+                                   const field_attributes & field )
 {
     const auto key_encoder   = scalar_encoder_type1( encoder );
     const auto value_encoder = scalar_encoder_type2( encoder );
 
-    check_wire_type( type, wire_type::length_delimited );
+    check_wire_type( field.type, wire_type::length_delimited );
 
     auto pair          = std::pair< keyT, valueT >( );
     auto key_defined   = false;
     auto value_defined = false;
     while( !stream.empty( ) )
     {
-        const auto tag        = read_varint< uint32_t >( stream );
-        const auto field      = field_from_tag( tag );
-        const auto field_type = wire_type_from_tag( tag );
+        const auto tag          = read_varint< uint32_t >( stream );
+        const auto field_number = field_from_tag( tag );
+        const auto field_type   = wire_type_from_tag( tag );
 
-        switch( field )
+        switch( field_number )
         {
         case 1:
+            check_wire_type( field_type, field.type );
             if constexpr( std::is_integral_v< keyT > )
             {
-                deserialize_as< key_encoder >( stream, pair.first, field_type );
+                deserialize_as< key_encoder >( stream, pair.first, field );
             }
             else
             {
@@ -608,20 +623,21 @@ static inline void deserialize_as( istream & stream, std::map< keyT, valueT > & 
                 {
                     const auto size = read_varint< uint32_t >( stream );
                     auto substream  = stream.sub_stream( size );
-                    deserialize( substream, pair.first, field_type );
+                    deserialize( substream, pair.first, field );
                     check_if_empty( substream );
                 }
                 else
                 {
-                    deserialize( stream, pair.first, field_type );
+                    deserialize( stream, pair.first, field );
                 }
             }
             key_defined = true;
             break;
         case 2:
+            check_wire_type( field_type, field.type );
             if constexpr( spb::detail::proto_field_number< valueT > )
             {
-                deserialize_as< value_encoder >( stream, pair.second, field_type );
+                deserialize_as< value_encoder >( stream, pair.second, field );
             }
             else
             {
@@ -629,7 +645,7 @@ static inline void deserialize_as( istream & stream, std::map< keyT, valueT > & 
                 {
                     const auto size = read_varint< uint32_t >( stream );
                     auto substream  = stream.sub_stream( size );
-                    deserialize( substream, pair.second, field_type );
+                    deserialize( substream, pair.second, field );
                     check_if_empty( substream );
                 }
                 else
@@ -654,15 +670,17 @@ static inline void deserialize_as( istream & stream, std::map< keyT, valueT > & 
 }
 
 template < size_t ordinal, typename T >
-static inline void deserialize_variant( istream & stream, T & variant, wire_type type )
+static inline void deserialize_variant( istream & stream, T & variant,
+                                        const field_attributes & field )
 {
-    deserialize( stream, variant.template emplace< ordinal >( ), type );
+    deserialize( stream, variant.template emplace< ordinal >( ), field );
 }
 
 template < size_t ordinal, scalar_encoder encoder, typename T >
-static inline void deserialize_variant_as( istream & stream, T & variant, wire_type type )
+static inline void deserialize_variant_as( istream & stream, T & variant,
+                                           const field_attributes & field )
 {
-    deserialize_as< encoder >( stream, variant.template emplace< ordinal >( ), type );
+    deserialize_as< encoder >( stream, variant.template emplace< ordinal >( ), field );
 }
 
 static inline void deserialize_main( istream & stream, spb::detail::proto_message auto & value )
@@ -691,9 +709,9 @@ static inline void deserialize_main( istream & stream, spb::detail::proto_messag
 }
 
 static inline void deserialize( istream & stream, spb::detail::proto_message auto & value,
-                                wire_type type )
+                                const field_attributes & field )
 {
-    check_wire_type( type, wire_type::length_delimited );
+    check_wire_type( field.type, wire_type::length_delimited );
 
     while( !stream.empty( ) )
     {
@@ -714,9 +732,9 @@ static inline void deserialize( istream & stream, spb::detail::proto_message aut
     }
 }
 
-inline void istream::deserialize( auto & value, uint32_t tag )
+inline void istream::deserialize( auto & value, const field_attributes & field )
 {
-    detail::deserialize( *this, value, wire_type_from_tag( tag ) );
+    detail::deserialize( *this, value, field );
 }
 
 inline void istream::read_skip( size_t size )
@@ -730,9 +748,9 @@ inline void istream::read_skip( size_t size )
     }
 }
 
-inline void istream::skip( uint32_t tag )
+inline void istream::skip( wire_type type )
 {
-    switch( wire_type_from_tag( tag ) )
+    switch( type )
     {
     case wire_type::varint:
         return ( void ) read_varint< uint64_t >( *this );
@@ -748,27 +766,27 @@ inline void istream::skip( uint32_t tag )
 }
 
 template < scalar_encoder encoder >
-inline void istream::deserialize_as( auto & value, uint32_t tag )
+inline void istream::deserialize_as( auto & value, const field_attributes & field )
 {
-    detail::deserialize_as< encoder >( *this, value, wire_type_from_tag( tag ) );
+    detail::deserialize_as< encoder >( *this, value, field );
 }
 
 template < size_t ordinal, typename T >
-inline void istream::deserialize_variant( T & variant, uint32_t tag )
+inline void istream::deserialize_variant( T & variant, const field_attributes & field )
 {
-    detail::deserialize_variant< ordinal >( *this, variant, wire_type_from_tag( tag ) );
+    detail::deserialize_variant< ordinal >( *this, variant, field );
 }
 
 template < size_t ordinal, scalar_encoder encoder, typename T >
-inline void istream::deserialize_variant_as( T & variant, uint32_t tag )
+inline void istream::deserialize_variant_as( T & variant, const field_attributes & field )
 {
-    detail::deserialize_variant_as< ordinal, encoder >( *this, variant, wire_type_from_tag( tag ) );
+    detail::deserialize_variant_as< ordinal, encoder >( *this, variant, field );
 }
 
 template < scalar_encoder encoder, typename T >
-inline auto istream::deserialize_bitfield_as( uint32_t bits, uint32_t tag ) -> T
+inline auto istream::deserialize_bitfield_as( uint32_t bits, const field_attributes & field ) -> T
 {
-    return detail::deserialize_bitfield_as< encoder, T >( *this, bits, wire_type_from_tag( tag ) );
+    return detail::deserialize_bitfield_as< encoder, T >( *this, bits, field );
 }
 
 static inline void deserialize( auto & value, spb::io::reader on_read )

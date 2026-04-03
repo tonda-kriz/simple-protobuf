@@ -76,13 +76,14 @@ concept proto_label_repeated = requires( T container ) {
     { container.emplace_back( ) };
     { container.begin( ) };
     { container.end( ) };
+    { container.size( ) } -> std::convertible_to< std::size_t >;
     { container.clear( ) };
     typename T::value_type;
 } && !proto_field_string< T > && !proto_field_bytes< T >;
 
 template < class T >
 concept proto_label_repeated_fixed_size = requires( T container ) {
-    { std::bool_constant< ( T{ }.size( ), true ) >( ) } -> std::same_as< std::true_type >;
+    { std::bool_constant< ( T{}.size( ), true ) >( ) } -> std::same_as< std::true_type >;
     { container[ 0 ] };
     typename T::value_type;
 } && !proto_label_repeated< T > && !proto_field_string< T > && !proto_field_bytes< T >;
