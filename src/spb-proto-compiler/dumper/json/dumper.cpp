@@ -177,28 +177,51 @@ void dump_cpp_open_namespace( std::ostream & stream, std::string_view name )
 }
 
 auto field_max_size( const proto_file & file, const proto_message & message,
-                     const proto_field & field ) -> size_t
+                     const proto_attributes & attributes ) -> size_t
 {
-    return field.attributes.max_size.value_or(
+    return attributes.max_size.value_or(
         message.attributes.max_size.value_or( file.attributes.max_size.value_or( 0 ) ) );
 }
 
 auto field_max_count( const proto_file & file, const proto_message & message,
-                      const proto_field & field ) -> size_t
+                      const proto_attributes & attributes ) -> size_t
 {
-    return field.attributes.max_count.value_or(
+    return attributes.max_count.value_or(
         message.attributes.max_count.value_or( file.attributes.max_count.value_or( 0 ) ) );
+}
+
+void dump_field_attributes_with_name( std::ostream & stream, const proto_file & file,
+                                      const proto_message & message,
+                                      const proto_attributes & attributes, std::string_view name )
+{
+    const auto max_count = field_max_count( file, message, attributes );
+    const auto max_size  = field_max_size( file, message, attributes );
+
+    if( name.empty( ) && max_size == 0 && max_count == 0 )
+        return;
+
+    stream << ", field_attributes{";
+    if( !name.empty( ) )
+        stream << ".name = \"" << name << "\"sv";
+    if( max_count )
+        stream << ( !name.empty( ) ? "," : "" ) << " .max_count = " << max_count;
+    if( max_size )
+        stream << ( !name.empty( ) || max_count ? "," : "" ) << " .max_size = " << max_size;
+    stream << "}";
 }
 
 void dump_field_attributes( std::ostream & stream, const proto_file & file,
                             const proto_message & message, const proto_field & field )
 {
-    stream << "field_attributes{.name = \"" << json_field_name( field ) << "\"sv";
-    if( const auto max_count = field_max_count( file, message, field ); max_count )
-        stream << ", .max_count = " << max_count;
-    if( const auto max_size = field_max_size( file, message, field ); max_size )
-        stream << ", .max_size = " << max_size;
-    stream << "}";
+    dump_field_attributes_with_name( stream, file, message, field.attributes,
+                                     json_field_name( field ) );
+}
+
+void dump_field_attributes_without_name( std::ostream & stream, const proto_file & file,
+                                         const proto_message & message,
+                                         const proto_attributes & attributes )
+{
+    dump_field_attributes_with_name( stream, file, message, attributes, {} );
 }
 
 void dump_cpp_serialize_value( std::ostream & stream, const proto_file & file,
@@ -208,9 +231,10 @@ void dump_cpp_serialize_value( std::ostream & stream, const proto_file & file,
     stream << "\t\tswitch( index )\n\t\t{\n";
     for( size_t i = 0; i < oneof.fields.size( ); ++i )
     {
-        stream << "\t\t\tcase " << i << ":\n\t\t\t\treturn stream.serialize(";
+        stream << "\t\t\tcase " << i << ":\n\t\t\t\treturn stream.serialize( std::get< " << i
+               << " >( value." << oneof.name.get_name( ) << " )";
         dump_field_attributes( stream, file, message, oneof.fields[ i ] );
-        stream << ", std::get< " << i << " >( value." << oneof.name.get_name( ) << ") );\n";
+        stream << " );\n";
     }
     stream << "\t\t}\n\t}\n\n";
 }
@@ -326,15 +350,15 @@ void dump_cpp_serialize_value( std::ostream & stream, const proto_file & file,
            << " & value )\n{\n";
     for( const auto & field : message.fields )
     {
-        stream << "\tstream.serialize( ";
+        stream << "\tstream.serialize( value." << field.name.get_name( );
         dump_field_attributes( stream, file, message, field );
-        stream << ", value." << field.name.get_name( ) << " );\n";
+        stream << " );\n";
     }
     for( const auto & map : message.maps )
     {
-        stream << "\tstream.serialize( ";
+        stream << "\tstream.serialize( value." << map.name.get_name( );
         dump_field_attributes( stream, file, message, map.key );
-        stream << ", value." << map.name.get_name( ) << " );\n";
+        stream << " );\n";
     }
     for( const auto & oneof : message.oneofs )
     {
@@ -343,8 +367,8 @@ void dump_cpp_serialize_value( std::ostream & stream, const proto_file & file,
     stream << "}\n";
 }
 
-void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & message,
-                                 std::string_view full_name )
+void dump_cpp_deserialize_value( std::ostream & stream, const proto_file & file,
+                                 const proto_message & message, std::string_view full_name )
 {
     if( message.fields.empty( ) && message.maps.empty( ) && message.oneofs.empty( ) )
     {
@@ -358,6 +382,7 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & me
     {
         std::string parsed_name;
         cpp_ident name;
+        proto_attributes attributes;
         size_t oneof_index = SIZE_MAX;
         std::string_view bitfield;
     };
@@ -376,6 +401,7 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & me
                           one_field{
                               .parsed_name = field_name,
                               .name        = field.name,
+                              .attributes  = field.attributes,
                               .bitfield    = field.bit_field,
                           } );
         if( field_name != field.name.proto_name )
@@ -387,6 +413,7 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & me
                               one_field{
                                   .parsed_name = std::string( field.name.proto_name ),
                                   .name        = field.name,
+                                  .attributes  = field.attributes,
                                   .bitfield    = field.bit_field,
                               } );
         }
@@ -475,8 +502,9 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_message & me
             }
             else
             {
-                stream << "\t\t\t\treturn stream.deserialize( value." << field.name.get_name( )
-                       << " );\n";
+                stream << "\t\t\t\treturn stream.deserialize( value." << field.name.get_name( );
+                dump_field_attributes_without_name( stream, file, message, field.attributes );
+                stream << " );\n";
             }
         }
         else
@@ -518,7 +546,7 @@ void dump_cpp_message( std::ostream & stream, const proto_file & file,
 
     dump_cpp_open_namespace( stream, "detail" );
     dump_cpp_serialize_value( stream, file, message, full_name );
-    dump_cpp_deserialize_value( stream, message, full_name );
+    dump_cpp_deserialize_value( stream, file, message, full_name );
     dump_cpp_close_namespace( stream, "detail" );
 
     dump_cpp_messages( stream, file, message.messages, full_name );

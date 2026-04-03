@@ -20,12 +20,35 @@ auto operator==( const std::span< const std::byte > & lhs,
 }
 }// namespace std
 
+namespace Test
+{
+auto operator==( const TestPerson & lhs, const TestPerson & rhs ) noexcept -> bool
+{
+    return lhs.value == rhs.value;
+}
+
+}// namespace Test
+
 namespace
 {
 template < typename T >
 concept HasValueMember = requires( T t ) {
     { t.value };
 };
+}// namespace
+
+namespace Test
+{
+
+auto operator==( const ::HasValueMember auto & lhs, const ::HasValueMember auto & rhs ) noexcept
+    -> bool
+{
+    return lhs.value == rhs.value;
+}
+}// namespace Test
+
+namespace
+{
 
 template < size_t N >
 auto to_array( const char ( &string )[ N ] )
@@ -111,6 +134,150 @@ TEST_CASE( "json" )
     }
     SUBCASE( "deserialize" )
     {
+        SUBCASE( "options" )
+        {
+            SUBCASE( "max_count" )
+            {
+                const auto ints_packed = spb::json::serialize< std::string >(
+                    Test::MaxCountIntPacked{ .value = { 0, 1, 2, 3, 4 } } );
+                const auto ints = spb::json::serialize< std::string >(
+                    Test::MaxCountInt{ .value = { 0, 1, 2, 3, 4 } } );
+                const auto strings = spb::json::serialize< std::string >(
+                    Test::MaxCountString{ .value = { "0", "1", "2", "3", "4" } } );
+                const auto bytes   = spb::json::serialize< std::string >( Test::MaxCountBytes{
+                    .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ), to_bytes( "3" ),
+                               to_bytes( "4" ) } } );
+                const auto person  = Test::TestPerson{ .value = "3" };
+                const auto persons = spb::json::serialize< std::string >(
+                    Test::MaxCountPerson{ .value = { person, person, person, person, person } } );
+
+                CHECK_THROWS( ( void ) spb::json::deserialize< Test::MaxCountFieldIntPacked >(
+                    ints_packed ) );
+                CHECK( spb::json::deserialize< Test::MaxCountFieldIntPacked >(
+                           R"({"value":[0,1,2,3]})"sv ) ==
+                       Test::MaxCountFieldIntPacked{ .value = { 0, 1, 2, 3 } } );
+
+                CHECK_THROWS( ( void ) spb::json::deserialize< Test::MaxCountFieldInt >( ints ) );
+                CHECK( spb::json::deserialize< Test::MaxCountFieldInt >(
+                           R"({"value":[0,1,2,3]})"sv ) ==
+                       Test::MaxCountFieldInt{ .value = { 0, 1, 2, 3 } } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxCountMsgCommentInt >( ints ) );
+                CHECK( spb::json::deserialize< Test::MaxCountMsgCommentInt >(
+                           R"({"value":[0,1,2,3]})"sv ) ==
+                       Test::MaxCountMsgCommentInt{ .value = { 0, 1, 2, 3 } } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxCountFieldCommentIntPacked >(
+                        ints_packed ) );
+                CHECK( spb::json::deserialize< Test::MaxCountFieldCommentIntPacked >(
+                           R"({"value":[0,1,2,3]})"sv ) ==
+                       Test::MaxCountFieldCommentIntPacked{ .value = { 0, 1, 2, 3 } } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxCountMsgIntPacked >( ints_packed ) );
+                CHECK( spb::json::deserialize< Test::MaxCountMsgIntPacked >(
+                           R"({"value":[0,1,2,3]})"sv ) ==
+                       Test::MaxCountMsgIntPacked{ .value = { 0, 1, 2, 3 } } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxCountMsgIntPacked >( strings ) );
+                CHECK( spb::json::deserialize< Test::MaxCountFieldString >(
+                           R"({"value":["0","1","2","3"]})"sv ) ==
+                       Test::MaxCountFieldString{ .value = { "0", "1", "2", "3" } } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxCountMsgIntPacked >( strings ) );
+                CHECK( spb::json::deserialize< Test::MaxCountMsgCommentString >(
+                           R"({"value":["0","1","2","3"]})"sv ) ==
+                       Test::MaxCountMsgCommentString{ .value = { "0", "1", "2", "3" } } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxCountMsgIntPacked >( strings ) );
+                CHECK( spb::json::deserialize< Test::MaxCountMsgString >(
+                           R"({"value":["0","1","2","3"]})"sv ) ==
+                       Test::MaxCountMsgString{ .value = { "0", "1", "2", "3" } } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxCountMsgIntPacked >( strings ) );
+                CHECK( spb::json::deserialize< Test::MaxCountFieldCommentString >(
+                           R"({"value":["0","1","2","3"]})"sv ) ==
+                       Test::MaxCountFieldCommentString{ .value = { "0", "1", "2", "3" } } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxCountMsgIntPacked >( bytes ) );
+                CHECK( spb::json::deserialize< Test::MaxCountFieldBytes >(
+                           R"({"value":["MA==","MQ==","Mg==","Mw=="]})"sv ) ==
+                       Test::MaxCountFieldBytes{
+                           .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ),
+                                      to_bytes( "3" ) },
+                       } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxCountMsgIntPacked >( bytes ) );
+                CHECK( spb::json::deserialize< Test::MaxCountMsgCommentBytes >(
+                           R"({"value":["MA==","MQ==","Mg==","Mw=="]})"sv ) ==
+                       Test::MaxCountMsgCommentBytes{
+                           .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ),
+                                      to_bytes( "3" ) },
+                       } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxCountMsgIntPacked >( bytes ) );
+                CHECK( spb::json::deserialize< Test::MaxCountMsgbytes >(
+                           R"({"value":["MA==","MQ==","Mg==","Mw=="]})"sv ) ==
+                       Test::MaxCountMsgbytes{
+                           .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ),
+                                      to_bytes( "3" ) },
+                       } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxCountMsgIntPacked >( bytes ) );
+                CHECK( spb::json::deserialize< Test::MaxCountFieldCommentBytes >(
+                           R"({"value":["MA==","MQ==","Mg==","Mw=="]})"sv ) ==
+                       Test::MaxCountFieldCommentBytes{
+                           .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ),
+                                      to_bytes( "3" ) },
+                       } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxCountMsgIntPacked >( persons ) );
+                CHECK(
+                    spb::json::deserialize< Test::MaxCountFieldPerson >(
+                        R"({"value":[{"value":"3"},{"value":"3"},{"value":"3"},{"value":"3"}]})"sv ) ==
+                    Test::MaxCountFieldPerson{
+                        .value = { person, person, person, person },
+                    } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxCountMsgIntPacked >( persons ) );
+                CHECK(
+                    spb::json::deserialize< Test::MaxCountFieldCommentPerson >(
+                        R"({"value":[{"value":"3"},{"value":"3"},{"value":"3"},{"value":"3"}]})"sv ) ==
+                    Test::MaxCountFieldCommentPerson{
+                        .value = { person, person, person, person },
+                    } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxCountMsgIntPacked >( persons ) );
+                CHECK(
+                    spb::json::deserialize< Test::MaxCountMsgPerson >(
+                        R"({"value":[{"value":"3"},{"value":"3"},{"value":"3"},{"value":"3"}]})"sv ) ==
+                    Test::MaxCountMsgPerson{
+                        .value = { person, person, person, person },
+                    } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxCountMsgIntPacked >( persons ) );
+                CHECK(
+                    spb::json::deserialize< Test::MaxCountMsgCommentPerson >(
+                        R"({"value":[{"value":"3"},{"value":"3"},{"value":"3"},{"value":"3"}]})"sv ) ==
+                    Test::MaxCountMsgCommentPerson{
+                        .value = { person, person, person, person },
+                    } );
+            }
+        }
         SUBCASE( "ignore" )
         {
             SUBCASE( "empty" )

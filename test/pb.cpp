@@ -280,7 +280,6 @@ TEST_CASE( "protobuf" )
     {
         SUBCASE( "max_count" )
         {
-
             const auto ints_packed = spb::pb::serialize< std::string >(
                 Test::MaxCountIntPacked{ .value = { 0, 1, 2, 3, 4 } } );
             const auto ints = spb::pb::serialize< std::string >(
