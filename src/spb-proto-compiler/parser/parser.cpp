@@ -48,25 +48,19 @@ auto find_file_in_paths( const fs::path & file_name, const parsing_ctx & ctx ) -
     if( file_name.has_root_path( ) )
     {
         if( fs::exists( file_name ) )
-        {
             return file_name;
-        }
     }
     else
     {
         if( fs::exists( ctx.base_dir / file_name ) )
-        {
             return ctx.base_dir / file_name;
-        }
 
         for( const auto & import_path : ctx.import_paths )
         {
             auto file_path = import_path.has_root_path( ) ? import_path / file_name
                                                           : ctx.base_dir / import_path / file_name;
             if( fs::exists( file_path ) )
-            {
                 return file_path;
-            }
         }
     }
 
@@ -441,12 +435,22 @@ void parse_top_level_import( spb::char_stream & stream, proto_file & file, parsi
             .import_paths   = ctx.import_paths,
         };
 
-        const auto import_file_path = find_file_in_paths( import_name, import_ctx );
-        if( !ctx.already_parsed.insert( import_file_path.string( ) ).second )
-            return;
+        try
+        {
+            const auto import_file_path = find_file_in_paths( import_name, import_ctx );
+            if( !ctx.already_parsed.insert( import_file_path.string( ) ).second )
+                return;
 
-        file.imports.emplace_back( parse_proto_file( import_file_path, import_ctx ) ).comment =
-            std::move( import_comment );
+            file.imports.emplace_back( parse_proto_file( import_file_path, import_ctx ) ).comment =
+                std::move( import_comment );
+        }
+        catch( const std::runtime_error & error )
+        {
+            if( file.attributes.exclude.contains( import_name ) )
+                return;
+
+            throw;
+        }
     }
     catch( const std::runtime_error & error )
     {
@@ -952,7 +956,7 @@ void parse_message_body( spb::char_stream & stream, proto_messages & messages,
     parse_message_body( stream, messages, std::move( comment ) );
     return true;
 }
-
+/*
 auto find_extendable_message_recursive( proto_file & file, std::string_view package,
                                         std::string_view extend ) -> proto_message *
 {
@@ -1003,14 +1007,36 @@ auto find_extendable_message( proto_file & file, std::string_view extend ) -> pr
 
     return *extendee;
 }
+*/
+
+void check_extendable_message( proto_file & file, std::string_view extend )
+{
+    static constexpr auto package          = "google.protobuf."sv;
+    static constexpr auto extendee_options = std::array< std::string_view, 9 >{
+        "FileOptions",      "MessageOptions",        "FieldOptions",
+        "OneofOptions",     "ExtensionRangeOptions", "EnumOptions",
+        "EnumValueOptions", "ServiceOptions",        "MethodOptions"
+    };
+
+    if( !extend.starts_with( package ) )
+        throw_parse_error( file, extend, "Extendee has to be one of `google.protobuf.*Options`" );
+
+    auto found = false;
+    extend.remove_prefix( package.size( ) );
+    for( const auto name : extendee_options )
+    {
+        found |= extend == name;
+    }
+
+    if( !found )
+        throw_parse_error( file, extend, "Extendee has to be one of `google.protobuf.*Options`" );
+}
 
 void parse_extend_body( spb::char_stream & stream, proto_file & file )
 {
     // extendBody = ExtendedMessage "{" { field } "}"
-    const auto extend_name = parse_full_ident( stream );
-
-    auto & message = find_extendable_message( file, extend_name.proto_name );
-
+    const auto extend_name = parse_full_ident( stream ).proto_name;
+    check_extendable_message( file, extend_name );
     consume_or_fail( stream, '{' );
 
     while( !stream.consume( '}' ) )
@@ -1019,7 +1045,8 @@ void parse_extend_body( spb::char_stream & stream, proto_file & file )
         if( stream.consume( '}' ) )
             break;
 
-        parse_field( stream, message.extends, std::move( comment ) );
+        auto & fields = file.extends[ extend_name ];
+        parse_field( stream, fields, std::move( comment ) );
     }
 }
 
@@ -1086,7 +1113,7 @@ void parse_top_level( spb::char_stream & stream, proto_file & file, parsing_ctx 
     }
 }
 
-void set_default_options( proto_file & file )
+void set_default_attributes( proto_file & file )
 {
     file.attributes.optional = "std::optional<$>";
     file.attributes.repeated = "std::vector<$>";
@@ -1099,7 +1126,7 @@ void set_default_options( proto_file & file )
 
 void parse_proto_file_content( proto_file & file, parsing_ctx & ctx )
 {
-    set_default_options( file );
+    set_default_attributes( file );
 
     auto stream = spb::char_stream( file.content );
 

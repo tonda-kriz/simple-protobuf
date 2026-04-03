@@ -13,6 +13,7 @@
 
 #include "proto-comment.h"
 #include "proto-common.h"
+#include "proto-extend.h"
 #include "proto-message.h"
 #include "proto-option.h"
 #include "proto-service.h"
@@ -33,6 +34,7 @@ struct proto_file
     proto_comment comment;
     proto_files imports;
     proto_message package;
+    proto_extends extends;
     proto_options options;
     proto_attributes attributes;
 
