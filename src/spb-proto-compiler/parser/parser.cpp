@@ -1094,6 +1094,7 @@ void set_default_options( proto_file & file )
     file.attributes.bytes    = "std::vector<$>";
     file.attributes.pointer  = "std::unique_ptr<$>";
     file.attributes.enum_    = "int32";
+    file.attributes.exclude  = { "nanopb.proto", "spb.proto", "google/protobuf/descriptor.proto" };
 }
 
 void parse_proto_file_content( proto_file & file, parsing_ctx & ctx )
