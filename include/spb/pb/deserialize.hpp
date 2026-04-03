@@ -117,17 +117,17 @@ public:
     }
 };
 
-[[nodiscard]] static inline auto wire_type_from_tag( uint32_t tag ) -> wire_type
+[[nodiscard]] static inline auto wire_type_from_tag( tag_type tag ) -> wire_type
 {
-    return wire_type( tag & 0x07 );
+    return wire_type( uint32_t( tag ) & 0x07 );
 }
 
-[[nodiscard]] static inline auto field_from_tag( uint32_t tag ) -> uint32_t
+[[nodiscard]] static inline auto field_from_tag( tag_type tag ) -> uint32_t
 {
-    return tag >> 3;
+    return uint32_t( tag ) >> 3;
 }
 
-static inline void check_tag( uint32_t tag )
+static inline void check_tag( tag_type tag )
 {
     if( field_from_tag( tag ) == 0 )
     {
@@ -151,13 +151,12 @@ static inline void check_if_empty( istream & stream )
     }
 }
 
-[[nodiscard]] static inline auto read_tag_or_eof( istream & stream ) -> uint32_t
+[[nodiscard]] static inline auto read_tag_or_eof( istream & stream ) -> tag_type
 {
     auto byte_or_eof = stream.read_byte_or_eof( );
     if( byte_or_eof < 0 )
-    {
-        return 0;
-    }
+        return tag_type::invalid;
+
     auto byte = uint8_t( byte_or_eof );
     auto tag  = uint32_t( byte & 0x7F );
 
@@ -172,9 +171,10 @@ static inline void check_if_empty( istream & stream )
         tag |= uint64_t( byte & 0x7F ) << shift;
     }
 
-    check_tag( tag );
+    const auto result = tag_type( tag );
+    check_tag( result );
 
-    return tag;
+    return result;
 }
 
 template < typename T >
@@ -605,9 +605,11 @@ static inline void deserialize_as( istream & stream, std::map< keyT, valueT > & 
     auto value_defined = false;
     while( !stream.empty( ) )
     {
-        const auto tag          = read_varint< uint32_t >( stream );
+        const auto tag          = tag_type( read_varint< uint32_t >( stream ) );
         const auto field_number = field_from_tag( tag );
         const auto field_type   = wire_type_from_tag( tag );
+
+        check_tag( tag );
 
         switch( field_number )
         {
@@ -688,10 +690,9 @@ static inline void deserialize_main( istream & stream, spb::detail::proto_messag
     for( ;; )
     {
         const auto tag = read_tag_or_eof( stream );
-        if( !tag )
-        {
+        if( tag == tag_type::invalid )
             break;
-        }
+
         const auto field_type = wire_type_from_tag( tag );
 
         if( field_type == wire_type::length_delimited )
@@ -715,8 +716,9 @@ static inline void deserialize( istream & stream, spb::detail::proto_message aut
 
     while( !stream.empty( ) )
     {
-        const auto tag        = read_varint< uint32_t >( stream );
+        const auto tag        = tag_type( read_varint< uint32_t >( stream ) );
         const auto field_type = wire_type_from_tag( tag );
+        check_tag( tag );
 
         if( field_type == wire_type::length_delimited )
         {

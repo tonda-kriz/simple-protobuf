@@ -15,6 +15,10 @@
 
 namespace spb::pb::detail
 {
+enum class tag_type : uint32_t
+{
+    invalid = 0
+};
 
 //- https://protobuf.dev/programming-guides/encoding/
 enum class wire_type : uint8_t

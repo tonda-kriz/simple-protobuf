@@ -233,13 +233,13 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_file & file,
     if( message.fields.empty( ) && message.maps.empty( ) && message.oneofs.empty( ) )
     {
         stream << "void deserialize_value( detail::istream & stream, " << full_name
-               << " &, uint32_t tag )\n{\n";
+               << " &, tag_type tag )\n{\n";
         stream << "\tstream.skip( wire_type_from_tag( tag ) );\n}\n\n";
         return;
     }
 
     stream << "void deserialize_value( detail::istream & stream, " << full_name
-           << " & value, uint32_t tag )\n{\n"
+           << " & value, tag_type tag )\n{\n"
            << "\tconst auto type = wire_type_from_tag( tag );\n";
 
     stream << "\tswitch( field_from_tag( tag ) )\n\t{\n";
