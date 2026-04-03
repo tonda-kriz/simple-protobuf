@@ -468,6 +468,9 @@ static inline void deserialize( istream & stream, spb::detail::proto_field_strin
                                 const field_attributes & field )
 {
     check_wire_type( field.type, wire_type::length_delimited );
+    if( field.max_size && stream.size( ) > field.max_size )
+        throw std::length_error( "string is too large" );
+
     if constexpr( spb::detail::proto_field_string_resizable< decltype( value ) > )
     {
         value.resize( stream.size( ) );
@@ -495,6 +498,9 @@ static inline void deserialize( istream & stream, spb::detail::proto_field_bytes
                                 const field_attributes & field )
 {
     check_wire_type( field.type, wire_type::length_delimited );
+    if( field.max_size && stream.size( ) > field.max_size )
+        throw std::length_error( "bytes is too large" );
+
     if constexpr( spb::detail::proto_field_bytes_resizable< decltype( value ) > )
     {
         value.resize( stream.size( ) );

@@ -276,23 +276,29 @@ static inline void serialize( ostream & stream,
 static inline void serialize( ostream & stream, const spb::detail::proto_field_string auto & value,
                               const field_attributes & field )
 {
-    if( !value.empty( ) )
-    {
-        serialize_key( stream, field.name );
-        serialize( stream, value );
-    }
+    if( value.empty( ) )
+        return;
+
+    if( field.max_size && value.size( ) > field.max_size )
+        throw std::length_error( "string is too large" );
+
+    serialize_key( stream, field.name );
+    serialize( stream, value );
 }
 
 static inline void serialize( ostream & stream, const spb::detail::proto_field_bytes auto & value,
                               const field_attributes & field )
 {
-    if( !value.empty( ) )
-    {
-        serialize_key( stream, field.name );
-        stream.write( '"' );
-        base64_encode( stream, value );
-        stream.write( '"' );
-    }
+    if( value.empty( ) )
+        return;
+
+    if( field.max_size && value.size( ) > field.max_size )
+        throw std::length_error( "bytes is too large" );
+
+    serialize_key( stream, field.name );
+    stream.write( '"' );
+    base64_encode( stream, value );
+    stream.write( '"' );
 }
 static inline void serialize( ostream & stream,
                               const spb::detail::proto_label_repeated auto & value,

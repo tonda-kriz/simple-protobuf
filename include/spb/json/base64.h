@@ -64,7 +64,7 @@ static inline void base64_encode( ostream & output, std::span< const std::byte >
 
 template < typename istream >
 static inline void base64_decode_string( spb::detail::proto_field_bytes auto & output,
-                                         istream & stream )
+                                         istream & stream, size_t max_output_size = 0 )
 {
     static constexpr uint8_t decode_table[ 256 ] = {
         128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,
@@ -127,6 +127,9 @@ static inline void base64_decode_string( spb::detail::proto_field_bytes auto & o
 
             if constexpr( spb::detail::proto_field_bytes_resizable< decltype( output ) > )
             {
+                if( max_output_size && ( output.size( ) + out_length > max_output_size ) )
+                    throw std::length_error( "bytes is too large" );
+
                 output.resize( output.size( ) + out_length );
             }
             else
@@ -185,6 +188,9 @@ static inline void base64_decode_string( spb::detail::proto_field_bytes auto & o
             stream.skip( 5 );
             if constexpr( spb::detail::proto_field_bytes_resizable< decltype( output ) > )
             {
+                if( max_output_size && ( output.size( ) + consumed_bytes > max_output_size ) )
+                    throw std::length_error( "bytes is too large" );
+
                 output.resize( output.size( ) + consumed_bytes );
             }
             else

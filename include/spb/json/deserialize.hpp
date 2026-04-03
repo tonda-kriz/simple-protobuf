@@ -388,7 +388,7 @@ static inline auto unescape( istream & stream, char utf8[ 4 ] ) -> uint32_t
 }
 
 static inline void deserialize( istream & stream, spb::detail::proto_field_string auto & value,
-                                const field_attributes & = {} )
+                                const field_attributes & field = {} )
 {
     if( stream.current_char( ) != '"' )
     {
@@ -404,6 +404,9 @@ static inline void deserialize( istream & stream, spb::detail::proto_field_strin
     auto index           = size_t( 0 );
     auto append_to_value = [ & ]( const char * str, size_t size )
     {
+        if( field.max_size && ( value.size( ) + size > field.max_size ) )
+            throw std::length_error( "string is too large" );
+
         if constexpr( spb::detail::proto_field_string_resizable< decltype( value ) > )
         {
             value.append( str, size );
@@ -583,7 +586,7 @@ static inline void deserialize( istream & stream, C & value, const field_attribu
 }
 
 static inline void deserialize( istream & stream, spb::detail::proto_field_bytes auto & value,
-                                const field_attributes & = {} )
+                                const field_attributes & field = {} )
 {
     if( stream.consume( "null"sv ) )
     {
@@ -591,7 +594,7 @@ static inline void deserialize( istream & stream, spb::detail::proto_field_bytes
         return;
     }
 
-    base64_decode_string( value, stream );
+    base64_decode_string( value, stream, field.max_size );
 }
 
 template < typename T >

@@ -119,12 +119,20 @@ message MaxCountMsgCommentPerson {
 }
 
 
+message MaxSizeOptString {
+    optional string value = 1;
+}
+
 message MaxSizeOptStringField {
     optional string value = 1 [(spb).max_size = 4];
 }
 
 message MaxSizeReqStringField {
     required string value = 1 [(spb).max_size = 4];
+}
+
+message MaxSizeOptBytes {
+    optional bytes value = 1;
 }
 
 message MaxSizeOptBytesField {
