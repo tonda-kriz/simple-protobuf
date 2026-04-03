@@ -7,6 +7,7 @@
 #include <person.pb.h>
 #include <proto/array.pb.h>
 #include <proto/enum.pb.h>
+#include <proto/options.pb.h>
 #include <proto/simd.pb.h>
 #include <reserved.pb.h>
 #include <scalar.pb.h>
@@ -50,6 +51,11 @@ auto operator==( const Test::Name & lhs, const Test::Name & rhs ) noexcept -> bo
 auto operator==( const Test::Variant & lhs, const Test::Variant & rhs ) noexcept -> bool
 {
     return lhs.oneof_field == rhs.oneof_field;
+}
+
+auto operator==( const TestPerson & lhs, const TestPerson & rhs ) noexcept -> bool
+{
+    return lhs.value == rhs.value;
 }
 
 }// namespace Test
@@ -146,7 +152,8 @@ template < spb::pb::detail::scalar_encoder encoder, typename T >
 auto pb_serialize_as( const T & value ) -> std::string
 {
     auto size_stream = spb::pb::detail::ostream( nullptr );
-    spb::pb::detail::serialize_as< encoder >( size_stream, 1, value );
+    spb::pb::detail::serialize_as< encoder >( size_stream, spb::pb::detail::field_attributes{ 1 },
+                                              value );
     const auto size = size_stream.size( );
     auto result     = std::string( size, '\0' );
     auto writer     = [ ptr = result.data( ) ]( const void * data, size_t size ) mutable
@@ -155,7 +162,8 @@ auto pb_serialize_as( const T & value ) -> std::string
         ptr += size;
     };
     auto stream = spb::pb::detail::ostream( writer );
-    spb::pb::detail::serialize_as< encoder >( stream, 1, value );
+    spb::pb::detail::serialize_as< encoder >( stream, spb::pb::detail::field_attributes{ 1 },
+                                              value );
     return result;
 }
 
@@ -207,7 +215,7 @@ template < typename T >
 void json_test( const T & value, std::string_view json )
 {
     {
-        auto serialized = spb::json::serialize< std::vector< std::byte > >( value );
+        auto serialized = spb::json::serialize< std::string >( value );
         CHECK( serialized.size( ) == json.size( ) );
         auto js = std::string_view( ( char * ) serialized.data( ), serialized.size( ) );
         CHECK( js == json );
@@ -268,6 +276,222 @@ using namespace std::literals;
 
 TEST_CASE( "protobuf" )
 {
+    SUBCASE( "options" )
+    {
+        SUBCASE( "max_count" )
+        {
+            CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
+                Test::MaxCountFieldIntPacked{ .value = { 0, 1, 2, 3, 4 } } ) );
+            pb_json_test( Test::MaxCountFieldIntPacked{ .value = { 0, 1, 2, 3 } },
+                          "\x0a\x04\x00\x01\x02\x03"sv, R"({"value":[0,1,2,3]})" );
+
+            CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
+                Test::MaxCountFieldInt{ .value = { 0, 1, 2, 3, 4 } } ) );
+            pb_json_test( Test::MaxCountFieldInt{ .value = { 0, 1, 2, 3 } },
+                          "\x08\x00\x08\x01\x08\x02\x08\x03"sv, R"({"value":[0,1,2,3]})" );
+
+            CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
+                Test::MaxCountMsgCommentInt{ .value = { 0, 1, 2, 3, 4 } } ) );
+            pb_json_test( Test::MaxCountMsgCommentInt{ .value = { 0, 1, 2, 3 } },
+                          "\x08\x00\x08\x01\x08\x02\x08\x03"sv, R"({"value":[0,1,2,3]})" );
+
+            CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
+                Test::MaxCountFieldCommentIntPacked{ .value = { 0, 1, 2, 3, 4 } } ) );
+            pb_json_test( Test::MaxCountFieldCommentIntPacked{ .value = { 0, 1, 2, 3 } },
+                          "\x0a\x04\x00\x01\x02\x03"sv, R"({"value":[0,1,2,3]})" );
+
+            CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
+                Test::MaxCountMsgIntPacked{ .value = { 0, 1, 2, 3, 4 } } ) );
+            pb_json_test( Test::MaxCountMsgIntPacked{ .value = { 0, 1, 2, 3 } },
+                          "\x0a\x04\x00\x01\x02\x03"sv, R"({"value":[0,1,2,3]})" );
+
+            CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
+                Test::MaxCountFieldString{ .value = { "0", "1", "2", "3", "4" } } ) );
+            pb_json_test( Test::MaxCountFieldString{ .value = { "0", "1", "2", "3" } },
+                          "\x0a\x01\x30\x0a\x01\x31\x0a\x01\x32\x0a\x01\x33"sv,
+                          R"({"value":["0","1","2","3"]})" );
+
+            CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
+                Test::MaxCountMsgCommentString{ .value = { "0", "1", "2", "3", "4" } } ) );
+            pb_json_test( Test::MaxCountMsgCommentString{ .value = { "0", "1", "2", "3" } },
+                          "\x0a\x01\x30\x0a\x01\x31\x0a\x01\x32\x0a\x01\x33"sv,
+                          R"({"value":["0","1","2","3"]})" );
+
+            CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
+                Test::MaxCountMsgString{ .value = { "0", "1", "2", "3", "4" } } ) );
+            pb_json_test( Test::MaxCountMsgString{ .value = { "0", "1", "2", "3" } },
+                          "\x0a\x01\x30\x0a\x01\x31\x0a\x01\x32\x0a\x01\x33"sv,
+                          R"({"value":["0","1","2","3"]})" );
+
+            CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
+                Test::MaxCountFieldCommentString{ .value = { "0", "1", "2", "3", "4" } } ) );
+            pb_json_test( Test::MaxCountFieldCommentString{ .value = { "0", "1", "2", "3" } },
+                          "\x0a\x01\x30\x0a\x01\x31\x0a\x01\x32\x0a\x01\x33"sv,
+                          R"({"value":["0","1","2","3"]})" );
+
+            CHECK_THROWS( ( void ) spb::pb::serialize< std::string >( Test::MaxCountFieldBytes{
+                .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ), to_bytes( "3" ),
+                           to_bytes( "4" ) } } ) );
+            pb_json_test(
+                Test::MaxCountFieldBytes{
+                    .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ), to_bytes( "3" ) },
+                },
+                "\x0a\x01\x30\x0a\x01\x31\x0a\x01\x32\x0a\x01\x33"sv,
+                R"({"value":["MA==","MQ==","Mg==","Mw=="]})" );
+
+            CHECK_THROWS( ( void ) spb::pb::serialize< std::string >( Test::MaxCountMsgCommentBytes{
+                .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ), to_bytes( "3" ),
+                           to_bytes( "4" ) } } ) );
+            pb_json_test(
+                Test::MaxCountMsgCommentBytes{
+                    .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ), to_bytes( "3" ) },
+                },
+                "\x0a\x01\x30\x0a\x01\x31\x0a\x01\x32\x0a\x01\x33"sv,
+                R"({"value":["MA==","MQ==","Mg==","Mw=="]})" );
+
+            CHECK_THROWS( ( void ) spb::pb::serialize< std::string >( Test::MaxCountMsgbytes{
+                .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ), to_bytes( "3" ),
+                           to_bytes( "4" ) } } ) );
+            pb_json_test(
+                Test::MaxCountMsgbytes{
+                    .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ), to_bytes( "3" ) },
+                },
+                "\x0a\x01\x30\x0a\x01\x31\x0a\x01\x32\x0a\x01\x33"sv,
+                R"({"value":["MA==","MQ==","Mg==","Mw=="]})" );
+
+            CHECK_THROWS(
+                ( void ) spb::pb::serialize< std::string >( Test::MaxCountFieldCommentBytes{
+                    .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ), to_bytes( "3" ),
+                               to_bytes( "4" ) } } ) );
+            pb_json_test(
+                Test::MaxCountFieldCommentBytes{
+                    .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ), to_bytes( "3" ) },
+                },
+                "\x0a\x01\x30\x0a\x01\x31\x0a\x01\x32\x0a\x01\x33"sv,
+                R"({"value":["MA==","MQ==","Mg==","Mw=="]})" );
+
+            const auto person = Test::TestPerson{ .value = "3" };
+            CHECK_THROWS( ( void ) spb::pb::serialize< std::string >( Test::MaxCountFieldPerson{
+                .value = { person, person, person, person, person } } ) );
+            pb_json_test(
+                Test::MaxCountFieldPerson{
+                    .value = { person, person, person, person },
+                },
+                "\x0a\x03\x0a\x01\x33\x0a\x03\x0a\x01\x33\x0a\x03\x0a\x01\x33\x0a\x03\x0a\x01\x33"sv,
+                R"({"value":[{"value":"3"},{"value":"3"},{"value":"3"},{"value":"3"}]})" );
+
+            CHECK_THROWS(
+                ( void ) spb::pb::serialize< std::string >( Test::MaxCountFieldCommentPerson{
+                    .value = { person, person, person, person, person } } ) );
+            pb_json_test(
+                Test::MaxCountFieldCommentPerson{
+                    .value = { person, person, person, person },
+                },
+                "\x0a\x03\x0a\x01\x33\x0a\x03\x0a\x01\x33\x0a\x03\x0a\x01\x33\x0a\x03\x0a\x01\x33"sv,
+                R"({"value":[{"value":"3"},{"value":"3"},{"value":"3"},{"value":"3"}]})" );
+
+            CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
+                Test::MaxCountMsgPerson{ .value = { person, person, person, person, person } } ) );
+            pb_json_test(
+                Test::MaxCountMsgPerson{
+                    .value = { person, person, person, person },
+                },
+                "\x0a\x03\x0a\x01\x33\x0a\x03\x0a\x01\x33\x0a\x03\x0a\x01\x33\x0a\x03\x0a\x01\x33"sv,
+                R"({"value":[{"value":"3"},{"value":"3"},{"value":"3"},{"value":"3"}]})" );
+
+            CHECK_THROWS(
+                ( void ) spb::pb::serialize< std::string >( Test::MaxCountMsgCommentPerson{
+                    .value = { person, person, person, person, person } } ) );
+            pb_json_test(
+                Test::MaxCountMsgCommentPerson{
+                    .value = { person, person, person, person },
+                },
+                "\x0a\x03\x0a\x01\x33\x0a\x03\x0a\x01\x33\x0a\x03\x0a\x01\x33\x0a\x03\x0a\x01\x33"sv,
+                R"({"value":[{"value":"3"},{"value":"3"},{"value":"3"},{"value":"3"}]})" );
+        }
+        SUBCASE( "max_size" )
+        {
+            CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
+                Test::MaxSizeOptStringField{ .value = "01234" } ) );
+            pb_json_test( Test::MaxSizeOptStringField{ .value = "0123" },
+                          "\x0a\x04\x30\x31\x32\x33"sv, R"({"value":"0123"})" );
+
+            CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
+                Test::MaxSizeReqStringField{ .value = "01234" } ) );
+            pb_json_test( Test::MaxSizeReqStringField{ .value = "0123" },
+                          "\x0a\x04\x30\x31\x32\x33"sv, R"({"value":"0123"})" );
+
+            CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
+                Test::MaxSizeOptBytesField{ .value = to_bytes( "01234" ) } ) );
+            pb_json_test( Test::MaxSizeOptBytesField{ .value = to_bytes( "0123" ) },
+                          "\x0a\x04\x30\x31\x32\x33"sv, R"({"value":"MDEyMw=="})" );
+
+            CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
+                Test::MaxSizeReqBytesField{ .value = to_bytes( "01234" ) } ) );
+            pb_json_test( Test::MaxSizeReqBytesField{ .value = to_bytes( "0123" ) },
+                          "\x0a\x04\x30\x31\x32\x33"sv, R"({"value":"MDEyMw=="})" );
+
+            CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
+                Test::MaxSizeOptStringComment{ .value = "01234" } ) );
+            pb_json_test( Test::MaxSizeOptStringComment{ .value = "0123" },
+                          "\x0a\x04\x30\x31\x32\x33"sv, R"({"value":"0123"})" );
+
+            CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
+                Test::MaxSizeReqStringComment{ .value = "01234" } ) );
+            pb_json_test( Test::MaxSizeReqStringComment{ .value = "0123" },
+                          "\x0a\x04\x30\x31\x32\x33"sv, R"({"value":"0123"})" );
+
+            CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
+                Test::MaxSizeOptBytesComment{ .value = to_bytes( "01234" ) } ) );
+            pb_json_test( Test::MaxSizeOptBytesComment{ .value = to_bytes( "0123" ) },
+                          "\x0a\x04\x30\x31\x32\x33"sv, R"({"value":"MDEyMw=="})" );
+
+            CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
+                Test::MaxSizeReqBytesComment{ .value = to_bytes( "01234" ) } ) );
+            pb_json_test( Test::MaxSizeReqBytesComment{ .value = to_bytes( "0123" ) },
+                          "\x0a\x04\x30\x31\x32\x33"sv, R"({"value":"MDEyMw=="})" );
+
+            CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
+                Test::MaxSizeOptStringMsg{ .value = "01234" } ) );
+            pb_json_test( Test::MaxSizeOptStringMsg{ .value = "0123" },
+                          "\x0a\x04\x30\x31\x32\x33"sv, R"({"value":"0123"})" );
+
+            CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
+                Test::MaxSizeReqStringMsg{ .value = "01234" } ) );
+            pb_json_test( Test::MaxSizeReqStringMsg{ .value = "0123" },
+                          "\x0a\x04\x30\x31\x32\x33"sv, R"({"value":"0123"})" );
+
+            CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
+                Test::MaxSizeOptBytesMsg{ .value = to_bytes( "01234" ) } ) );
+            pb_json_test( Test::MaxSizeOptBytesMsg{ .value = to_bytes( "0123" ) },
+                          "\x0a\x04\x30\x31\x32\x33"sv, R"({"value":"MDEyMw=="})" );
+
+            CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
+                Test::MaxSizeReqBytesMsg{ .value = to_bytes( "01234" ) } ) );
+            pb_json_test( Test::MaxSizeReqBytesMsg{ .value = to_bytes( "0123" ) },
+                          "\x0a\x04\x30\x31\x32\x33"sv, R"({"value":"MDEyMw=="})" );
+
+            CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
+                Test::MaxSizeOptStringMsgComment{ .value = "01234" } ) );
+            pb_json_test( Test::MaxSizeOptStringMsgComment{ .value = "0123" },
+                          "\x0a\x04\x30\x31\x32\x33"sv, R"({"value":"0123"})" );
+
+            CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
+                Test::MaxSizeReqStringMsgComment{ .value = "01234" } ) );
+            pb_json_test( Test::MaxSizeReqStringMsgComment{ .value = "0123" },
+                          "\x0a\x04\x30\x31\x32\x33"sv, R"({"value":"0123"})" );
+
+            CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
+                Test::MaxSizeOptBytesMsgComment{ .value = to_bytes( "01234" ) } ) );
+            pb_json_test( Test::MaxSizeOptBytesMsgComment{ .value = to_bytes( "0123" ) },
+                          "\x0a\x04\x30\x31\x32\x33"sv, R"({"value":"MDEyMw=="})" );
+
+            CHECK_THROWS( ( void ) spb::pb::serialize< std::string >(
+                Test::MaxSizeReqBytesMsgComment{ .value = to_bytes( "01234" ) } ) );
+            pb_json_test( Test::MaxSizeReqBytesMsgComment{ .value = to_bytes( "0123" ) },
+                          "\x0a\x04\x30\x31\x32\x33"sv, R"({"value":"MDEyMw=="})" );
+        }
+    }
     SUBCASE( "tag" )
     {
         SUBCASE( "large field numbers" )
@@ -291,7 +515,7 @@ TEST_CASE( "protobuf" )
             }
             SUBCASE( "optional" )
             {
-                pb_json_test( Test::Scalar::OptEnumAlias{ }, "", "{}" );
+                pb_json_test( Test::Scalar::OptEnumAlias{}, "", "{}" );
                 pb_json_test(
                     Test::Scalar::OptEnumAlias{ .value =
                                                     Test::Scalar::OptEnumAlias::Enum::EAA_STARTED },
@@ -299,7 +523,7 @@ TEST_CASE( "protobuf" )
             }
             SUBCASE( "repeated" )
             {
-                pb_json_test( Test::Scalar::RepEnumAlias{ }, "", "{}" );
+                pb_json_test( Test::Scalar::RepEnumAlias{}, "", "{}" );
                 pb_json_test(
                     Test::Scalar::RepEnumAlias{
                         .value = { Test::Scalar::RepEnumAlias::Enum::EAA_STARTED } },
@@ -316,7 +540,7 @@ TEST_CASE( "protobuf" )
     {
         SUBCASE( "required" )
         {
-            pb_json_test( Test::Scalar::ReqString{ }, "", "{}" );
+            pb_json_test( Test::Scalar::ReqString{}, "", "{}" );
             pb_json_test( Test::Scalar::ReqString{ .value = "hello" }, "\x0a\x05hello",
                           R"({"value":"hello"})" );
             CHECK_THROWS(
@@ -358,7 +582,7 @@ TEST_CASE( "protobuf" )
         }
         SUBCASE( "optional" )
         {
-            pb_json_test( Test::Scalar::OptString{ }, "", "{}" );
+            pb_json_test( Test::Scalar::OptString{}, "", "{}" );
             pb_json_test( Test::Scalar::OptString{ .value = "hello" }, "\x0a\x05hello",
                           R"({"value":"hello"})" );
             CHECK_THROWS(
@@ -366,7 +590,7 @@ TEST_CASE( "protobuf" )
         }
         SUBCASE( "repeated" )
         {
-            pb_json_test( Test::Scalar::RepString{ }, "", "{}" );
+            pb_json_test( Test::Scalar::RepString{}, "", "{}" );
             pb_json_test( Test::Scalar::RepString{ .value = { "hello" } }, "\x0a\x05hello",
                           R"({"value":["hello"]})" );
             pb_json_test( Test::Scalar::RepString{ .value = { "hello", "world" } },
@@ -395,7 +619,7 @@ TEST_CASE( "protobuf" )
             }
             SUBCASE( "optional" )
             {
-                pb_json_test( Test::Scalar::OptStringFixed{ }, "", "{}" );
+                pb_json_test( Test::Scalar::OptStringFixed{}, "", "{}" );
                 pb_json_test( Test::Scalar::OptStringFixed{ .value = to_string( "hello1" ) },
                               "\x0a\x06hello1", R"({"value":"hello1"})" );
                 CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::OptStringFixed >(
@@ -407,7 +631,7 @@ TEST_CASE( "protobuf" )
             }
             SUBCASE( "repeated" )
             {
-                pb_json_test( Test::Scalar::RepStringFixed{ }, "", "{}" );
+                pb_json_test( Test::Scalar::RepStringFixed{}, "", "{}" );
                 pb_json_test( Test::Scalar::RepStringFixed{ .value = { to_string( "hello1" ) } },
                               "\x0a\x06hello1", R"({"value":["hello1"]})" );
                 pb_json_test( Test::Scalar::RepStringFixed{ .value = { to_string( "hello1" ),
@@ -424,7 +648,7 @@ TEST_CASE( "protobuf" )
     {
         SUBCASE( "required" )
         {
-            pb_json_test( Test::Scalar::ReqBool{ }, "\x08\x00"sv, R"({"value":false})" );
+            pb_json_test( Test::Scalar::ReqBool{}, "\x08\x00"sv, R"({"value":false})" );
             pb_json_test( Test::Scalar::ReqBool{ .value = true }, "\x08\x01", R"({"value":true})" );
             pb_json_test( Test::Scalar::ReqBool{ .value = false }, "\x08\x00"sv,
                           R"({"value":false})" );
@@ -434,14 +658,14 @@ TEST_CASE( "protobuf" )
         }
         SUBCASE( "optional" )
         {
-            pb_json_test( Test::Scalar::OptBool{ }, "", "{}" );
+            pb_json_test( Test::Scalar::OptBool{}, "", "{}" );
             pb_json_test( Test::Scalar::OptBool{ .value = true }, "\x08\x01", R"({"value":true})" );
             pb_json_test( Test::Scalar::OptBool{ .value = false }, "\x08\x00"sv,
                           R"({"value":false})" );
         }
         SUBCASE( "repeated" )
         {
-            pb_json_test( Test::Scalar::RepBool{ }, "", "{}" );
+            pb_json_test( Test::Scalar::RepBool{}, "", "{}" );
             pb_json_test( Test::Scalar::RepBool{ .value = { true } }, "\x08\x01",
                           R"({"value":[true]})" );
             pb_json_test( Test::Scalar::RepBool{ .value = { true, false } }, "\x08\x01\x08\x00"sv,
@@ -452,7 +676,7 @@ TEST_CASE( "protobuf" )
 
             SUBCASE( "packed" )
             {
-                pb_json_test( Test::Scalar::RepPackBool{ }, "", "{}" );
+                pb_json_test( Test::Scalar::RepPackBool{}, "", "{}" );
                 pb_json_test( Test::Scalar::RepPackBool{ .value = { true } }, "\x0a\x01\x01",
                               R"({"value":[true]})" );
                 pb_json_test( Test::Scalar::RepPackBool{ .value = { true, false } },
@@ -474,13 +698,13 @@ TEST_CASE( "protobuf" )
         }
         SUBCASE( "optional" )
         {
-            pb_json_test( Test::Scalar::OptEnum{ }, "", "{}" );
+            pb_json_test( Test::Scalar::OptEnum{}, "", "{}" );
             pb_json_test( Test::Scalar::OptEnum{ .value = Test::Scalar::OptEnum::Enum::Enum_value },
                           "\x08\x01", R"({"value":"Enum_value"})" );
         }
         SUBCASE( "repeated" )
         {
-            pb_json_test( Test::Scalar::RepEnum{ }, "", "{}" );
+            pb_json_test( Test::Scalar::RepEnum{}, "", "{}" );
             pb_json_test(
                 Test::Scalar::RepEnum{ .value = { Test::Scalar::RepEnum::Enum::Enum_value } },
                 "\x08\x01", R"({"value":["Enum_value"]})" );
@@ -494,7 +718,7 @@ TEST_CASE( "protobuf" )
 
             SUBCASE( "packed" )
             {
-                pb_json_test( Test::Scalar::RepPackEnum{ }, "", "{}" );
+                pb_json_test( Test::Scalar::RepPackEnum{}, "", "{}" );
                 pb_json_test(
                     Test::Scalar::RepPackEnum{
                         .value = { Test::Scalar::RepPackEnum::Enum::Enum_value } },
@@ -570,7 +794,7 @@ TEST_CASE( "protobuf" )
             }
             SUBCASE( "optional" )
             {
-                pb_json_test( Test::Scalar::OptInt32{ }, "", "{}" );
+                pb_json_test( Test::Scalar::OptInt32{}, "", "{}" );
                 pb_json_test( Test::Scalar::OptInt32{ .value = 0x42 }, "\x08\x42",
                               R"({"value":66})" );
                 pb_json_test( Test::Scalar::OptInt32{ .value = 0xff }, "\x08\xff\x01",
@@ -580,7 +804,7 @@ TEST_CASE( "protobuf" )
             }
             SUBCASE( "repeated" )
             {
-                pb_json_test( Test::Scalar::RepInt32{ }, "", "{}" );
+                pb_json_test( Test::Scalar::RepInt32{}, "", "{}" );
                 pb_json_test( Test::Scalar::RepInt32{ .value = { 0x42 } }, "\x08\x42",
                               R"({"value":[66]})" );
                 pb_json_test( Test::Scalar::RepInt32{ .value = { 0x42, 0x3 } }, "\x08\x42\x08\x03",
@@ -589,7 +813,7 @@ TEST_CASE( "protobuf" )
 
                 SUBCASE( "packed" )
                 {
-                    pb_json_test( Test::Scalar::RepPackInt32{ }, "", "{}" );
+                    pb_json_test( Test::Scalar::RepPackInt32{}, "", "{}" );
                     pb_json_test( Test::Scalar::RepPackInt32{ .value = { 0x42 } }, "\x0a\x01\x42",
                                   R"({"value":[66]})" );
                     pb_json_test( Test::Scalar::RepPackInt32{ .value = { 0x42, 0x3 } },
@@ -651,7 +875,7 @@ TEST_CASE( "protobuf" )
             }
             SUBCASE( "optional" )
             {
-                pb_json_test( Test::Scalar::OptUint32{ }, "", "{}" );
+                pb_json_test( Test::Scalar::OptUint32{}, "", "{}" );
                 pb_json_test( Test::Scalar::OptUint32{ .value = 0x42 }, "\x08\x42",
                               R"({"value":66})" );
                 pb_json_test( Test::Scalar::OptUint32{ .value = 0xff }, "\x08\xff\x01",
@@ -659,7 +883,7 @@ TEST_CASE( "protobuf" )
             }
             SUBCASE( "repeated" )
             {
-                pb_json_test( Test::Scalar::RepUint32{ }, "", "{}" );
+                pb_json_test( Test::Scalar::RepUint32{}, "", "{}" );
                 pb_json_test( Test::Scalar::RepUint32{ .value = { 0x42 } }, "\x08\x42",
                               R"({"value":[66]})" );
                 pb_json_test( Test::Scalar::RepUint32{ .value = { 0x42, 0x3 } }, "\x08\x42\x08\x03",
@@ -668,7 +892,7 @@ TEST_CASE( "protobuf" )
 
                 SUBCASE( "packed" )
                 {
-                    pb_json_test( Test::Scalar::RepPackUint32{ }, "", "{}" );
+                    pb_json_test( Test::Scalar::RepPackUint32{}, "", "{}" );
                     pb_json_test( Test::Scalar::RepPackUint32{ .value = { 0x42 } }, "\x0a\x01\x42",
                                   R"({"value":[66]})" );
                     pb_json_test( Test::Scalar::RepPackUint32{ .value = { 0x42, 0x3 } },
@@ -699,7 +923,7 @@ TEST_CASE( "protobuf" )
             }
             SUBCASE( "optional" )
             {
-                pb_json_test( Test::Scalar::OptInt64{ }, "", "{}" );
+                pb_json_test( Test::Scalar::OptInt64{}, "", "{}" );
                 pb_json_test( Test::Scalar::OptInt64{ .value = 0x42 }, "\x08\x42",
                               R"({"value":66})" );
                 pb_json_test( Test::Scalar::OptInt64{ .value = 0xff }, "\x08\xff\x01",
@@ -709,7 +933,7 @@ TEST_CASE( "protobuf" )
             }
             SUBCASE( "repeated" )
             {
-                pb_json_test( Test::Scalar::RepInt64{ }, "", "{}" );
+                pb_json_test( Test::Scalar::RepInt64{}, "", "{}" );
                 pb_json_test( Test::Scalar::RepInt64{ .value = { 0x42 } }, "\x08\x42",
                               R"({"value":[66]})" );
                 pb_json_test( Test::Scalar::RepInt64{ .value = { 0x42, 0x3 } }, "\x08\x42\x08\x03",
@@ -718,7 +942,7 @@ TEST_CASE( "protobuf" )
 
                 SUBCASE( "packed" )
                 {
-                    pb_json_test( Test::Scalar::RepPackInt64{ }, "", "{}" );
+                    pb_json_test( Test::Scalar::RepPackInt64{}, "", "{}" );
                     pb_json_test( Test::Scalar::RepPackInt64{ .value = { 0x42 } }, "\x0a\x01\x42",
                                   R"({"value":[66]})" );
                     pb_json_test( Test::Scalar::RepPackInt64{ .value = { 0x42, 0x3 } },
@@ -779,7 +1003,7 @@ TEST_CASE( "protobuf" )
             }
             SUBCASE( "optional" )
             {
-                pb_json_test( Test::Scalar::OptSint32{ }, "", "{}" );
+                pb_json_test( Test::Scalar::OptSint32{}, "", "{}" );
                 pb_json_test( Test::Scalar::OptSint32{ .value = 0x42 }, "\x08\x84\x01"sv,
                               R"({"value":66})" );
                 pb_json_test( Test::Scalar::OptSint32{ .value = 0xff }, "\x08\xfe\x03"sv,
@@ -789,7 +1013,7 @@ TEST_CASE( "protobuf" )
             }
             SUBCASE( "repeated" )
             {
-                pb_json_test( Test::Scalar::RepSint32{ }, "", "{}" );
+                pb_json_test( Test::Scalar::RepSint32{}, "", "{}" );
                 pb_json_test( Test::Scalar::RepSint32{ .value = { 0x42 } }, "\x08\x84\x01"sv,
                               R"({"value":[66]})" );
                 pb_json_test( Test::Scalar::RepSint32{ .value = { 0x42, -2 } },
@@ -829,7 +1053,7 @@ TEST_CASE( "protobuf" )
             }
             SUBCASE( "optional" )
             {
-                pb_json_test( Test::Scalar::OptSint64{ }, "", "{}" );
+                pb_json_test( Test::Scalar::OptSint64{}, "", "{}" );
                 pb_json_test( Test::Scalar::OptSint64{ .value = 0x42 }, "\x08\x84\x01"sv,
                               R"({"value":66})" );
                 pb_json_test( Test::Scalar::OptSint64{ .value = 0xff }, "\x08\xfe\x03"sv,
@@ -839,7 +1063,7 @@ TEST_CASE( "protobuf" )
             }
             SUBCASE( "repeated" )
             {
-                pb_json_test( Test::Scalar::RepSint64{ }, "", "{}" );
+                pb_json_test( Test::Scalar::RepSint64{}, "", "{}" );
                 pb_json_test( Test::Scalar::RepSint64{ .value = { 0x42 } }, "\x08\x84\x01"sv,
                               R"({"value":[66]})" );
                 pb_json_test( Test::Scalar::RepSint64{ .value = { 0x42, -2 } },
@@ -1538,7 +1762,7 @@ TEST_CASE( "protobuf" )
     {
         SUBCASE( "required" )
         {
-            pb_json_test( Test::Scalar::ReqBytes{ }, "", "{}" );
+            pb_json_test( Test::Scalar::ReqBytes{}, "", "{}" );
             pb_json_test( Test::Scalar::ReqBytes{ .value = to_bytes( "hello" ) }, "\x0a\x05hello"sv,
                           R"({"value":"aGVsbG8="})" );
             pb_json_test( Test::Scalar::ReqBytes{ .value = to_bytes( "\x00\x01\x02"sv ) },
@@ -1550,7 +1774,7 @@ TEST_CASE( "protobuf" )
         }
         SUBCASE( "optional" )
         {
-            pb_json_test( Test::Scalar::OptBytes{ }, "", "{}" );
+            pb_json_test( Test::Scalar::OptBytes{}, "", "{}" );
             pb_json_test( Test::Scalar::OptBytes{ .value = to_bytes( "hello" ) }, "\x0a\x05hello"sv,
                           R"({"value":"aGVsbG8="})" );
             pb_json_test( Test::Scalar::OptBytes{ .value = to_bytes( "\x00\x01\x02"sv ) },
@@ -1560,7 +1784,7 @@ TEST_CASE( "protobuf" )
         }
         SUBCASE( "repeated" )
         {
-            pb_json_test( Test::Scalar::RepBytes{ }, "", "{}" );
+            pb_json_test( Test::Scalar::RepBytes{}, "", "{}" );
             pb_json_test( Test::Scalar::RepBytes{ .value = { to_bytes( "hello" ) } },
                           "\x0a\x05hello"sv, R"({"value":["aGVsbG8="]})" );
             pb_json_test( Test::Scalar::RepBytes{ .value = { to_bytes( "\x00\x01\x02"sv ),
@@ -1575,7 +1799,7 @@ TEST_CASE( "protobuf" )
         {
             SUBCASE( "required" )
             {
-                pb_json_test( Test::Scalar::ReqBytesFixed{ },
+                pb_json_test( Test::Scalar::ReqBytesFixed{},
                               "\x0a\x08\x00\x00\x00\x00\x00\x00\x00\x00"sv,
                               R"({"value":"AAAAAAAAAAA="})" );
                 pb_json_test( Test::Scalar::ReqBytesFixed{ .value = to_array( "hello123" ) },
@@ -1587,7 +1811,7 @@ TEST_CASE( "protobuf" )
             }
             SUBCASE( "optional" )
             {
-                pb_json_test( Test::Scalar::OptBytesFixed{ }, "", "{}" );
+                pb_json_test( Test::Scalar::OptBytesFixed{}, "", "{}" );
                 pb_json_test( Test::Scalar::OptBytesFixed{ .value = to_array( "hello123" ) },
                               "\x0a\x08hello123"sv, R"({"value":"aGVsbG8xMjM="})" );
                 CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::OptBytesFixed >(
@@ -1597,7 +1821,7 @@ TEST_CASE( "protobuf" )
             }
             SUBCASE( "repeated" )
             {
-                pb_json_test( Test::Scalar::RepBytesFixed{ }, "", "{}" );
+                pb_json_test( Test::Scalar::RepBytesFixed{}, "", "{}" );
                 pb_json_test( Test::Scalar::RepBytesFixed{ .value = { to_array( "hello123" ) } },
                               "\x0a\x08hello123"sv, R"({"value":["aGVsbG8xMjM="]})" );
                 pb_json_test( Test::Scalar::RepBytesFixed{ .value = { to_array( "hello123" ),
@@ -1700,7 +1924,7 @@ TEST_CASE( "protobuf" )
     }
     SUBCASE( "name" )
     {
-        pb_json_test( Test::Name{ }, "", "{}" );
+        pb_json_test( Test::Name{}, "", "{}" );
     }
     SUBCASE( "reserved" )
     {
@@ -1710,7 +1934,7 @@ TEST_CASE( "protobuf" )
     }
     SUBCASE( "simd" )
     {
-        auto data             = UnitTest::simd::Data{ };
+        auto data             = UnitTest::simd::Data{};
         data.coordinates[ 0 ] = 0;
         data.coordinates[ 1 ] = 1;
         data.coordinates[ 2 ] = 2;
@@ -1747,7 +1971,7 @@ TEST_CASE( "protobuf" )
             SUBCASE( "required" )
             {
                 CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x0a\x05hello"sv ) ==
-                       Test::Scalar::Simple{ } );
+                       Test::Scalar::Simple{} );
                 CHECK_NOTHROW(
                     ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x0a\x05hello"sv ) );
                 CHECK_THROWS(
@@ -1756,7 +1980,7 @@ TEST_CASE( "protobuf" )
             SUBCASE( "repeated" )
             {
                 CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
-                           "\x0a\x05hello\x0a\x05world"sv ) == Test::Scalar::Simple{ } );
+                           "\x0a\x05hello\x0a\x05world"sv ) == Test::Scalar::Simple{} );
                 CHECK_NOTHROW( ( void ) spb::pb::deserialize< Test::Scalar::Empty >(
                     "\x0a\x05hello\x0a\x05world"sv ) );
                 CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >(
@@ -1768,14 +1992,14 @@ TEST_CASE( "protobuf" )
             SUBCASE( "required" )
             {
                 CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x08\x01"sv ) ==
-                       Test::Scalar::Simple{ } );
+                       Test::Scalar::Simple{} );
                 CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x08\x00"sv ) ==
-                       Test::Scalar::Simple{ } );
+                       Test::Scalar::Simple{} );
             }
             SUBCASE( "repeated" )
             {
                 CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x08\x01\x08\x00"sv ) ==
-                       Test::Scalar::Simple{ } );
+                       Test::Scalar::Simple{} );
                 CHECK_THROWS(
                     ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x08\x01\x08"sv ) );
             }
@@ -1787,11 +2011,11 @@ TEST_CASE( "protobuf" )
                 SUBCASE( "required" )
                 {
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x08\x42"sv ) ==
-                           Test::Scalar::Simple{ } );
+                           Test::Scalar::Simple{} );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x08\xff\x01"sv ) ==
-                           Test::Scalar::Simple{ } );
+                           Test::Scalar::Simple{} );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
-                               "\x08\xfe\xff\xff\xff\x0f"sv ) == Test::Scalar::Simple{ } );
+                               "\x08\xfe\xff\xff\xff\x0f"sv ) == Test::Scalar::Simple{} );
                     CHECK_THROWS(
                         ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x08"sv ) );
                     CHECK_THROWS(
@@ -1802,14 +2026,14 @@ TEST_CASE( "protobuf" )
                 SUBCASE( "repeated" )
                 {
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x08\x42\x08\x03"sv ) ==
-                           Test::Scalar::Simple{ } );
+                           Test::Scalar::Simple{} );
 
                     SUBCASE( "packed" )
                     {
                         CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x0a\x01\x42"sv ) ==
-                               Test::Scalar::Simple{ } );
+                               Test::Scalar::Simple{} );
                         CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
-                                   "\x0a\x02\x42\x03"sv ) == Test::Scalar::Simple{ } );
+                                   "\x0a\x02\x42\x03"sv ) == Test::Scalar::Simple{} );
                         CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >(
                             "\x0a\x02\x42"sv ) );
                     }
@@ -1820,12 +2044,12 @@ TEST_CASE( "protobuf" )
                 SUBCASE( "required" )
                 {
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x08\x42"sv ) ==
-                           Test::Scalar::Simple{ } );
+                           Test::Scalar::Simple{} );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x08\xff\x01"sv ) ==
-                           Test::Scalar::Simple{ } );
+                           Test::Scalar::Simple{} );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
                                "\x08\xfe\xff\xff\xff\xff\xff\xff\xff\xff\x01"sv ) ==
-                           Test::Scalar::Simple{ } );
+                           Test::Scalar::Simple{} );
                     CHECK_THROWS(
                         ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x08"sv ) );
                     CHECK_THROWS(
@@ -1836,14 +2060,14 @@ TEST_CASE( "protobuf" )
                 SUBCASE( "repeated" )
                 {
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x08\x42\x08\x03"sv ) ==
-                           Test::Scalar::Simple{ } );
+                           Test::Scalar::Simple{} );
 
                     SUBCASE( "packed" )
                     {
                         CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x0a\x01\x42"sv ) ==
-                               Test::Scalar::Simple{ } );
+                               Test::Scalar::Simple{} );
                         CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
-                                   "\x0a\x02\x42\x03"sv ) == Test::Scalar::Simple{ } );
+                                   "\x0a\x02\x42\x03"sv ) == Test::Scalar::Simple{} );
                         CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >(
                             "\x0a\x02\x42"sv ) );
                     }
@@ -1854,11 +2078,11 @@ TEST_CASE( "protobuf" )
                 SUBCASE( "required" )
                 {
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x08\x84\x01"sv ) ==
-                           Test::Scalar::Simple{ } );
+                           Test::Scalar::Simple{} );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x08\xfe\x03"sv ) ==
-                           Test::Scalar::Simple{ } );
+                           Test::Scalar::Simple{} );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x08\x03"sv ) ==
-                           Test::Scalar::Simple{ } );
+                           Test::Scalar::Simple{} );
                     CHECK_THROWS(
                         ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x08"sv ) );
                     CHECK_THROWS(
@@ -1869,16 +2093,16 @@ TEST_CASE( "protobuf" )
                 SUBCASE( "repeated" )
                 {
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x08\x84\x01"sv ) ==
-                           Test::Scalar::Simple{ } );
+                           Test::Scalar::Simple{} );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
-                               "\x08\x84\x01\x08\x03"sv ) == Test::Scalar::Simple{ } );
+                               "\x08\x84\x01\x08\x03"sv ) == Test::Scalar::Simple{} );
 
                     SUBCASE( "packed" )
                     {
                         CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
-                                   "\x0a\x02\x84\x01"sv ) == Test::Scalar::Simple{ } );
+                                   "\x0a\x02\x84\x01"sv ) == Test::Scalar::Simple{} );
                         CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
-                                   "\x0a\x03\x84\x01\x03"sv ) == Test::Scalar::Simple{ } );
+                                   "\x0a\x03\x84\x01\x03"sv ) == Test::Scalar::Simple{} );
                         CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >(
                             "\x0a\x02\x42"sv ) );
                     }
@@ -1889,11 +2113,11 @@ TEST_CASE( "protobuf" )
                 SUBCASE( "required" )
                 {
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x08\x84\x01"sv ) ==
-                           Test::Scalar::Simple{ } );
+                           Test::Scalar::Simple{} );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x08\xfe\x03"sv ) ==
-                           Test::Scalar::Simple{ } );
+                           Test::Scalar::Simple{} );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x08\x03"sv ) ==
-                           Test::Scalar::Simple{ } );
+                           Test::Scalar::Simple{} );
                     CHECK_THROWS(
                         ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x08"sv ) );
                     CHECK_THROWS(
@@ -1904,16 +2128,16 @@ TEST_CASE( "protobuf" )
                 SUBCASE( "repeated" )
                 {
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x08\x84\x01"sv ) ==
-                           Test::Scalar::Simple{ } );
+                           Test::Scalar::Simple{} );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
-                               "\x08\x84\x01\x08\x03"sv ) == Test::Scalar::Simple{ } );
+                               "\x08\x84\x01\x08\x03"sv ) == Test::Scalar::Simple{} );
 
                     SUBCASE( "packed" )
                     {
                         CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
-                                   "\x0a\x02\x84\x01"sv ) == Test::Scalar::Simple{ } );
+                                   "\x0a\x02\x84\x01"sv ) == Test::Scalar::Simple{} );
                         CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
-                                   "\x0a\x03\x84\x01\x03"sv ) == Test::Scalar::Simple{ } );
+                                   "\x0a\x03\x84\x01\x03"sv ) == Test::Scalar::Simple{} );
 
                         CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >(
                             "\x0a\x02\x84"sv ) );
@@ -1927,29 +2151,29 @@ TEST_CASE( "protobuf" )
                 SUBCASE( "required" )
                 {
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
-                               "\x0d\x42\x00\x00\x00"sv ) == Test::Scalar::Simple{ } );
+                               "\x0d\x42\x00\x00\x00"sv ) == Test::Scalar::Simple{} );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
-                               "\x0d\xff\x00\x00\x00"sv ) == Test::Scalar::Simple{ } );
+                               "\x0d\xff\x00\x00\x00"sv ) == Test::Scalar::Simple{} );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
-                               "\x0d\xfe\xff\xff\xff"sv ) == Test::Scalar::Simple{ } );
+                               "\x0d\xfe\xff\xff\xff"sv ) == Test::Scalar::Simple{} );
                     CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >(
                         "\x0d\x42\x00\x00"sv ) );
                 }
                 SUBCASE( "repeated" )
                 {
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
-                               "\x0d\x42\x00\x00\x00"sv ) == Test::Scalar::Simple{ } );
+                               "\x0d\x42\x00\x00\x00"sv ) == Test::Scalar::Simple{} );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
                                "\x0d\x42\x00\x00\x00\x0d\x03\x00\x00\x00"sv ) ==
-                           Test::Scalar::Simple{ } );
+                           Test::Scalar::Simple{} );
 
                     SUBCASE( "packed" )
                     {
                         CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
-                                   "\x0a\x04\x42\x00\x00\x00"sv ) == Test::Scalar::Simple{ } );
+                                   "\x0a\x04\x42\x00\x00\x00"sv ) == Test::Scalar::Simple{} );
                         CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
                                    "\x0a\x08\x42\x00\x00\x00\x03\x00\x00\x00"sv ) ==
-                               Test::Scalar::Simple{ } );
+                               Test::Scalar::Simple{} );
                         CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >(
                             "\x0a\x08\x42\x00\x00\x00\x03\x00\x00"sv ) );
                     }
@@ -1961,13 +2185,13 @@ TEST_CASE( "protobuf" )
                 {
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
                                "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv ) ==
-                           Test::Scalar::Simple{ } );
+                           Test::Scalar::Simple{} );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
                                "\x09\xff\x00\x00\x00\x00\x00\x00\x00"sv ) ==
-                           Test::Scalar::Simple{ } );
+                           Test::Scalar::Simple{} );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
                                "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv ) ==
-                           Test::Scalar::Simple{ } );
+                           Test::Scalar::Simple{} );
                     CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >(
                         "\x09\x42\x00\x00\x00\x00\x00\x00"sv ) );
                 }
@@ -1975,21 +2199,21 @@ TEST_CASE( "protobuf" )
                 {
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
                                "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv ) ==
-                           Test::Scalar::Simple{ } );
+                           Test::Scalar::Simple{} );
                     CHECK(
                         spb::pb::deserialize< Test::Scalar::Simple >(
                             "\x09\x42\x00\x00\x00\x00\x00\x00\x00\x09\x03\x00\x00\x00\x00\x00\x00\x00"sv ) ==
-                        Test::Scalar::Simple{ } );
+                        Test::Scalar::Simple{} );
 
                     SUBCASE( "packed" )
                     {
                         CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
                                    "\x0a\x08\x42\x00\x00\x00\x00\x00\x00\x00"sv ) ==
-                               Test::Scalar::Simple{ } );
+                               Test::Scalar::Simple{} );
                         CHECK(
                             spb::pb::deserialize< Test::Scalar::Simple >(
                                 "\x0a\x10\x42\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00"sv ) ==
-                            Test::Scalar::Simple{ } );
+                            Test::Scalar::Simple{} );
                     }
                 }
             }
@@ -1998,29 +2222,29 @@ TEST_CASE( "protobuf" )
                 SUBCASE( "required" )
                 {
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
-                               "\x0d\x42\x00\x00\x00"sv ) == Test::Scalar::Simple{ } );
+                               "\x0d\x42\x00\x00\x00"sv ) == Test::Scalar::Simple{} );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
-                               "\x0d\xff\x00\x00\x00"sv ) == Test::Scalar::Simple{ } );
+                               "\x0d\xff\x00\x00\x00"sv ) == Test::Scalar::Simple{} );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
-                               "\x0d\xfe\xff\xff\xff"sv ) == Test::Scalar::Simple{ } );
+                               "\x0d\xfe\xff\xff\xff"sv ) == Test::Scalar::Simple{} );
                     CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >(
                         "\x0d\x42\x00\x00"sv ) );
                 }
                 SUBCASE( "repeated" )
                 {
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
-                               "\x0d\x42\x00\x00\x00"sv ) == Test::Scalar::Simple{ } );
+                               "\x0d\x42\x00\x00\x00"sv ) == Test::Scalar::Simple{} );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
                                "\x0d\x42\x00\x00\x00\x0d\x03\x00\x00\x00"sv ) ==
-                           Test::Scalar::Simple{ } );
+                           Test::Scalar::Simple{} );
 
                     SUBCASE( "packed" )
                     {
                         CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
-                                   "\x0a\x04\x42\x00\x00\x00"sv ) == Test::Scalar::Simple{ } );
+                                   "\x0a\x04\x42\x00\x00\x00"sv ) == Test::Scalar::Simple{} );
                         CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
                                    "\x0a\x08\x42\x00\x00\x00\x03\x00\x00\x00"sv ) ==
-                               Test::Scalar::Simple{ } );
+                               Test::Scalar::Simple{} );
                     }
                 }
             }
@@ -2030,13 +2254,13 @@ TEST_CASE( "protobuf" )
                 {
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
                                "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv ) ==
-                           Test::Scalar::Simple{ } );
+                           Test::Scalar::Simple{} );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
                                "\x09\xff\x00\x00\x00\x00\x00\x00\x00"sv ) ==
-                           Test::Scalar::Simple{ } );
+                           Test::Scalar::Simple{} );
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
                                "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv ) ==
-                           Test::Scalar::Simple{ } );
+                           Test::Scalar::Simple{} );
                     CHECK_THROWS( ( void ) spb::pb::deserialize< Test::Scalar::Empty >(
                         "\x09\x42\x00\x00\x00\x00\x00\x00"sv ) );
                 }
@@ -2044,21 +2268,21 @@ TEST_CASE( "protobuf" )
                 {
                     CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
                                "\x09\x42\x00\x00\x00\x00\x00\x00\x00"sv ) ==
-                           Test::Scalar::Simple{ } );
+                           Test::Scalar::Simple{} );
                     CHECK(
                         spb::pb::deserialize< Test::Scalar::Simple >(
                             "\x09\x42\x00\x00\x00\x00\x00\x00\x00\x09\x03\x00\x00\x00\x00\x00\x00\x00"sv ) ==
-                        Test::Scalar::Simple{ } );
+                        Test::Scalar::Simple{} );
 
                     SUBCASE( "packed" )
                     {
                         CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
                                    "\x0a\x08\x42\x00\x00\x00\x00\x00\x00\x00"sv ) ==
-                               Test::Scalar::Simple{ } );
+                               Test::Scalar::Simple{} );
                         CHECK(
                             spb::pb::deserialize< Test::Scalar::Simple >(
                                 "\x0a\x10\x42\x00\x00\x00\x00\x00\x00\x00\x03\x00\x00\x00\x00\x00\x00\x00"sv ) ==
-                            Test::Scalar::Simple{ } );
+                            Test::Scalar::Simple{} );
                     }
                 }
             }
@@ -2068,17 +2292,17 @@ TEST_CASE( "protobuf" )
             SUBCASE( "required" )
             {
                 CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x0d\x00\x00\x28\x42"sv ) ==
-                       Test::Scalar::Simple{ } );
+                       Test::Scalar::Simple{} );
                 CHECK_THROWS(
                     ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x0d\x00\x00\x28"sv ) );
             }
             SUBCASE( "repeated" )
             {
                 CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x0d\x33\x33\x29\x42"sv ) ==
-                       Test::Scalar::Simple{ } );
+                       Test::Scalar::Simple{} );
                 CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
                            "\x0d\x00\x00\x28\x42\x0d\x33\x33\x29\x42"sv ) ==
-                       Test::Scalar::Simple{ } );
+                       Test::Scalar::Simple{} );
             }
         }
         SUBCASE( "double" )
@@ -2086,23 +2310,23 @@ TEST_CASE( "protobuf" )
             SUBCASE( "required" )
             {
                 CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
-                           "\x09\x00\x00\x00\x00\x00\x00\x45\x40"sv ) == Test::Scalar::Simple{ } );
+                           "\x09\x00\x00\x00\x00\x00\x00\x45\x40"sv ) == Test::Scalar::Simple{} );
                 CHECK_THROWS(
                     ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x0d\x00\x00\x28"sv ) );
             }
             SUBCASE( "optional" )
             {
                 CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
-                           "\x09\x66\x66\x66\x66\x66\x26\x45\x40"sv ) == Test::Scalar::Simple{ } );
+                           "\x09\x66\x66\x66\x66\x66\x26\x45\x40"sv ) == Test::Scalar::Simple{} );
             }
             SUBCASE( "repeated" )
             {
                 CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
-                           "\x09\x66\x66\x66\x66\x66\x26\x45\x40"sv ) == Test::Scalar::Simple{ } );
+                           "\x09\x66\x66\x66\x66\x66\x26\x45\x40"sv ) == Test::Scalar::Simple{} );
                 CHECK(
                     spb::pb::deserialize< Test::Scalar::Simple >(
                         "\x09\x66\x66\x66\x66\x66\x26\x45\x40\x09\x00\x00\x00\x00\x00\x00\x08\x40"sv ) ==
-                    Test::Scalar::Simple{ } );
+                    Test::Scalar::Simple{} );
             }
         }
         SUBCASE( "bytes" )
@@ -2110,29 +2334,29 @@ TEST_CASE( "protobuf" )
             SUBCASE( "required" )
             {
                 CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x0a\x05hello"sv ) ==
-                       Test::Scalar::Simple{ } );
+                       Test::Scalar::Simple{} );
                 CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x0a\x03\x00\x01\x02"sv ) ==
-                       Test::Scalar::Simple{ } );
+                       Test::Scalar::Simple{} );
                 CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
-                           "\x0a\x05\x00\x01\x02\x03\x04"sv ) == Test::Scalar::Simple{ } );
+                           "\x0a\x05\x00\x01\x02\x03\x04"sv ) == Test::Scalar::Simple{} );
                 CHECK_THROWS(
                     ( void ) spb::pb::deserialize< Test::Scalar::Empty >( "\x0a\x05hell"sv ) );
             }
             SUBCASE( "repeated" )
             {
                 CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x0a\x05hello"sv ) ==
-                       Test::Scalar::Simple{ } );
+                       Test::Scalar::Simple{} );
                 CHECK( spb::pb::deserialize< Test::Scalar::Simple >( "\x0a\x03\x00\x01\x02"sv ) ==
-                       Test::Scalar::Simple{ } );
+                       Test::Scalar::Simple{} );
                 CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
-                           "\x0a\x05\x00\x01\x02\x03\x04"sv ) == Test::Scalar::Simple{ } );
+                           "\x0a\x05\x00\x01\x02\x03\x04"sv ) == Test::Scalar::Simple{} );
             }
         }
         SUBCASE( "struct" )
         {
             CHECK( spb::pb::deserialize< Test::Scalar::Simple >(
                        "\x0a\x08John Doe\x10\x7b\x1a\x11QXUeh@example.com\x22\x0c\x0A\x08"
-                       "555-4321\x10\x01"sv ) == Test::Scalar::Simple{ } );
+                       "555-4321\x10\x01"sv ) == Test::Scalar::Simple{} );
             CHECK_NOTHROW( ( void ) spb::pb::deserialize< Test::Scalar::Empty >(
                 "\x0a\x08John Doe\x10\x7b\x1a\x11QXUeh@example.com\x22\x0c\x0A\x08"
                 "555-4321\x10\x01"sv ) );

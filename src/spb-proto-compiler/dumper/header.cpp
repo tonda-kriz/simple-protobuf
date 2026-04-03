@@ -155,6 +155,9 @@ void get_imports( cpp_includes & includes, const proto_file & file )
 {
     for( const auto & import : file.imports )
     {
+        if( file.attributes.exclude.contains( import.path.filename( ).string( ) ) )
+            continue;
+
         includes.insert( "\"" + cpp_file_name_from_proto( import.path, ".pb.h" ).string( ) + "\"" );
     }
 }

@@ -48,6 +48,13 @@ enum class scalar_encoder : uint8_t
     packed = 0x08
 };
 
+struct field_attributes
+{
+    uint32_t number;
+    size_t max_count = 0;
+    size_t max_size  = 0;
+};
+
 static constexpr scalar_encoder operator&( scalar_encoder lhs, scalar_encoder rhs ) noexcept
 {
     return scalar_encoder( std::underlying_type_t< scalar_encoder >( lhs ) &

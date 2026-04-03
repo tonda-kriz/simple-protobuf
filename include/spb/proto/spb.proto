@@ -2,30 +2,32 @@ syntax = "proto3";
 
 import "google/protobuf/descriptor.proto";
 
-package spb;
-
-message EnumOptions
+message SpbEnumOptions
 {
     // enum type: one of int8, uint8, int16, uint16, int32, uint32, int64, uint64
     // default: "int32"
     string type = 2;
 }
 
-message Options
+message SpbOptions
 {
-    // maximum size for `repeated`, `string` or `bytes`
+    // maximum size for `string` or `bytes`
     // de/serialize will return false if `real_size > max_size`
     uint32 max_size = 1;
+
+    // maximum elements in an repeated field
+    // de/serialize will return false if `real_count > max_count`
+    uint32 max_count = 2;
 
     // field's type: one of int8, uint8, int16, uint16, int32, uint32, int64, uint64
     // can be combined with an bit field: `int8:1`, `uint8:2`, ...
     // warning: due to compatibility with GPB, always use int types with the same sign, like `int32` and `int8`,
     // combinations like `int32` and `uint8` or `float and `int32` are invalid.
-    string type = 2;
+    string type = 3;
 
     // enum type, one of int8, uint8, int16, uint16, int32, uint32, int64, uint64
     // default: "int32"
-    string enum = 3;
+    string enum = 4;
 
     // extra files to include in generated `.pb.h`
     repeated string include = 5;
@@ -53,11 +55,11 @@ message Options
     // default: "std::string", `$` will be replaced with `char`
     string string = 14;
 
-    // [[deprecated]] attribute
+    // `deprecated` attribute
     // default: false
     bool deprecated = 15;
 
-    // [[packed]] attribute
+    // `packed` attribute
     // default: false
     bool packed = 17;
 
@@ -78,18 +80,18 @@ message Options
     bool pb_serialize = 23;
 }
 
-extend google.protobuf.FieldOptions { 
-    Options spb = 1200;
+extend google.protobuf.FieldOptions {
+    SpbOptions spb = 1200;
 }
-
+    
 extend google.protobuf.FileOptions {
-    Options spb = 1200;
+    SpbOptions spb_fileopt = 1200;
 }
-
+    
 extend google.protobuf.MessageOptions {
-    Options spb = 1200;
+    SpbOptions spb_msgopt = 1200;
 }
 
 extend google.protobuf.EnumOptions {
-    EnumOptions spb = 1200;
+    SpbEnumOptions spb_enumopt = 1200;
 }
