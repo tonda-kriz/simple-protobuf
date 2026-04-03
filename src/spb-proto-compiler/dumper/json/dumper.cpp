@@ -176,15 +176,41 @@ void dump_cpp_open_namespace( std::ostream & stream, std::string_view name )
     stream << "namespace " << name << "\n{\n";
 }
 
-void dump_cpp_serialize_value( std::ostream & stream, const proto_oneof & oneof )
+auto field_max_size( const proto_file & file, const proto_message & message,
+                     const proto_field & field ) -> size_t
+{
+    return field.attributes.max_size.value_or(
+        message.attributes.max_size.value_or( file.attributes.max_size.value_or( 0 ) ) );
+}
+
+auto field_max_count( const proto_file & file, const proto_message & message,
+                      const proto_field & field ) -> size_t
+{
+    return field.attributes.max_count.value_or(
+        message.attributes.max_count.value_or( file.attributes.max_count.value_or( 0 ) ) );
+}
+
+void dump_field_attributes( std::ostream & stream, const proto_file & file,
+                            const proto_message & message, const proto_field & field )
+{
+    stream << "field_attributes{.name = \"" << json_field_name( field ) << "\"sv";
+    if( const auto max_count = field_max_count( file, message, field ); max_count )
+        stream << ", .max_count = " << max_count;
+    if( const auto max_size = field_max_size( file, message, field ); max_size )
+        stream << ", .max_size = " << max_size;
+    stream << "}";
+}
+
+void dump_cpp_serialize_value( std::ostream & stream, const proto_file & file,
+                               const proto_message & message, const proto_oneof & oneof )
 {
     stream << "\t{\n\t\tconst auto index = value." << oneof.name.get_name( ) << ".index( );\n";
     stream << "\t\tswitch( index )\n\t\t{\n";
     for( size_t i = 0; i < oneof.fields.size( ); ++i )
     {
-        stream << "\t\t\tcase " << i << ":\n\t\t\t\treturn stream.serialize( \""
-               << json_field_name( oneof.fields[ i ] ) << "\"sv, std::get< " << i << " >( value."
-               << oneof.name.get_name( ) << ") );\n";
+        stream << "\t\t\tcase " << i << ":\n\t\t\t\treturn stream.serialize(";
+        dump_field_attributes( stream, file, message, oneof.fields[ i ] );
+        stream << ", std::get< " << i << " >( value." << oneof.name.get_name( ) << ") );\n";
     }
     stream << "\t\t}\n\t}\n\n";
 }
@@ -286,8 +312,8 @@ void dump_cpp_deserialize_value( std::ostream & stream, const proto_enum & my_en
     stream << "\t\t}\n\t}, enum_value );\n}\n\n";
 }
 
-void dump_cpp_serialize_value( std::ostream & stream, const proto_message & message,
-                               std::string_view full_name )
+void dump_cpp_serialize_value( std::ostream & stream, const proto_file & file,
+                               const proto_message & message, std::string_view full_name )
 {
     if( message.fields.empty( ) && message.maps.empty( ) && message.oneofs.empty( ) )
     {
@@ -300,17 +326,19 @@ void dump_cpp_serialize_value( std::ostream & stream, const proto_message & mess
            << " & value )\n{\n";
     for( const auto & field : message.fields )
     {
-        stream << "\tstream.serialize( \"" << json_field_name( field ) << "\"sv, value."
-               << field.name.get_name( ) << " );\n";
+        stream << "\tstream.serialize( ";
+        dump_field_attributes( stream, file, message, field );
+        stream << ", value." << field.name.get_name( ) << " );\n";
     }
     for( const auto & map : message.maps )
     {
-        stream << "\tstream.serialize( \"" << map.name.proto_name << "\"sv, value."
-               << map.name.get_name( ) << " );\n";
+        stream << "\tstream.serialize( ";
+        dump_field_attributes( stream, file, message, map.key );
+        stream << ", value." << map.name.get_name( ) << " );\n";
     }
     for( const auto & oneof : message.oneofs )
     {
-        dump_cpp_serialize_value( stream, oneof );
+        dump_cpp_serialize_value( stream, file, message, oneof );
     }
     stream << "}\n";
 }
@@ -478,30 +506,30 @@ void dump_cpp_enums( std::ostream & stream, const proto_enums & enums, std::stri
     }
 }
 
-void dump_cpp_messages( std::ostream & stream, const proto_messages & messages,
-                        std::string_view parent );
+void dump_cpp_messages( std::ostream & stream, const proto_file & file,
+                        const proto_messages & messages, std::string_view parent );
 
-void dump_cpp_message( std::ostream & stream, const proto_message & message,
-                       std::string_view parent )
+void dump_cpp_message( std::ostream & stream, const proto_file & file,
+                       const proto_message & message, std::string_view parent )
 {
     const auto full_name = std::string( parent ) + "::" + std::string( message.name.get_name( ) );
 
     dump_cpp_enums( stream, message.enums, full_name );
 
     dump_cpp_open_namespace( stream, "detail" );
-    dump_cpp_serialize_value( stream, message, full_name );
+    dump_cpp_serialize_value( stream, file, message, full_name );
     dump_cpp_deserialize_value( stream, message, full_name );
     dump_cpp_close_namespace( stream, "detail" );
 
-    dump_cpp_messages( stream, message.messages, full_name );
+    dump_cpp_messages( stream, file, message.messages, full_name );
 }
 
-void dump_cpp_messages( std::ostream & stream, const proto_messages & messages,
-                        std::string_view parent )
+void dump_cpp_messages( std::ostream & stream, const proto_file & file,
+                        const proto_messages & messages, std::string_view parent )
 {
     for( const auto & message : messages )
     {
-        dump_cpp_message( stream, message, parent );
+        dump_cpp_message( stream, file, message, parent );
     }
 }
 
@@ -511,7 +539,7 @@ void dump_cpp( std::ostream & stream, const proto_file & file )
         ? std::string( )
         : "::" + std::string( file.package.name.get_name( ) );
     dump_cpp_enums( stream, file.package.enums, str_namespace );
-    dump_cpp_messages( stream, file.package.messages, str_namespace );
+    dump_cpp_messages( stream, file, file.package.messages, str_namespace );
 }
 
 }// namespace
