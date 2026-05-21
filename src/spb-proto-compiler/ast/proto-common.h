@@ -32,11 +32,11 @@ struct proto_reserved
 struct cpp_ident
 {
     //- points to .proto file
-    std::string_view proto_name;
+    std::string_view proto_name{};
 
     //- cpp compatible identifier in case that `proto_name` can't be used in cpp directly
     //- ('private' -> 'private_')
-    std::string cpp_name;
+    std::string cpp_name{};
 
     auto get_name( ) const -> std::string_view
     {
