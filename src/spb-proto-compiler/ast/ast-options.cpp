@@ -67,6 +67,13 @@ auto option_value( std::initializer_list< const std::string_view > path,
     return option && !option->value.empty( ) ? *option->value.begin( ) : std::string_view{};
 }
 
+auto option_values( std::initializer_list< const std::string_view > path,
+                    const proto_options & options ) -> std::span< const proto_option_value >
+{
+    auto option = option_value( std::span( path.begin( ), path.size( ) ), options );
+    return option ? option->value : std::span< const proto_option_value >{};
+}
+
 auto option_value_bool( const proto_file & file,
                         std::initializer_list< const std::string_view > full_name,
                         const proto_options & options ) -> std::optional< bool >
@@ -104,8 +111,8 @@ auto option_value_int( const proto_file & file,
 void convert_nanopb_options( const proto_file & file, proto_attributes & attributes,
                              const proto_options & options, std::string_view opt_value )
 {
-    if( auto value = option_value( { opt_value, "include" }, options ); !value.empty( ) )
-        attributes.include.insert( value );
+    if( auto values = option_values( { opt_value, "include" }, options ); !values.empty( ) )
+        attributes.include.insert( values.begin( ), values.end( ) );
 
     if( auto value = option_value_int< uint32_t >( file, { opt_value, "max_size" }, options );
         value.has_value( ) )
@@ -212,9 +219,11 @@ void convert_spb_options( const proto_file & file, proto_attributes & attributes
     }
 }
 void convert_spb_options( const proto_file & file, proto_attributes & attributes,
-                          const proto_options & options, option_type type )
+                          const proto_options & options, option_type type, bool legacy )
 {
-    convert_spb_options_legacy( attributes, options );
+    if( legacy )
+        convert_spb_options_legacy( attributes, options );
+
     switch( type )
     {
     case option_type::option_field:
@@ -223,51 +232,66 @@ void convert_spb_options( const proto_file & file, proto_attributes & attributes
         return convert_spb_options( file, attributes, options, "spb_msgopt" );
     case option_type::option_file:
         return convert_spb_options( file, attributes, options, "spb_fileopt" );
+    case option_type::option_enum:
+        return convert_spb_options( file, attributes, options, "spb_enumopt" );
     default:;
     }
 }
 
 void convert_include_options( proto_attributes & attributes, const proto_options & options )
 {
-    if( auto value = option_value( { "spb", "include" }, options ); !value.empty( ) )
-        attributes.include.insert( value );
+    if( auto values = option_values( { "spb", "include" }, options ); !values.empty( ) )
+        attributes.include.insert( values.begin( ), values.end( ) );
 
-    if( auto value = option_value( { "repeated", "include" }, options ); !value.empty( ) )
-        attributes.include.insert( value );
+    if( auto values = option_values( { "spb_msgopt", "include" }, options ); !values.empty( ) )
+        attributes.include.insert( values.begin( ), values.end( ) );
 
-    if( auto value = option_value( { "optional", "include" }, options ); !value.empty( ) )
-        attributes.include.insert( value );
+    if( auto values = option_values( { "spb_fileopt", "include" }, options ); !values.empty( ) )
+        attributes.include.insert( values.begin( ), values.end( ) );
 
-    if( auto value = option_value( { "pointer", "include" }, options ); !value.empty( ) )
-        attributes.include.insert( value );
+    if( auto values = option_values( { "spb_enumopt", "include" }, options ); !values.empty( ) )
+        attributes.include.insert( values.begin( ), values.end( ) );
 
-    if( auto value = option_value( { "bytes", "include" }, options ); !value.empty( ) )
-        attributes.include.insert( value );
+    if( auto values = option_values( { "repeated", "include" }, options ); !values.empty( ) )
+        attributes.include.insert( values.begin( ), values.end( ) );
 
-    if( auto value = option_value( { "string", "include" }, options ); !value.empty( ) )
-        attributes.include.insert( value );
+    if( auto values = option_values( { "optional", "include" }, options ); !values.empty( ) )
+        attributes.include.insert( values.begin( ), values.end( ) );
+
+    if( auto values = option_values( { "pointer", "include" }, options ); !values.empty( ) )
+        attributes.include.insert( values.begin( ), values.end( ) );
+
+    if( auto values = option_values( { "bytes", "include" }, options ); !values.empty( ) )
+        attributes.include.insert( values.begin( ), values.end( ) );
+
+    if( auto values = option_values( { "string", "include" }, options ); !values.empty( ) )
+        attributes.include.insert( values.begin( ), values.end( ) );
 }
 
 void convert_options( proto_file & file, proto_attributes & attributes,
-                      const proto_options & options, option_type type )
+                      const proto_options & options, option_type type, bool legacy )
 {
     convert_include_options( file.attributes, options );
-    convert_gpb_options( file, attributes, options );
-    convert_spb_options( file, attributes, options, type );
+    if( legacy )
+        convert_gpb_options( file, attributes, options );
+    convert_spb_options( file, attributes, options, type, legacy );
     convert_nanopb_options( file, attributes, options, type );
 }
 
 void resolve_options( proto_file & file, proto_enum & enum_ )
 {
-    convert_options( file, enum_.attributes, enum_.options, option_type::option_enum );
+    convert_options( file, enum_.attributes, enum_.options, option_type::option_enum, true );
 }
 
 void resolve_options( proto_file & file, proto_message & message )
 {
-    convert_options( file, message.attributes, message.options, option_type::option_message );
+    convert_options( file, message.attributes, message.options, option_type::option_message, true );
+    convert_options( file, file.attributes, message.options, option_type::option_file, false );
     for( auto & field : message.fields )
     {
-        convert_options( file, field.attributes, field.options, option_type::option_field );
+        convert_options( file, field.attributes, field.options, option_type::option_field, true );
+        convert_options( file, message.attributes, field.options, option_type::option_message,
+                         false );
     }
     for( auto & message : message.messages )
     {
@@ -282,6 +306,6 @@ void resolve_options( proto_file & file, proto_message & message )
 
 void resolve_options( proto_file & file )
 {
-    convert_options( file, file.attributes, file.options, option_type::option_file );
+    convert_options( file, file.attributes, file.options, option_type::option_file, true );
     resolve_options( file, file.package );
 }

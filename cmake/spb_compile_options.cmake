@@ -52,6 +52,7 @@ function(spb_disable_warnings TARGET)
 endfunction(spb_disable_warnings)
 
 function(spb_set_compile_options TARGET)
+  target_compile_features(${TARGET} PRIVATE cxx_std_20)
   spb_enable_warnings(${TARGET})
 
   set_target_properties(${TARGET} PROPERTIES INTERPROCEDURAL_OPTIMIZATION IPO_ENABLED)

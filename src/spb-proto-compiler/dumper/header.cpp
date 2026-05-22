@@ -255,7 +255,7 @@ auto get_enum_type( const proto_file & file, const proto_attributes & attributes
         throw_parse_error( file, type, "invalid enum type: " + std::string( type ) );
     };
 
-    if( auto name = attributes.enum_; !name.empty( ) )
+    if( auto name = attributes.type; !name.empty( ) )
         return ctype_from_pb( name );
 
     if( auto name = message_attributes.enum_; !name.empty( ) )

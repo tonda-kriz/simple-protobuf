@@ -2,30 +2,33 @@ syntax = "proto3";
 
 import "google/protobuf/descriptor.proto";
 
+// This file exists only for compatibility with GPB
+// spb is not using it, all options are hardcoded in the compiler
+
 message SpbEnumOptions
 {
-    // enum type: one of int8, uint8, int16, uint16, int32, uint32, int64, uint64
-    // default: "int32"
-    string type = 2;
+    // enum's type: one of `int8`, `uint8`, `int16`, `uint16`, `int32`
+    // default: int32
+    string type = 3;
 }
 
 message SpbOptions
 {
-    // maximum size for `string` or `bytes`
-    // de/serialize will return false if `real_size > max_size`
+    // maximum size in bytes for `bytes` or `string` (not including the `\0` terminator)
+    // de/serialize will throw an exception if `real_size > max_size`
     uint32 max_size = 1;
 
-    // maximum elements in an repeated field
-    // de/serialize will return false if `real_count > max_count`
+    // maximum number of elements in an repeated field
+    // de/serialize will throw an exception if `real_count > max_count`
     uint32 max_count = 2;
 
-    // field's type: one of int8, uint8, int16, uint16, int32, uint32, int64, uint64
+    // field's type: one of `int8`, `uint8`, `int16`, `uint16`, `int32`, `uint32`, `int64`, `uint64`
     // can be combined with an bit field: `int8:1`, `uint8:2`, ...
     // warning: due to compatibility with GPB, always use int types with the same sign, like `int32` and `int8`,
     // combinations like `int32` and `uint8` or `float and `int32` are invalid.
     string type = 3;
 
-    // enum type, one of int8, uint8, int16, uint16, int32, uint32, int64, uint64
+    // enum type, one of `int8`, `uint8`, `int16`, `uint16`, `int32`
     // default: "int32"
     string enum = 4;
 
@@ -33,17 +36,18 @@ message SpbOptions
     repeated string include = 5;
 
     // files to exclude from includes in generated `.pb.h`
+    // default: ["spb.proto", "nanopb.proto", "google/protobuf/descriptor.proto"]
     repeated string exclude = 6;
 
-    // container type for optional label
-    // default: "std::optional<$>"
+    // container type for `optional` label
+    // default: "std::optional<$>", `$` will be replaced by a field's type
     string optional = 10 ;
 
-    // container type for optional label if there is cyclic dependency between messages (A -> B, B -> A)
-    // default: "std::unique_ptr<$>"
+    // container type for `optional` label if there is cyclic dependency between messages (A -> B, B -> A)
+    // default: "std::unique_ptr<$>", `$` will be replaced by a field's type
     string pointer = 11;
 
-    // container type for repeated label
+    // container type for `repeated` label
     // default: "std::vector<$>", `$` will be replaced by a field's type
     string repeated = 12;
     
@@ -54,30 +58,6 @@ message SpbOptions
     // container type for string type
     // default: "std::string", `$` will be replaced with `char`
     string string = 14;
-
-    // `deprecated` attribute
-    // default: false
-    bool deprecated = 15;
-
-    // `packed` attribute
-    // default: false
-    bool packed = 17;
-
-    // generate `spb::json::deserialize()`
-    // default: true
-    bool json_deserialize = 20;
-
-    // generate `spb::json::serialize()`
-    // default: true
-    bool json_serialize = 21;
-
-    // generate `spb::pb::serialize()`
-    // default: true
-    bool pb_deserialize = 22;
-
-    // generate `spb::pb::deserialize()`
-    // default: true
-    bool pb_serialize = 23;
 }
 
 extend google.protobuf.FieldOptions {

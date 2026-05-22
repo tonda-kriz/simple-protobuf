@@ -26,15 +26,8 @@ using proto_options = std::map< proto_option_name, proto_option >;
 
 struct proto_option
 {
-    std::set< proto_option_value > value;
+    std::vector< proto_option_value > value;
     std::vector< proto_options > options;
-};
-
-struct enum_options
-{
-    // enum type: one of int8, uint8, int16, uint16, int32, uint32, int64, uint64
-    // default: "int32"
-    std::string_view type;
 };
 
 struct proto_attributes
@@ -95,20 +88,4 @@ struct proto_attributes
 
     // packed attribute for an array or message
     std::optional< bool > packed;
-
-    // generate `spb::json::deserialize()`
-    // default: true
-    std::optional< bool > json_deserialize;
-
-    // generate `spb::json::serialize()`
-    // default: true
-    std::optional< bool > json_serialize;
-
-    // generate `spb::pb::serialize()`
-    // default: true
-    std::optional< bool > pb_deserialize;
-
-    // generate `spb::pb::deserialize()`
-    // default: true
-    std::optional< bool > pb_serialize;
 };

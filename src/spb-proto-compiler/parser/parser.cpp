@@ -550,7 +550,7 @@ void parse_option_value( spb::char_stream & stream, proto_option & option )
     case '[':
         return parse_option_array( stream, option );
     default:
-        option.value.insert( parse_constant( stream ) );
+        option.value.push_back( parse_constant( stream ) );
     }
 }
 
