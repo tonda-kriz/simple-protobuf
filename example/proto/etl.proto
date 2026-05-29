@@ -10,11 +10,11 @@ option (spb_fileopt).include = "<etl/string.h>";
 option (spb_fileopt).include = "<etl/vector.h>";
 
 message DeviceStatus {
-    required uint32 device_id = 1 [(spb).type = "uint32:31"];
-    required uint32 is_online = 2 [(spb).type = "uint32:1"];
+    required uint32 device_id = 1 [(spb_opt).type = "uint32:31"];
+    required uint32 is_online = 2 [(spb_opt).type = "uint32:1"];
     required uint32 last_heartbeat = 3;
-    required string firmware_version = 4 [(spb).string = "std::array<$,8>"];
-    required string name = 5 [ (spb).string = "etl::string<16>"];
+    required string firmware_version = 4 [(spb_opt).string = "std::array<$,8>"];
+    required string name = 5 [ (spb_opt).string = "etl::string<16>"];
 }
 
 message Command {
@@ -25,10 +25,10 @@ message Command {
         CMD_WRITE = 3;
         CMD_TST = 4;
     }
-    required uint32 command_id = 1 [(spb).type = "uint8:4"]; // CMD
-    required uint32 arg = 2 [(spb).type = "uint8:2"]; // argument for the command
-    required uint32 in_flag = 3 [(spb).type = "uint8:1"]; // input flag
-    required uint32 out_flag = 4 [(spb).type = "uint8:1"]; // output flag
+    required uint32 command_id = 1 [(spb_opt).type = "uint8:4"]; // CMD
+    required uint32 arg = 2 [(spb_opt).type = "uint8:2"]; // argument for the command
+    required uint32 in_flag = 3 [(spb_opt).type = "uint8:1"]; // input flag
+    required uint32 out_flag = 4 [(spb_opt).type = "uint8:1"]; // output flag
 }
 
 

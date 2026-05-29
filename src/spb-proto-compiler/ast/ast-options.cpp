@@ -227,7 +227,7 @@ void convert_spb_options( const proto_file & file, proto_attributes & attributes
     switch( type )
     {
     case option_type::option_field:
-        return convert_spb_options( file, attributes, options, "spb" );
+        return convert_spb_options( file, attributes, options, "spb_opt" );
     case option_type::option_message:
         return convert_spb_options( file, attributes, options, "spb_msgopt" );
     case option_type::option_file:

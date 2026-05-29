@@ -101,7 +101,7 @@ if(SPB_PROTO_BUILD_COMPATIBILITY_TESTS)
     add_custom_command(
         OUTPUT ${OUTPUT_CC} ${OUTPUT_H}
         COMMAND protobuf::protoc
-        ARGS --cpp_out=${CMAKE_CURRENT_BINARY_DIR} -I${CMAKE_CURRENT_BINARY_DIR} ${PROTO_FILE}
+        ARGS --cpp_out=${CMAKE_CURRENT_BINARY_DIR} -I${CMAKE_CURRENT_BINARY_DIR} -I${CMAKE_SOURCE_DIR}/include/spb/proto -I${CMAKE_BINARY_DIR}/_deps/protobuf-src/src ${PROTO_FILE}
         DEPENDS ${PROTO_FILE}
         COMMENT "Generating Protobuf files for ${PROTO_FILE} as ${OUTPUT_CC} and ${OUTPUT_H}"
         VERBATIM
@@ -116,6 +116,7 @@ if(SPB_PROTO_BUILD_COMPATIBILITY_TESTS)
     PROTOBUF_GENERATE_CPP(PROTO_RESERVED_SRC PROTO_PERSON_HDR ${CMAKE_CURRENT_BINARY_DIR}/gpb-reserved.proto)
   endif()
   PROTOBUF_GENERATE_CPP(PROTO_NAME_SRC PROTO_NAME_HDR ${CMAKE_CURRENT_BINARY_DIR}/gpb-name.proto)
+  PROTOBUF_GENERATE_CPP(PROTO_SPB_SRC PROTO_SPB_HDR ${CMAKE_SOURCE_DIR}/include/spb/proto/spb.proto)
   PROTOBUF_GENERATE_CPP(PROTO_SCALAR_SRC PROTO_SCALAR_HDR ${CMAKE_CURRENT_BINARY_DIR}/gpb-scalar.proto)
   if(SPB_PROTO_BUILD_ETL_TESTS)
     PROTOBUF_GENERATE_CPP(PROTO_ETL_SCALAR_SRC PROTO_ETL_HDR ${CMAKE_CURRENT_BINARY_DIR}/gpb-etl-scalar.proto)
@@ -123,9 +124,9 @@ if(SPB_PROTO_BUILD_COMPATIBILITY_TESTS)
   endif()
 
 if(Protobuf_VERSION VERSION_GREATER_EQUAL "30")  
-  add_library(gpb-proto STATIC ${PROTO_ETL_PERSON_SRC} ${PROTO_ETL_SCALAR_SRC} ${PROTO_SCALAR_SRC} ${PROTO_PERSON_SRC} ${PROTO_NAME_SRC} ${PROTO_RESERVED_SRC})
+  add_library(gpb-proto STATIC ${PROTO_SPB_SRC} ${PROTO_ETL_PERSON_SRC} ${PROTO_ETL_SCALAR_SRC} ${PROTO_SCALAR_SRC} ${PROTO_PERSON_SRC} ${PROTO_NAME_SRC} ${PROTO_RESERVED_SRC})
 else()
-  add_library(gpb-proto STATIC ${PROTO_ETL_PERSON_SRC} ${PROTO_ETL_SCALAR_SRC} ${PROTO_SCALAR_SRC} ${PROTO_PERSON_SRC} ${PROTO_NAME_SRC})
+  add_library(gpb-proto STATIC ${PROTO_SPB_SRC} ${PROTO_ETL_PERSON_SRC} ${PROTO_ETL_SCALAR_SRC} ${PROTO_SCALAR_SRC} ${PROTO_PERSON_SRC} ${PROTO_NAME_SRC})
 endif()
 
   target_link_libraries(gpb-proto PUBLIC protobuf::libprotobuf)
@@ -133,7 +134,7 @@ endif()
 
   add_executable(gpb-compatibility-test gpb-compatibility.cpp ${SPB_PROTO_PERSON_SRC} ${SPB_PROTO_NAME_SRC} ${SPB_PROTO_SCALAR_SRC})
   spb_set_compile_options(gpb-compatibility-test)
-  target_link_libraries(gpb-compatibility-test PUBLIC spb-proto gpb-proto)
+  target_link_libraries(gpb-compatibility-test PUBLIC spb-proto gpb-proto spb-generated)
   add_dependencies(unit_tests gpb-compatibility-test)
   doctest_discover_tests(gpb-compatibility-test)
 

@@ -48,7 +48,7 @@ struct deserialize_options
  * @throws exceptions only from `on_write`
  */
 static inline auto serialize( const auto & message, spb::io::writer on_write,
-                              const serialize_options & options = { } ) -> size_t
+                              const serialize_options & options = {} ) -> size_t
 {
     auto stream = detail::ostream{ on_write };
     if( options.delimited )
@@ -67,7 +67,7 @@ static inline auto serialize( const auto & message, spb::io::writer on_write,
  * @return serialized size in bytes
  */
 [[nodiscard]] static inline auto serialize_size( const auto & message,
-                                                 const serialize_options & options = { } ) -> size_t
+                                                 const serialize_options & options = {} ) -> size_t
 {
     return serialize( message, spb::io::writer( nullptr ), options );
 }
@@ -85,7 +85,7 @@ static inline auto serialize( const auto & message, spb::io::writer on_write,
  */
 template < typename Message, spb::resizable_container Container >
 static inline auto serialize( const Message & message, Container & result,
-                              const serialize_options & options = { } ) -> size_t
+                              const serialize_options & options = {} ) -> size_t
 {
     const auto size = serialize_size( message, options );
     result.resize( size );
@@ -110,7 +110,7 @@ static inline auto serialize( const Message & message, Container & result,
  */
 template < spb::resizable_container Container = std::string, typename Message >
 [[nodiscard]] static inline auto serialize( const Message & message,
-                                            const serialize_options & options = { } ) -> Container
+                                            const serialize_options & options = {} ) -> Container
 {
     auto result = Container( );
     serialize< Message, Container >( message, result, options );
@@ -126,7 +126,7 @@ template < spb::resizable_container Container = std::string, typename Message >
  * @throws std::runtime_error on error
  */
 static inline void deserialize( auto & message, spb::io::reader reader,
-                                const deserialize_options & options = { } )
+                                const deserialize_options & options = {} )
 {
     detail::istream stream{ reader };
     if( options.delimited )
@@ -154,7 +154,7 @@ static inline void deserialize( auto & message, spb::io::reader reader,
  */
 template < typename Message, spb::size_container Container >
 static inline void deserialize( Message & message, const Container & protobuf,
-                                const deserialize_options & options = { } )
+                                const deserialize_options & options = {} )
 {
     auto reader = [ ptr = protobuf.data( ), end = protobuf.data( ) + protobuf.size( ) ](
                       void * data, size_t size ) mutable -> size_t
@@ -181,9 +181,9 @@ static inline void deserialize( Message & message, const Container & protobuf,
  */
 template < typename Message, spb::size_container Container >
 [[nodiscard]] static inline auto deserialize( const Container & protobuf,
-                                              const deserialize_options & options = { } ) -> Message
+                                              const deserialize_options & options = {} ) -> Message
 {
-    auto message = Message{ };
+    auto message = Message{};
     deserialize( message, protobuf, options );
     return message;
 }
@@ -198,9 +198,9 @@ template < typename Message, spb::size_container Container >
  */
 template < typename Message >
 [[nodiscard]] static inline auto deserialize( spb::io::reader reader,
-                                              const deserialize_options & options = { } ) -> Message
+                                              const deserialize_options & options = {} ) -> Message
 {
-    auto message = Message{ };
+    auto message = Message{};
     deserialize( message, reader, options );
     return message;
 }

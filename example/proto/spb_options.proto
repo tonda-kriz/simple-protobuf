@@ -12,20 +12,20 @@ option (spb_fileopt).include = "<memory>";
 
 // int can also be: int8, uint8, int16, uint16
 message Integers {
-    required uint32 u8 = 1 [ (spb).type = "uint8" ];
-    required uint32 u16 = 2 [ (spb).type = "uint16" ];
+    required uint32 u8 = 1 [ (spb_opt).type = "uint8" ];
+    required uint32 u16 = 2 [ (spb_opt).type = "uint16" ];
     required uint32 u32 = 3;
     required uint64 u64 = 4;
 
     // alternative syntax, to avoid import "spb.proto";
-    //[[ (spb).type = "int8" ]]
+    //[[ (spb_opt).type = "int8" ]]
     optional int32 i8 = 5;
-    optional int32 i16 = 6 [ (spb).type = "int16" ];
+    optional int32 i16 = 6 [ (spb_opt).type = "int16" ];
     optional int32 i32 = 7;
     optional int64 i64 = 8;
 
-    repeated int32 r8 = 9 [ (spb).type = "int8" ];
-    repeated int32 r16 = 10 [ (spb).type = "int16" ];
+    repeated int32 r8 = 9 [ (spb_opt).type = "int8" ];
+    repeated int32 r16 = 10 [ (spb_opt).type = "int16" ];
     repeated int32 r32 = 11;
     repeated int64 r64 = 12;
 }
@@ -47,8 +47,8 @@ enum Enum16 {
 
 // int bit-fields: `int8:1`, `uint8:2`, ...
 message BitFields {
-    required uint32 id_major = 1 [ (spb).type = "uint8:4" ];
-    required uint32 id_minor = 2 [ (spb).type = "uint8:4" ];
+    required uint32 id_major = 1 [ (spb_opt).type = "uint8:4" ];
+    required uint32 id_minor = 2 [ (spb_opt).type = "uint8:4" ];
 }
 
 // container types for (`optional`, `repeated`, `string`, `bytes`)
@@ -84,7 +84,7 @@ message Containers {
         repeated int32 default_i = 1;
         // packed repeated fields can have fixed size
         repeated int32 fixed_size = 2
-            [ (spb).repeated = "std::array<$, 10>", packed = true ];
+            [ (spb_opt).repeated = "std::array<$, 10>", packed = true ];
     }
 
     message String {
@@ -98,7 +98,7 @@ message Containers {
             optional string vec_of_chars2 = 2;
             //- an array of fixed size strings
             repeated string fixed_string = 3
-                [ (spb).string = "std::array<$, 8>" ];
+                [ (spb_opt).string = "std::array<$, 8>" ];
         }
     }
 
@@ -111,7 +111,7 @@ message Containers {
             required bytes bytes_as_string1 = 1;
             optional bytes bytes_as_string2 = 2;
             // an array of fixed size bytes
-            repeated bytes fixed_bytes = 3 [ (spb).bytes = "std::array<$, 8>" ];
+            repeated bytes fixed_bytes = 3 [ (spb_opt).bytes = "std::array<$, 8>" ];
         }
     }
 }
@@ -122,7 +122,7 @@ message MaximumCount {
     message Person { required uint32 age = 1; }
 
     // can be set for a single field
-    repeated int32 up_to_4_int = 1 [ (spb).max_count = 4 ];
+    repeated int32 up_to_4_int = 1 [ (spb_opt).max_count = 4 ];
 
     // for the whole message or the whole file
     option (spb_msgopt).max_count = 5;
@@ -134,8 +134,8 @@ message MaximumCount {
 message MaximumSize {
 
     // can be set for a single field
-    optional string up_to_4_chars = 1 [ (spb).max_size = 4 ];
-    optional bytes up_to_5_bytes = 2 [ (spb).max_size = 5 ];
+    optional string up_to_4_chars = 1 [ (spb_opt).max_size = 4 ];
+    optional bytes up_to_5_bytes = 2 [ (spb_opt).max_size = 5 ];
 
     // for the whole message or the whole file
     option (spb_msgopt).max_size = 6;
@@ -144,9 +144,9 @@ message MaximumSize {
 
     // can be also combined with the `.max_count`
     repeated string up_to_7_short_strings = 5
-        [ (spb).max_count = 7, (spb).max_size = 5 ];
+        [ (spb_opt).max_count = 7, (spb_opt).max_size = 5 ];
     repeated bytes up_to_7_short_bytes = 6
-        [ (spb).max_count = 7, (spb).max_size = 5 ];
+        [ (spb_opt).max_count = 7, (spb_opt).max_size = 5 ];
 }
 
 // its a good idea to set some global upper limit

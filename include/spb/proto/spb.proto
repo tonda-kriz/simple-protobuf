@@ -61,7 +61,7 @@ message SpbOptions
 }
 
 extend google.protobuf.FieldOptions {
-    SpbOptions spb = 1200;
+    SpbOptions spb_opt = 1200;
 }
     
 extend google.protobuf.FileOptions {

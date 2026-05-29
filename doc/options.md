@@ -25,8 +25,8 @@ You may also use 8-bit and 16-bit integer types (`int8`, `uint8`, `int16`, `uint
 **Warning:** to remain compatible with GPB, always use matching sign. For example, `int32` and `int8` are valid together, but `int32` and `uint8` are not.
 
 ```proto
-//[[ (spb).type = "int16" ]]
-[ (spb).type = "int16" ];
+//[[ (spb_opt).type = "int16" ]]
+[ (spb_opt).type = "int16" ];
 ```
 
 ### bit fields
@@ -36,8 +36,8 @@ You may use bit fields such as `int8:1` or `uint64:2` for [ints](#int-types).
 *Remember: always use types with matching sign.*
 
 ```proto
-//[[ (spb).type = "uint32:2" ]]
-[ (spb).type = "uint32:2" ];
+//[[ (spb_opt).type = "uint32:2" ]]
+[ (spb_opt).type = "uint32:2" ];
 ```
 
 ## enum types
@@ -70,8 +70,8 @@ Containers must satisfy a [concept](../include/spb/concepts.h).
 | `bytes`    | `proto_field_bytes_resizable` | resizable [`bytes`](https://protobuf.dev/programming-guides/proto2/#scalar) field type |
 
 ```proto
-//[[ (spb).optional = "std::optional<$>" ]]
-[ (spb).optional = "std::optional<$>" ];
+//[[ (spb_opt).optional = "std::optional<$>" ]]
+[ (spb_opt).optional = "std::optional<$>" ];
 
 //[[ (spb_msgopt).optional = "std::optional<$>" ]]
 option (spb_msgopt).optional = "std::optional<$>";
@@ -79,8 +79,8 @@ option (spb_msgopt).optional = "std::optional<$>";
 //[[ (spb_fileopt).optional = "std::optional<$>" ]]
 option (spb_fileopt).optional = "std::optional<$>";
 
-//[[ (spb).repeated = "std::vector<$>" ]]
-[ (spb).repeated = "std::vector<$>" ];
+//[[ (spb_opt).repeated = "std::vector<$>" ]]
+[ (spb_opt).repeated = "std::vector<$>" ];
 
 //[[ (spb_msgopt).repeated = "std::vector<$>" ]]
 option (spb_msgopt).repeated = "std::vector<$>";
@@ -88,8 +88,8 @@ option (spb_msgopt).repeated = "std::vector<$>";
 //[[ (spb_fileopt).repeated = "std::vector<$>" ]]
 option (spb_fileopt).repeated = "std::vector<$>";
 
-//[[ (spb).string = "std::string" ]]
-[ (spb).string = "std::string" ];
+//[[ (spb_opt).string = "std::string" ]]
+[ (spb_opt).string = "std::string" ];
 
 //[[ (spb_msgopt).string = "std::string" ]]
 option (spb_msgopt).string = "std::string";
@@ -97,8 +97,8 @@ option (spb_msgopt).string = "std::string";
 //[[ (spb_fileopt).string = "std::string" ]]
 option (spb_fileopt).string = "std::string";
 
-//[[ (spb).bytes = "std::vector<$>" ]]
-[ (spb).bytes = "std::vector<$>" ];
+//[[ (spb_opt).bytes = "std::vector<$>" ]]
+[ (spb_opt).bytes = "std::vector<$>" ];
 
 //[[ (spb_msgopt).bytes = "std::vector<$>" ]]
 option (spb_msgopt).bytes = "std::vector<$>";
@@ -121,8 +121,8 @@ The field must be `repeated` and `packed` (packed is the default in proto3, for 
 **Warning:** deserialization throws an exception if the repeated field length differs from the expected size.
 
 ```proto
-//[[ (spb).repeated = "std::fixed_size_simd<$,4>" ]]
-[ (spb).repeated = "std::array<$,32>" ];
+//[[ (spb_opt).repeated = "std::fixed_size_simd<$,4>" ]]
+[ (spb_opt).repeated = "std::array<$,32>" ];
 
 //[[ (spb_msgopt).repeated = "std::fixed_size_simd<$,4>" ]]
 option (spb_msgopt).repeated = "std::array<$,32>";
@@ -138,8 +138,8 @@ You can use **fixed-size** containers for `bytes` and `string` fields. They must
 **Warning:** deserialization throws an exception if the field size differs from the expected size.
 
 ```proto
-//[[ (spb).string = "std::array<$,4>" ]]
-[ (spb).string = "std::array<$,4>" ];
+//[[ (spb_opt).string = "std::array<$,4>" ]]
+[ (spb_opt).string = "std::array<$,4>" ];
 
 //[[ (spb_msgopt).string = "std::array<$,4>" ]]
 option (spb_msgopt).string = "std::array<$,4>";
@@ -147,8 +147,8 @@ option (spb_msgopt).string = "std::array<$,4>";
 //[[ (spb_fileopt).string = "std::array<$,4>" ]]
 option (spb_fileopt).string = "std::array<$,4>";
 
-//[[ (spb).bytes = "std::array<$,32>" ]]
-[ (spb).bytes = "std::array<$,32>" ];
+//[[ (spb_opt).bytes = "std::array<$,32>" ]]
+[ (spb_opt).bytes = "std::array<$,32>" ];
 
 //[[ (spb_msgopt).bytes = "std::array<$,32>" ]]
 option (spb_msgopt).bytes = "std::array<$,32>";
@@ -164,8 +164,8 @@ Serialization or deserialization throws an exception if `real_size > max_size`.
 This option is copied from [nanopb](https://github.com/nanopb/nanopb/blob/master/generator/proto/nanopb.proto), so the original name is also supported.
 
 ```proto
-//[[ (spb).max_size = 8]]
-[ (spb).max_size = 8]
+//[[ (spb_opt).max_size = 8]]
+[ (spb_opt).max_size = 8]
 
 //[[ (nanopb).max_size = 8]]
 [ (nanopb).max_size = 8]
@@ -199,8 +199,8 @@ Serialization or deserialization throws an exception if `real_count > max_count`
 This option is also copied from [nanopb](https://github.com/nanopb/nanopb/blob/master/generator/proto/nanopb.proto), so the original name is also supported.
 
 ```proto
-//[[ (spb).max_count = 8]]
-[ (spb).max_count = 8]
+//[[ (spb_opt).max_count = 8]]
+[ (spb_opt).max_count = 8]
 
 //[[ (nanopb).max_count = 8]]
 [ (nanopb).max_count = 8]

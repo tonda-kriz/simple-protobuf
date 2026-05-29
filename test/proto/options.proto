@@ -17,11 +17,11 @@ message MaxCountIntPacked {
 }
 
 message MaxCountFieldInt {
-    repeated int32 value = 1 [(spb).max_count = 4];
+    repeated int32 value = 1 [(spb_opt).max_count = 4];
 }
 
 message MaxCountFieldIntPacked {
-    repeated int32 value = 1 [(spb).max_count = 4, packed = true];
+    repeated int32 value = 1 [(spb_opt).max_count = 4, packed = true];
 }
 
 message MaxCountString {
@@ -29,7 +29,7 @@ message MaxCountString {
 }
 
 message MaxCountFieldString {
-    repeated string value = 1 [(spb).max_count = 4];
+    repeated string value = 1 [(spb_opt).max_count = 4];
 }
 
 message MaxCountBytes {
@@ -37,7 +37,7 @@ message MaxCountBytes {
 }
 
 message MaxCountFieldBytes {
-    repeated bytes value = 1 [(spb).max_count = 4];
+    repeated bytes value = 1 [(spb_opt).max_count = 4];
 }
 
 message MaxCountPerson {
@@ -45,31 +45,31 @@ message MaxCountPerson {
 }
 
 message MaxCountFieldPerson {
-    repeated TestPerson value = 1 [(spb).max_count = 4];
+    repeated TestPerson value = 1 [(spb_opt).max_count = 4];
 }
 
 message MaxCountFieldCommentInt {
-    // [[(spb).max_count = 4]]
+    // [[(spb_opt).max_count = 4]]
     repeated int32 value = 1;
 }
 
 message MaxCountFieldCommentIntPacked {
-    // [[(spb).max_count = 4]]
+    // [[(spb_opt).max_count = 4]]
     repeated int32 value = 1 [packed = true];
 }
 
 message MaxCountFieldCommentString {
-    // [[(spb).max_count = 4]]
+    // [[(spb_opt).max_count = 4]]
     repeated string value = 1;
 }
 
 message MaxCountFieldCommentBytes {
-    // [[(spb).max_count = 4]]
+    // [[(spb_opt).max_count = 4]]
     repeated bytes value = 1;
 }
 
 message MaxCountFieldCommentPerson {
-    // [[(spb).max_count = 4]]
+    // [[(spb_opt).max_count = 4]]
     repeated TestPerson value = 1;
 }
 
@@ -124,11 +124,11 @@ message MaxSizeOptString {
 }
 
 message MaxSizeOptStringField {
-    optional string value = 1 [(spb).max_size = 4];
+    optional string value = 1 [(spb_opt).max_size = 4];
 }
 
 message MaxSizeReqStringField {
-    required string value = 1 [(spb).max_size = 4];
+    required string value = 1 [(spb_opt).max_size = 4];
 }
 
 message MaxSizeOptBytes {
@@ -136,30 +136,30 @@ message MaxSizeOptBytes {
 }
 
 message MaxSizeOptBytesField {
-    optional bytes value = 1 [(spb).max_size = 4];
+    optional bytes value = 1 [(spb_opt).max_size = 4];
 }
 
 message MaxSizeReqBytesField {
-    required bytes value = 1 [(spb).max_size = 4];
+    required bytes value = 1 [(spb_opt).max_size = 4];
 }
 
 message MaxSizeOptStringComment {
-    // [[(spb).max_size = 4]]
+    // [[(spb_opt).max_size = 4]]
     optional string value = 1;
 }
 
 message MaxSizeReqStringComment {
-    // [[(spb).max_size = 4]]
+    // [[(spb_opt).max_size = 4]]
     required string value = 1;
 }
 
 message MaxSizeOptBytesComment {
-    // [[(spb).max_size = 4]]
+    // [[(spb_opt).max_size = 4]]
     optional bytes value = 1;
 }
 
 message MaxSizeReqBytesComment {
-    // [[(spb).max_size = 4]]
+    // [[(spb_opt).max_size = 4]]
     required bytes value = 1;
 }
 
