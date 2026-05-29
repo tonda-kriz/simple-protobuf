@@ -101,7 +101,7 @@ auto option_value_int( const proto_file & file,
         return {};
 
     auto value  = T{};
-    auto result = spb_std_emu::from_chars( option.begin( ), option.end( ), value );
+    auto result = spb_std_emu::from_chars( option.data( ), option.data( ) + option.size( ), value );
     if( result.ec == std::errc{} ) [[likely]]
         return value;
 
@@ -293,9 +293,9 @@ void resolve_options( proto_file & file, proto_message & message )
         convert_options( file, message.attributes, field.options, option_type::option_message,
                          false );
     }
-    for( auto & message : message.messages )
+    for( auto & sub_message : message.messages )
     {
-        resolve_options( file, message );
+        resolve_options( file, sub_message );
     }
     for( auto & enum_ : message.enums )
     {

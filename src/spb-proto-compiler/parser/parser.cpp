@@ -444,7 +444,7 @@ void parse_top_level_import( spb::char_stream & stream, proto_file & file, parsi
             file.imports.emplace_back( parse_proto_file( import_file_path, import_ctx ) ).comment =
                 std::move( import_comment );
         }
-        catch( const std::runtime_error & error )
+        catch( const std::runtime_error & )
         {
             if( file.attributes.exclude.contains( import_name ) )
                 return;
