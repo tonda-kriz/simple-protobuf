@@ -34,6 +34,16 @@ jobs:
             sanitizer: 'OFF'
           - os: ubuntu-24.04
             compiler: gcc
+            build_type: Release
+            version: '15'
+            sanitizer: 'OFF'
+          - os: ubuntu-24.04
+            compiler: gcc
+            build_type: Release
+            version: '16'
+            sanitizer: 'OFF'
+          - os: ubuntu-24.04
+            compiler: gcc
             build_type: Debug
             version: '14'
             sanitizer: 'ON'
@@ -61,6 +71,16 @@ jobs:
             compiler: clang
             build_type: Release
             version: '18'
+            sanitizer: 'OFF'
+          - os: ubuntu-24.04
+            compiler: clang
+            build_type: Release
+            version: '19'
+            sanitizer: 'OFF'
+          - os: ubuntu-24.04
+            compiler: clang
+            build_type: Release
+            version: '20'
             sanitizer: 'OFF'
           - os: ubuntu-24.04
             compiler: clang
