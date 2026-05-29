@@ -106,10 +106,6 @@ message Containers {
         // default bytes is an std::vector<std::byte>
         required bytes default_bytes = 1;
         message SubBytes {
-            // bytes type for the whole message
-            option (spb_msgopt).bytes = "std::basic_string<$>";
-            required bytes bytes_as_string1 = 1;
-            optional bytes bytes_as_string2 = 2;
             // an array of fixed size bytes
             repeated bytes fixed_bytes = 3 [ (spb_opt).bytes = "std::array<$, 8>" ];
         }

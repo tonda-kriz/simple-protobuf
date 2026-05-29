@@ -101,8 +101,6 @@ struct Containers
     {
         struct SubBytes
         {
-            std::basic_string< std::byte > bytes_as_string1;
-            std::optional< std::basic_string< std::byte > > bytes_as_string2;
             // an array of fixed size bytes
             std::vector< std::array< std::byte, 8 > > fixed_bytes;
         };
