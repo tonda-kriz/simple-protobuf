@@ -8,13 +8,15 @@
 [![Mac-build](https://github.com/tonda-kriz/simple-protobuf/actions/workflows/ci-macos-tests.yml/badge.svg)](https://github.com/tonda-kriz/simple-protobuf/actions/workflows/ci-macos-tests.yml)
 [![Library-coverage](https://tonda-kriz.github.io/simple-protobuf/library/coverage.svg)](https://tonda-kriz.github.io/simple-protobuf/library)
 
-**Lightweight C++ protobuf & JSON serialization library** - no **protoc**, no **Google toolchain** dependency.
+**Lightweight C++ protobuf & JSON serialization library** 
+ - _Where **simplicity** meets **usability**_
+ - Without **protoc** and without **Google toolchain** dependency
+
+### Usage
 
 1. Define your data in standard `.proto` files.
 2. Generate clean, native C++ structs.
 3. Serialize/deserialize to `protobuf` (GPB-wire-compatible) and `JSON` (GPB-compatible) with minimal effort.
-
-Ideal for embedded systems (zero heap allocations are possible with [ETL](https://github.com/ETLCPP/etl)), IoT, microservices, or anywhere you want protobuf without installing heavy tooling.
 
 ### Example
 
@@ -41,6 +43,13 @@ message Person {
   // all registered phones
   repeated PhoneNumber phones = 4;
 }
+```
+
+```bash
+# CMakeLists.txt, hand written
+add_subdirectory(external/simple-protobuf) # or FetchContent
+add_executable(myapp main.cpp proto/person.proto)
+spb_protobuf_generate(TARGET myapp)
 ```
 
 ```CPP
@@ -95,32 +104,15 @@ int main() {
 }
 ```
 
-```bash
-# CMakeLists.txt
-add_subdirectory(external/simple-protobuf) # or FetchContent
-add_executable(myapp main.cpp proto/person.proto)
-spb_protobuf_generate(TARGET myapp)
-```
+## Features
 
-## Why simple-protobuf?
-
-`Simplicity` and `usability`.
-
-* No `protoc` or `Google libs` dependency - uses only its own tiny parser/compiler (`sprotoc`) and the C++ standard library.
+* No `protoc` or `Google libs` dependency - instead it uses its own proto-compiler called `sprotoc`.
 * Supports `.proto` files with `proto2` or `proto3` syntax (no edition syntax).
 * Generates clean, modern C++ with `std::optional`, `std::vector`, and `enum class`.
 * Bundles protobuf and JSON support in a single library.
     * Serialized protobuf and JSON are compatible with official protoc, Python, Go, Java.
-* Embedded-friendly, with zero heap allocations when paired with ETL or fixed-size strings/vectors.
+* Embedded-friendly, zero heap allocations when paired with [ETL](https://github.com/ETLCPP/etl) or fixed-size strings/vectors.
     * See [options](doc/options.md) for user-specified types and advanced usage.
-
-## Comparison to other libraries
-
-| Library | Language | Toolchain needed | JSON built-in | Generated style | Best for |
-|---------|----------|------------------|--------------|----------------|----------|
-| simple-protobuf | C++20 | None (own compiler) | Yes | C++ structs | Lightweight, simple, easy |
-| Official protobuf | C++ | protoc | Yes | Heavy classes | Full protobuf but not for embedded |
-| nanopb | C | protoc + python plugin | No | C structs + streams | Tiny MCUs, pure C |
 
 ## Dependencies
 
@@ -164,6 +156,11 @@ See also [options](doc/options.md) for user-specified types and advanced usage.
 ## Examples
 
 See the [example](example/) directory.
+
+## Doc
+
+* [API](doc/API.md)
+* [Options](doc/options.md)
 
 ## Status
 
