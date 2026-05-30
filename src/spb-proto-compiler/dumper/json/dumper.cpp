@@ -211,14 +211,14 @@ void dump_field_attributes_without_name(std::ostream &stream, const proto_file &
 void dump_cpp_serialize_value(std::ostream &stream, const proto_file &file, const proto_message &message,
                               const proto_oneof &oneof)
 {
-    stream << "\t{\n\t\tconst auto index = value." << oneof.name.get_name() << ".index( );\n";
-    stream << "\t\tswitch( index )\n\t\t{\n";
+    stream << "\t{\n\t\tconst auto index = value." << oneof.name.get_name() << ".index();\n";
+    stream << "\t\tswitch (index)\n\t\t{\n";
     for (size_t i = 0; i < oneof.fields.size(); ++i)
     {
-        stream << "\t\t\tcase " << i << ":\n\t\t\t\treturn stream.serialize( std::get< " << i << " >( value."
-               << oneof.name.get_name() << " )";
+        stream << "\t\t\tcase " << i << ":\n\t\t\t\treturn stream.serialize(std::get< " << i << " >(value."
+               << oneof.name.get_name() << ")";
         dump_field_attributes(stream, file, message, oneof.fields[i]);
-        stream << " );\n";
+        stream << ");\n";
     }
     stream << "\t\t}\n\t}\n\n";
 }
@@ -227,13 +227,13 @@ void dump_cpp_serialize_value(std::ostream &stream, const proto_enum &my_enum, s
 {
     if (my_enum.fields.empty())
     {
-        stream << "void serialize_value( detail::ostream &, const " << full_name << " & )\n{\n";
+        stream << "void serialize_value(detail::ostream &, const " << full_name << " &)\n{\n";
         stream << "\treturn ;\n}\n\n";
         return;
     }
 
-    stream << "void serialize_value( detail::ostream & stream, const " << full_name << " & value )\n{\n";
-    stream << "\tswitch( value )\n\t{\n";
+    stream << "void serialize_value(detail::ostream & stream, const " << full_name << " & value)\n{\n";
+    stream << "\tswitch (value)\n\t{\n";
 
     std::set<int32_t> numbers_taken;
     for (const auto &field : my_enum.fields)
@@ -242,10 +242,10 @@ void dump_cpp_serialize_value(std::ostream &stream, const proto_enum &my_enum, s
             continue;
 
         stream << "\tcase " << full_name << "::" << field.name.get_name()
-               << ":\n\t\treturn stream.serialize( \"" << field.name.get_name() << "\"sv);\n";
+               << ":\n\t\treturn stream.serialize(\"" << field.name.get_name() << "\"sv);\n";
     }
-    stream << "\tdefault:\n\t\tthrow std::system_error( std::make_error_code( "
-              "std::errc::invalid_argument ) );\n";
+    stream << "\tdefault:\n\t\tthrow std::system_error(std::make_error_code("
+              "std::errc::invalid_argument));\n";
     stream << "\t}\n}\n\n";
 }
 
@@ -253,7 +253,7 @@ void dump_cpp_deserialize_value(std::ostream &stream, const proto_enum &my_enum,
 {
     if (my_enum.fields.empty())
     {
-        stream << "void deserialize_value( detail::istream &, " << full_name << " & )\n{\n";
+        stream << "void deserialize_value(detail::istream &, " << full_name << " &)\n{\n";
         stream << "\n}\n\n";
         return;
     }
@@ -269,12 +269,12 @@ void dump_cpp_deserialize_value(std::ostream &stream, const proto_enum &my_enum,
         key_size_max = std::max(key_size_max, field.name.get_name().size());
     }
 
-    stream << "void deserialize_value( detail::istream & stream, " << full_name << " & value )\n{\n";
-    stream << "\tauto enum_value = stream.deserialize_string_or_int( " << key_size_min << ", " << key_size_max
-           << " );\n";
-    stream << "\tstd::visit( detail::overloaded{\n\t\t[&]( std::string_view enum_str )\n\t\t{\n";
-    stream << "\t\t\tconst auto enum_hash = djb2_hash( enum_str );\n";
-    stream << "\t\t\tswitch( enum_hash )\n\t\t\t{\n";
+    stream << "void deserialize_value(detail::istream & stream, " << full_name << " & value)\n{\n";
+    stream << "\tauto enum_value = stream.deserialize_string_or_int(" << key_size_min << ", " << key_size_max
+           << ");\n";
+    stream << "\tstd::visit(detail::overloaded{\n\t\t[&](std::string_view enum_str)\n\t\t{\n";
+    stream << "\t\t\tconst auto enum_hash = djb2_hash(enum_str);\n";
+    stream << "\t\t\tswitch (enum_hash)\n\t\t\t{\n";
     auto last_hash = name_map.begin()->first + 1;
     auto put_break = false;
     for (const auto &[hash, name] : name_map)
@@ -283,19 +283,19 @@ void dump_cpp_deserialize_value(std::ostream &stream, const proto_enum &my_enum,
         {
             last_hash = hash;
             if (put_break)
-                stream << "\t\t\t\tbreak ;\n";
+                stream << "\t\t\t\tbreak;\n";
 
             put_break = true;
-            stream << "\t\t\tcase detail::djb2_hash( \"" << name << "\"sv ):\n";
+            stream << "\t\t\tcase detail::djb2_hash(\"" << name << "\"sv):\n";
         }
-        stream << "\t\t\t\tif( enum_str == \"" << name << "\"sv ){\n\t\t\t\t\tvalue = " << full_name
-               << "::" << name << ";\n\t\t\t\t\treturn ;\t\t\t\t}\n";
+        stream << "\t\t\t\tif (enum_str == \"" << name << "\"sv)\n\t\t\t\t{\n\t\t\t\t\tvalue = " << full_name
+               << "::" << name << ";\n\t\t\t\t\treturn ;\n\t\t\t\t}\n";
     }
     stream << "\t\t\t\tbreak ;\n";
-    stream << "\t\t\t}\n\t\t\tthrow std::system_error( std::make_error_code( "
-              "std::errc::invalid_argument ) );\n";
-    stream << "\t\t},\n\t\t[&]( int32_t enum_int )\n\t\t{\n\t\t\tswitch( " << full_name
-           << "( enum_int ) )\n\t\t\t{\n";
+    stream << "\t\t\t}\n\t\t\tthrow std::system_error(std::make_error_code("
+              "std::errc::invalid_argument));\n";
+    stream << "\t\t},\n\t\t[&](int32_t enum_int)\n\t\t{\n\t\t\tswitch (" << full_name
+           << "(enum_int))\n\t\t\t{\n";
     std::set<int32_t> numbers_taken;
     for (const auto &field : my_enum.fields)
     {
@@ -304,10 +304,10 @@ void dump_cpp_deserialize_value(std::ostream &stream, const proto_enum &my_enum,
 
         stream << "\t\t\tcase " << full_name << "::" << field.name.get_name() << ":\n";
     }
-    stream << "\t\t\t\tvalue = " << full_name << "( enum_int );\n\t\t\t\treturn ;\n";
-    stream << "\t\t\t}\n\t\t\tthrow std::system_error( std::make_error_code( "
-              "std::errc::invalid_argument ) );\n";
-    stream << "\t\t}\n\t}, enum_value );\n}\n\n";
+    stream << "\t\t\t\tvalue = " << full_name << "(enum_int);\n\t\t\t\treturn ;\n";
+    stream << "\t\t\t}\n\t\t\tthrow std::system_error(std::make_error_code("
+              "std::errc::invalid_argument));\n";
+    stream << "\t\t}\n\t}, enum_value);\n}\n\n";
 }
 
 void dump_cpp_serialize_value(std::ostream &stream, const proto_file &file, const proto_message &message,
@@ -315,22 +315,22 @@ void dump_cpp_serialize_value(std::ostream &stream, const proto_file &file, cons
 {
     if (message.fields.empty() && message.maps.empty() && message.oneofs.empty())
     {
-        stream << "void serialize_value( detail::ostream & , const " << full_name << " & )\n{\n}\n\n";
+        stream << "void serialize_value(detail::ostream &, const " << full_name << " &)\n{\n}\n\n";
         return;
     }
 
-    stream << "void serialize_value( detail::ostream & stream, const " << full_name << " & value )\n{\n";
+    stream << "void serialize_value(detail::ostream & stream, const " << full_name << " & value)\n{\n";
     for (const auto &field : message.fields)
     {
-        stream << "\tstream.serialize( value." << field.name.get_name();
+        stream << "\tstream.serialize(value." << field.name.get_name();
         dump_field_attributes(stream, file, message, field);
-        stream << " );\n";
+        stream << ");\n";
     }
     for (const auto &map : message.maps)
     {
-        stream << "\tstream.serialize( value." << map.name.get_name();
+        stream << "\tstream.serialize(value." << map.name.get_name();
         dump_field_attributes(stream, file, message, map.key);
-        stream << " );\n";
+        stream << ");\n";
     }
     for (const auto &oneof : message.oneofs)
     {
@@ -344,7 +344,7 @@ void dump_cpp_deserialize_value(std::ostream &stream, const proto_file &file, co
 {
     if (message.fields.empty() && message.maps.empty() && message.oneofs.empty())
     {
-        stream << "void deserialize_value( detail::istream &, " << full_name << " & )\n{\n";
+        stream << "void deserialize_value(detail::istream &, " << full_name << " &)\n{\n";
         stream << "\n}\n\n";
         return;
     }
@@ -437,9 +437,9 @@ void dump_cpp_deserialize_value(std::ostream &stream, const proto_file &file, co
         }
     }
 
-    stream << "void deserialize_value( detail::istream & stream, " << full_name << " & value )\n{\n";
-    stream << "\tauto key = stream.deserialize_key( " << key_size_min << ", " << key_size_max << " );\n";
-    stream << "\tswitch( djb2_hash( key ) )\n\t{\n";
+    stream << "void deserialize_value(detail::istream & stream, " << full_name << " & value)\n{\n";
+    stream << "\tauto key = stream.deserialize_key(" << key_size_min << ", " << key_size_max << ");\n";
+    stream << "\tswitch (djb2_hash(key))\n\t{\n";
 
     auto last_hash = name_map.begin()->first + 1;
     auto put_break = false;
@@ -448,36 +448,36 @@ void dump_cpp_deserialize_value(std::ostream &stream, const proto_file &file, co
         if (hash != last_hash)
         {
             if (put_break)
-                stream << "\t\t\t\tbreak;\n";
+                stream << "\t\t\tbreak;\n";
 
             put_break = true;
             last_hash = hash;
-            stream << "\t\tcase detail::djb2_hash( \"" << field.parsed_name << "\"sv ):\n";
+            stream << "\t\tcase detail::djb2_hash(\"" << field.parsed_name << "\"sv):\n";
         }
-        stream << "\t\t\tif( key == \"" << field.parsed_name << "\"sv )\n\t\t\t{\n";
+        stream << "\t\t\tif (key == \"" << field.parsed_name << "\"sv)\n\t\t\t{\n";
         if (field.oneof_index == SIZE_MAX)
         {
             if (!field.bitfield.empty())
             {
                 stream << "\t\t\t\tvalue." << field.name.get_name()
-                       << " = stream.deserialize_bitfield< decltype( value." << field.name.get_name()
-                       << " ) >( " << field.bitfield << " );\n\t\t\t\treturn ;\n";
+                       << " = stream.deserialize_bitfield<decltype(value." << field.name.get_name() << ")>("
+                       << field.bitfield << ");\n\t\t\t\treturn ;\n";
             }
             else
             {
-                stream << "\t\t\t\treturn stream.deserialize( value." << field.name.get_name();
+                stream << "\t\t\t\treturn stream.deserialize(value." << field.name.get_name();
                 dump_field_attributes_without_name(stream, file, message, field.attributes);
-                stream << " );\n";
+                stream << ");\n";
             }
         }
         else
         {
-            stream << "\t\t\t\treturn stream.deserialize_variant<" << field.oneof_index << ">( value."
-                   << field.name.get_name() << " );\n";
+            stream << "\t\t\t\treturn stream.deserialize_variant<" << field.oneof_index << ">(value."
+                   << field.name.get_name() << ");\n";
         }
         stream << "\t\t\t}\n";
     }
-    stream << "\t\t\tbreak;\n\t}\n\treturn stream.skip_value( );\n}\n";
+    stream << "\t\t\tbreak;\n\t}\n\treturn stream.skip_value();\n}\n";
 }
 
 void dump_cpp_enum(std::ostream &stream, const proto_enum &my_enum, std::string_view parent)
