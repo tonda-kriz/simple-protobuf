@@ -19,29 +19,27 @@
 #include <vector>
 
 struct proto_option;
-using proto_option_name  = std::string_view;
+using proto_option_name = std::string_view;
 using proto_option_value = std::string_view;
 
-using proto_options = std::map< proto_option_name, proto_option >;
+using proto_options = std::map<proto_option_name, proto_option>;
 
-struct proto_option
-{
-    std::vector< proto_option_value > value;
-    std::vector< proto_options > options;
+struct proto_option {
+    std::vector<proto_option_value> value;
+    std::vector<proto_options> options;
 };
 
-struct proto_attributes
-{
+struct proto_attributes {
     // default field value
     std::string_view default_;
 
     // maximum size for `string` or `bytes`
     // de/serialize will return false if `real_size > max_size`
-    std::optional< uint32_t > max_size;
+    std::optional<uint32_t> max_size;
 
     // maximum elements in an repeated field
     // de/serialize will return false if `real_count > max_count`
-    std::optional< uint32_t > max_count;
+    std::optional<uint32_t> max_count;
 
     // field's type: one of int8, uint8, int16, uint16, int32, uint32, int64, uint64
     // can be combined with an bit field: `int8:1`, `uint8:2`, ...
@@ -54,10 +52,10 @@ struct proto_attributes
     std::string_view enum_;
 
     // extra files to include in generated `.pb.h`
-    std::set< std::string_view > include;
+    std::set<std::string_view> include;
 
     // files to exclude from includes in generated `.pb.h`
-    std::set< std::string_view > exclude;
+    std::set<std::string_view> exclude;
 
     // container type for optional label
     // default: "std::optional<$>"
@@ -87,5 +85,5 @@ struct proto_attributes
     bool deprecated = false;
 
     // packed attribute for an array or message
-    std::optional< bool > packed;
+    std::optional<bool> packed;
 };

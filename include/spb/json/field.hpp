@@ -15,10 +15,9 @@
 
 namespace spb::json::detail
 {
-struct field_attributes
-{
+struct field_attributes {
     std::string_view name;
     size_t max_count = 0;
-    size_t max_size  = 0;
+    size_t max_size = 0;
 };
-}// namespace spb::json::detail
+} // namespace spb::json::detail

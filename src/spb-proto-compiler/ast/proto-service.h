@@ -12,8 +12,7 @@
 
 #include <vector>
 
-struct proto_service
-{
+struct proto_service {
 };
 
-using proto_services = std::vector< proto_service >;
+using proto_services = std::vector<proto_service>;

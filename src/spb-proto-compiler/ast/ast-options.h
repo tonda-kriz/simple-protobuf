@@ -12,4 +12,4 @@
 
 #include "proto-file.h"
 
-void resolve_options( proto_file & file );
+void resolve_options(proto_file &file);

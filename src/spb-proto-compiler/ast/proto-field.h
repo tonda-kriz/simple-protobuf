@@ -16,10 +16,8 @@
 #include <string_view>
 #include <vector>
 
-struct proto_field : public proto_base
-{
-    enum Type
-    {
+struct proto_field : public proto_base {
+    enum Type {
         NONE,
         BOOL,
         BYTES,
@@ -40,8 +38,7 @@ struct proto_field : public proto_base
         UINT64,
     };
 
-    enum class BitType
-    {
+    enum class BitType {
         NONE,
         INT8,
         INT16,
@@ -53,8 +50,7 @@ struct proto_field : public proto_base
         UINT64,
     };
 
-    enum class Label
-    {
+    enum class Label {
         //- no type modifier, only `type`
         NONE = 0,
         //- std::optional< type >
@@ -65,7 +61,7 @@ struct proto_field : public proto_base
         PTR = 3,
     };
 
-    Type type   = Type::NONE;
+    Type type = Type::NONE;
     Label label = Label::OPTIONAL;
 
     cpp_ident type_name;
@@ -74,4 +70,4 @@ struct proto_field : public proto_base
     std::string_view bit_field;
 };
 
-using proto_fields = std::vector< proto_field >;
+using proto_fields = std::vector<proto_field>;
