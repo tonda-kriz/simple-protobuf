@@ -154,7 +154,7 @@ void dump_cpp_includes(std::ostream &stream, std::string_view header_file_path)
 
 void dump_cpp_close_namespace(std::ostream &stream, std::string_view name)
 {
-    stream << "} // namespace " << name << "\n";
+    stream << "} // namespace " << name << "\n\n";
 }
 
 void dump_cpp_open_namespace(std::ostream &stream, std::string_view name)

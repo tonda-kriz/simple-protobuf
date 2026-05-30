@@ -15,6 +15,7 @@
 #include "ast/proto-field.h"
 #include "ast/proto-file.h"
 #include "ast/proto-message.h"
+#include "indent_ostream.h"
 #include "io/file.h"
 #include "parser/parser.h"
 #include <algorithm>
@@ -514,17 +515,19 @@ void throw_parse_error(const proto_file &file, std::string_view at, std::string_
 
 void dump_cpp_definitions(const proto_file &file, std::ostream &stream)
 {
+    indented_ostream ostream(stream);
+
     auto includes = cpp_includes();
-    dump_pragma(stream, file);
+    dump_pragma(ostream, file);
     get_imports(includes, file);
     get_std_includes(includes, file);
     get_user_includes(includes, file);
-    dump_includes(stream, includes);
-    dump_syntax(stream, file);
-    dump_package_begin(stream, file);
-    dump_enums(stream, file);
-    dump_messages(stream, file);
-    dump_package_end(stream, file);
+    dump_includes(ostream, includes);
+    dump_syntax(ostream, file);
+    dump_package_begin(ostream, file);
+    dump_enums(ostream, file);
+    dump_messages(ostream, file);
+    dump_package_end(ostream, file);
 }
 
 auto replace(std::string_view input, std::string_view what, std::string_view with) -> std::string
