@@ -21,8 +21,8 @@
 #include <vector>
 
 struct proto_message;
-using proto_messages         = std::vector< proto_message >;
-using forwarded_declarations = std::set< std::string_view >;
+using proto_messages = std::vector<proto_message>;
+using forwarded_declarations = std::set<std::string_view>;
 
 struct proto_message : public proto_base
 {

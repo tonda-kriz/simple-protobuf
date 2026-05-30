@@ -24,7 +24,7 @@
 
 struct proto_file;
 
-using proto_files = std::vector< proto_file >;
+using proto_files = std::vector<proto_file>;
 
 struct proto_file
 {

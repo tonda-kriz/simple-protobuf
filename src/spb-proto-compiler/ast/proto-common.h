@@ -20,8 +20,8 @@
 #include <unordered_set>
 #include <vector>
 
-using proto_reserved_range = std::vector< std::pair< int32_t, int32_t > >;
-using proto_reserved_name  = std::unordered_set< std::string_view >;
+using proto_reserved_range = std::vector<std::pair<int32_t, int32_t>>;
+using proto_reserved_name = std::unordered_set<std::string_view>;
 
 struct proto_reserved
 {
@@ -38,9 +38,9 @@ struct cpp_ident
     //- ('private' -> 'private_')
     std::string cpp_name{};
 
-    auto get_name( ) const -> std::string_view
+    auto get_name() const -> std::string_view
     {
-        return cpp_name.empty( ) ? proto_name : std::string_view( cpp_name );
+        return cpp_name.empty() ? proto_name : std::string_view(cpp_name);
     }
 };
 
@@ -60,4 +60,4 @@ struct proto_base
     proto_attributes attributes;
 };
 
-using proto_bases = std::vector< proto_base >;
+using proto_bases = std::vector<proto_base>;

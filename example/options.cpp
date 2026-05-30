@@ -1,6 +1,6 @@
 #include <proto/spb_options.pb.h>
 
-int main( )
+int main()
 {
     return 0;
 }

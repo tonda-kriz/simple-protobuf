@@ -23,65 +23,63 @@ namespace spb::io
 
 class buffered_reader
 {
-private:
+  private:
     io::reader on_read;
-    std::array< char, SPB_READ_BUFFER_SIZE > buffer;
+    std::array<char, SPB_READ_BUFFER_SIZE> buffer;
     size_t begin_index = 0;
-    size_t end_index   = 0;
-    bool eof_reached   = false;
+    size_t end_index = 0;
+    bool eof_reached = false;
 
-    auto bytes_in_buffer( ) const noexcept -> size_t
+    auto bytes_in_buffer() const noexcept -> size_t
     {
         return end_index - begin_index;
     }
 
-    auto space_left_in_buffer( ) const noexcept -> size_t
+    auto space_left_in_buffer() const noexcept -> size_t
     {
         return SPB_READ_BUFFER_SIZE - end_index;
     }
 
-    void shift_data_to_start( ) noexcept
+    void shift_data_to_start() noexcept
     {
-        if( begin_index > 0 )
+        if (begin_index > 0)
         {
-            memmove( buffer.data( ), buffer.data( ) + begin_index, bytes_in_buffer( ) );
+            memmove(buffer.data(), buffer.data() + begin_index, bytes_in_buffer());
             end_index -= begin_index;
             begin_index = 0;
         }
     }
 
-    void read_buffer( )
+    void read_buffer()
     {
-        shift_data_to_start( );
+        shift_data_to_start();
 
-        while( bytes_in_buffer( ) < SPB_READ_BUFFER_SIZE && !eof_reached )
+        while (bytes_in_buffer() < SPB_READ_BUFFER_SIZE && !eof_reached)
         {
-            auto bytes_in = on_read( &buffer[ end_index ], space_left_in_buffer( ) );
+            auto bytes_in = on_read(&buffer[end_index], space_left_in_buffer());
             eof_reached |= bytes_in == 0;
             end_index += bytes_in;
         }
     }
 
-public:
-    explicit buffered_reader( io::reader reader )
-        : on_read( reader )
+  public:
+    explicit buffered_reader(io::reader reader) : on_read(reader)
     {
     }
 
-    [[nodiscard]] auto view( size_t minimal_size ) -> std::string_view
+    [[nodiscard]] auto view(size_t minimal_size) -> std::string_view
     {
-        minimal_size = std::max< size_t >( minimal_size, 1U );
-        if( bytes_in_buffer( ) < minimal_size )
-        {
-            read_buffer( );
-        }
-        return std::string_view( &buffer[ begin_index ], bytes_in_buffer( ) );
+        minimal_size = std::max<size_t>(minimal_size, 1U);
+        if (bytes_in_buffer() < minimal_size)
+            read_buffer();
+
+        return std::string_view(&buffer[begin_index], bytes_in_buffer());
     }
 
-    void skip( size_t size ) noexcept
+    void skip(size_t size) noexcept
     {
-        begin_index += std::min( size, bytes_in_buffer( ) );
+        begin_index += std::min(size, bytes_in_buffer());
     }
 };
 
-}// namespace spb::io
+} // namespace spb::io
