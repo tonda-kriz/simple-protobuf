@@ -15,21 +15,27 @@
 
 void dump_cpp_header(const proto_file &file, std::ostream &stream)
 {
-    try {
+    try
+    {
         dump_cpp_definitions(file, stream);
         dump_json_header(file, stream);
         dump_pb_header(file, stream);
-    } catch (const std::exception &e) {
+    }
+    catch (const std::exception &e)
+    {
         throw std::runtime_error(file.path.string() + ":" + e.what());
     }
 }
 
 void dump_cpp(const proto_file &file, const std::filesystem::path &header_file, std::ostream &file_stream)
 {
-    try {
+    try
+    {
         dump_json_cpp(file, header_file, file_stream);
         dump_pb_cpp(file, header_file, file_stream);
-    } catch (const std::exception &e) {
+    }
+    catch (const std::exception &e)
+    {
         throw std::runtime_error(file.path.string() + ":" + e.what());
     }
 }

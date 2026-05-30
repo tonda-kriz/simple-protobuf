@@ -13,7 +13,8 @@
 #include <string_view>
 #include <vector>
 
-struct proto_comment {
+struct proto_comment
+{
     //- points to .proto file
     std::vector<std::string_view> comments;
 };

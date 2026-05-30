@@ -29,7 +29,8 @@
 namespace spb::pb::detail
 {
 
-struct istream {
+struct istream
+{
   private:
     spb::io::reader on_read;
     size_t m_size;
@@ -65,9 +66,9 @@ struct istream {
     [[nodiscard]] auto read_byte_or_eof() -> int
     {
         uint8_t result = {};
-        if (on_read(&result, sizeof(result)) == 0) {
+        if (on_read(&result, sizeof(result)) == 0)
             return -1;
-        }
+
         return result;
     }
 
@@ -78,15 +79,14 @@ struct istream {
 
     void read_exact(void *data, size_t size)
     {
-        if (this->size() < size) [[unlikely]] {
+        if (this->size() < size) [[unlikely]]
             throw std::runtime_error("unexpected end of stream");
-        }
 
-        while (size > 0) {
+        while (size > 0)
+        {
             auto chunk_size = on_read(data, size);
-            if (chunk_size == 0) {
+            if (chunk_size == 0) [[unlikely]]
                 throw std::runtime_error("unexpected end of stream");
-            }
 
             size -= chunk_size;
             m_size -= chunk_size;
@@ -100,9 +100,9 @@ struct istream {
 
     [[nodiscard]] auto sub_stream(size_t sub_size) -> istream
     {
-        if (size() < sub_size) {
+        if (size() < sub_size) [[unlikely]]
             throw std::runtime_error("unexpected end of stream");
-        }
+
         m_size -= sub_size;
         return istream(on_read, sub_size);
     }
@@ -120,23 +120,20 @@ struct istream {
 
 static inline void check_tag(tag_type tag)
 {
-    if (field_from_tag(tag) == 0) {
+    if (field_from_tag(tag) == 0) [[unlikely]]
         throw std::runtime_error("invalid field id");
-    }
 }
 
 static inline void check_wire_type(wire_type type1, wire_type type2)
 {
-    if (type1 != type2) {
+    if (type1 != type2) [[unlikely]]
         throw std::runtime_error("invalid wire type");
-    }
 }
 
 static inline void check_if_empty(istream &stream)
 {
-    if (!stream.empty()) {
+    if (!stream.empty()) [[unlikely]]
         throw std::runtime_error("unexpected data in stream");
-    }
 }
 
 [[nodiscard]] static inline auto read_tag_or_eof(istream &stream) -> tag_type
@@ -148,10 +145,10 @@ static inline void check_if_empty(istream &stream)
     auto byte = uint8_t(byte_or_eof);
     auto tag = uint32_t(byte & 0x7F);
 
-    for (size_t shift = CHAR_BIT - 1; (byte & 0x80) != 0; shift += CHAR_BIT - 1) {
-        if (shift >= sizeof(tag) * CHAR_BIT) {
+    for (size_t shift = CHAR_BIT - 1; (byte & 0x80) != 0; shift += CHAR_BIT - 1)
+    {
+        if (shift >= sizeof(tag) * CHAR_BIT) [[unlikely]]
             throw std::runtime_error("invalid tag");
-        }
 
         byte = stream.read_byte();
         tag |= uint64_t(byte & 0x7F) << shift;
@@ -165,8 +162,10 @@ static inline void check_if_empty(istream &stream)
 
 template <typename T> [[nodiscard]] static inline auto read_varint(istream &stream) -> T
 {
-    if constexpr (std::is_same_v<T, bool>) {
-        switch (stream.read_byte()) {
+    if constexpr (std::is_same_v<T, bool>)
+    {
+        switch (stream.read_byte())
+        {
         case 0:
             return false;
         case 1:
@@ -174,14 +173,19 @@ template <typename T> [[nodiscard]] static inline auto read_varint(istream &stre
         default:
             throw std::runtime_error("invalid varint for bool");
         }
-    } else {
+    }
+    else
+    {
         auto value = uint64_t(0);
 
-        for (auto shift = 0U; shift < sizeof(value) * CHAR_BIT; shift += CHAR_BIT - 1) {
+        for (auto shift = 0U; shift < sizeof(value) * CHAR_BIT; shift += CHAR_BIT - 1)
+        {
             uint8_t byte = stream.read_byte();
             value |= uint64_t(byte & 0x7F) << shift;
-            if ((byte & 0x80) == 0) {
-                if constexpr (std::is_signed_v<T> && sizeof(T) < sizeof(value)) {
+            if ((byte & 0x80) == 0)
+            {
+                if constexpr (std::is_signed_v<T> && sizeof(T) < sizeof(value))
+                {
                     //- GPB encodes signed varints always as 64-bits
                     //- so int32_t(-2) is encoded as "\xfe\xff\xff\xff\xff\xff\xff\xff\xff\x01",
                     // same as int64_t(-2)
@@ -189,14 +193,15 @@ template <typename T> [[nodiscard]] static inline auto read_varint(istream &stre
                     value = T(value);
                 }
                 auto result = T(value);
-                if constexpr (std::is_signed_v<T>) {
-                    if (result == std::make_signed_t<T>(value)) {
+                if constexpr (std::is_signed_v<T>)
+                {
+                    if (result == std::make_signed_t<T>(value))
                         return result;
-                    }
-                } else {
-                    if (result == value) {
+                }
+                else
+                {
+                    if (result == value)
                         return result;
-                    }
                 }
 
                 break;
@@ -240,9 +245,12 @@ static inline void deserialize(istream &stream, std::unique_ptr<T> &value, const
 
 template <typename T, typename signedT, typename unsignedT> static auto create_tmp_var()
 {
-    if constexpr (std::is_signed<T>::value) {
+    if constexpr (std::is_signed<T>::value)
+    {
         return signedT();
-    } else {
+    }
+    else
+    {
         return unsignedT();
     }
 }
@@ -251,34 +259,47 @@ template <scalar_encoder encoder, typename T>
 static inline auto deserialize_bitfield_as(istream &stream, uint32_t bits, const field_attributes &field) -> T
 {
     auto value = T();
-    if constexpr (scalar_encoder_type1(encoder) == scalar_encoder::svarint) {
+    if constexpr (scalar_encoder_type1(encoder) == scalar_encoder::svarint)
+    {
         check_wire_type(field.type, wire_type::varint);
 
         auto tmp = read_varint<std::make_unsigned_t<T>>(stream);
         value = T((tmp >> 1) ^ (~(tmp & 1) + 1));
-    } else if constexpr (scalar_encoder_type1(encoder) == scalar_encoder::varint) {
+    }
+    else if constexpr (scalar_encoder_type1(encoder) == scalar_encoder::varint)
+    {
         check_wire_type(field.type, wire_type::varint);
         value = read_varint<T>(stream);
-    } else if constexpr (scalar_encoder_type1(encoder) == scalar_encoder::i32) {
+    }
+    else if constexpr (scalar_encoder_type1(encoder) == scalar_encoder::i32)
+    {
         static_assert(sizeof(T) <= sizeof(uint32_t));
 
         check_wire_type(field.type, wire_type::fixed32);
 
-        if constexpr (sizeof(value) == sizeof(uint32_t)) {
+        if constexpr (sizeof(value) == sizeof(uint32_t))
+        {
             stream.read_exact(&value, sizeof(value));
-        } else {
+        }
+        else
+        {
             auto tmp = create_tmp_var<T, int32_t, uint32_t>();
             stream.read_exact(&tmp, sizeof(tmp));
             spb::detail::check_if_value_fit_in_bits(tmp, bits);
             value = T(tmp);
         }
-    } else if constexpr (scalar_encoder_type1(encoder) == scalar_encoder::i64) {
+    }
+    else if constexpr (scalar_encoder_type1(encoder) == scalar_encoder::i64)
+    {
         static_assert(sizeof(T) <= sizeof(uint64_t));
         check_wire_type(field.type, wire_type::fixed64);
 
-        if constexpr (sizeof(value) == sizeof(uint64_t)) {
+        if constexpr (sizeof(value) == sizeof(uint64_t))
+        {
             stream.read_exact(&value, sizeof(value));
-        } else {
+        }
+        else
+        {
             auto tmp = create_tmp_var<T, int64_t, uint64_t>();
             stream.read_exact(&tmp, sizeof(tmp));
             spb::detail::check_if_value_fit_in_bits(tmp, bits);
@@ -296,7 +317,8 @@ static inline void deserialize_as(istream &stream, spb::detail::proto_enum auto 
     using T = std::remove_cvref_t<decltype(value)>;
     using int_type = std::underlying_type_t<T>;
 
-    if constexpr (!scalar_encoder_is_packed(encoder)) {
+    if constexpr (!scalar_encoder_is_packed(encoder))
+    {
         check_wire_type(field.type, wire_type::varint);
     }
 
@@ -309,63 +331,86 @@ static inline void deserialize_as(istream &stream, spb::detail::proto_field_int_
 {
     using T = std::remove_cvref_t<decltype(value)>;
 
-    if constexpr (scalar_encoder_type1(encoder) == scalar_encoder::svarint) {
-        if constexpr (!scalar_encoder_is_packed(encoder)) {
+    if constexpr (scalar_encoder_type1(encoder) == scalar_encoder::svarint)
+    {
+        if constexpr (!scalar_encoder_is_packed(encoder))
+        {
             check_wire_type(field.type, wire_type::varint);
         }
         auto tmp = read_varint<std::make_unsigned_t<T>>(stream);
         value = T((tmp >> 1) ^ (~(tmp & 1) + 1));
-    } else if constexpr (scalar_encoder_type1(encoder) == scalar_encoder::varint) {
-        if constexpr (!scalar_encoder_is_packed(encoder)) {
+    }
+    else if constexpr (scalar_encoder_type1(encoder) == scalar_encoder::varint)
+    {
+        if constexpr (!scalar_encoder_is_packed(encoder))
+        {
             check_wire_type(field.type, wire_type::varint);
         }
         value = read_varint<T>(stream);
-    } else if constexpr (scalar_encoder_type1(encoder) == scalar_encoder::i32) {
+    }
+    else if constexpr (scalar_encoder_type1(encoder) == scalar_encoder::i32)
+    {
         static_assert(sizeof(T) <= sizeof(uint32_t));
 
-        if constexpr (!scalar_encoder_is_packed(encoder)) {
+        if constexpr (!scalar_encoder_is_packed(encoder))
+        {
             check_wire_type(field.type, wire_type::fixed32);
         }
-        if constexpr (sizeof(value) == sizeof(uint32_t)) {
+        if constexpr (sizeof(value) == sizeof(uint32_t))
+        {
             stream.read_exact(&value, sizeof(value));
-        } else {
-            if constexpr (std::is_signed_v<T>) {
+        }
+        else
+        {
+            if constexpr (std::is_signed_v<T>)
+            {
                 auto tmp = int32_t(0);
                 stream.read_exact(&tmp, sizeof(tmp));
-                if (tmp > std::numeric_limits<T>::max() || tmp < std::numeric_limits<T>::min()) {
+                if (tmp > std::numeric_limits<T>::max() || tmp < std::numeric_limits<T>::min())
                     throw std::runtime_error("int overflow");
-                }
+
                 value = T(tmp);
-            } else {
+            }
+            else
+            {
                 auto tmp = uint32_t(0);
                 stream.read_exact(&tmp, sizeof(tmp));
-                if (tmp > std::numeric_limits<T>::max()) {
+                if (tmp > std::numeric_limits<T>::max())
                     throw std::runtime_error("int overflow");
-                }
+
                 value = T(tmp);
             }
         }
-    } else if constexpr (scalar_encoder_type1(encoder) == scalar_encoder::i64) {
+    }
+    else if constexpr (scalar_encoder_type1(encoder) == scalar_encoder::i64)
+    {
         static_assert(sizeof(T) <= sizeof(uint64_t));
-        if constexpr (!scalar_encoder_is_packed(encoder)) {
+        if constexpr (!scalar_encoder_is_packed(encoder))
+        {
             check_wire_type(field.type, wire_type::fixed64);
         }
-        if constexpr (sizeof(value) == sizeof(uint64_t)) {
+        if constexpr (sizeof(value) == sizeof(uint64_t))
+        {
             stream.read_exact(&value, sizeof(value));
-        } else {
-            if constexpr (std::is_signed_v<T>) {
+        }
+        else
+        {
+            if constexpr (std::is_signed_v<T>)
+            {
                 auto tmp = int64_t(0);
                 stream.read_exact(&tmp, sizeof(tmp));
-                if (tmp > std::numeric_limits<T>::max() || tmp < std::numeric_limits<T>::min()) {
+                if (tmp > std::numeric_limits<T>::max() || tmp < std::numeric_limits<T>::min())
                     throw std::runtime_error("int overflow");
-                }
+
                 value = T(tmp);
-            } else {
+            }
+            else
+            {
                 auto tmp = uint64_t(0);
                 stream.read_exact(&tmp, sizeof(tmp));
-                if (tmp > std::numeric_limits<T>::max()) {
+                if (tmp > std::numeric_limits<T>::max())
                     throw std::runtime_error("int overflow");
-                }
+
                 value = T(tmp);
             }
         }
@@ -393,12 +438,14 @@ static inline void deserialize(istream &stream, spb::detail::proto_field_string 
     if (field.max_size && stream.size() > field.max_size)
         throw std::length_error("string is too large");
 
-    if constexpr (spb::detail::proto_field_string_resizable<decltype(value)>) {
+    if constexpr (spb::detail::proto_field_string_resizable<decltype(value)>)
+    {
         value.resize(stream.size());
-    } else {
-        if (value.size() != stream.size()) {
+    }
+    else
+    {
+        if (value.size() != stream.size()) [[unlikely]]
             throw std::runtime_error("invalid string size");
-        }
     }
     stream.read_exact(value.data(), stream.size());
     spb::detail::utf8::validate(std::string_view(value.data(), value.size()));
@@ -418,12 +465,14 @@ static inline void deserialize(istream &stream, spb::detail::proto_field_bytes a
     if (field.max_size && stream.size() > field.max_size)
         throw std::length_error("bytes is too large");
 
-    if constexpr (spb::detail::proto_field_bytes_resizable<decltype(value)>) {
+    if constexpr (spb::detail::proto_field_bytes_resizable<decltype(value)>)
+    {
         value.resize(stream.size());
-    } else {
-        if (stream.size() != value.size()) {
+    }
+    else
+    {
+        if (stream.size() != value.size()) [[unlikely]]
             throw std::runtime_error("invalid bytes size");
-        }
     }
     stream.read_exact(value.data(), stream.size());
 }
@@ -431,7 +480,7 @@ static inline void deserialize(istream &stream, spb::detail::proto_field_bytes a
 static inline void deserialize(istream &stream, spb::detail::proto_label_repeated auto &value,
                                const field_attributes &field)
 {
-    if (field.max_count && value.size() >= field.max_count)
+    if (field.max_count && value.size() >= field.max_count) [[unlikely]]
         throw std::length_error("repeated is too large");
 
     deserialize(stream, value.emplace_back(), field);
@@ -440,13 +489,17 @@ static inline void deserialize(istream &stream, spb::detail::proto_label_repeate
 template <scalar_encoder encoder, spb::detail::proto_label_repeated C>
 static inline void deserialize_packed_as(istream &stream, C &value, const field_attributes &field)
 {
-    while (!stream.empty()) {
-        if (field.max_count && value.size() >= field.max_count)
+    while (!stream.empty())
+    {
+        if (field.max_count && value.size() >= field.max_count) [[unlikely]]
             throw std::length_error("repeated is too large");
 
-        if constexpr (std::is_same_v<typename C::value_type, bool>) {
+        if constexpr (std::is_same_v<typename C::value_type, bool>)
+        {
             value.emplace_back(read_varint<bool>(stream));
-        } else {
+        }
+        else
+        {
             deserialize_as<encoder>(stream, value.emplace_back(), field);
         }
     }
@@ -455,10 +508,14 @@ static inline void deserialize_packed_as(istream &stream, C &value, const field_
 template <scalar_encoder encoder, spb::detail::proto_label_repeated_fixed_size C>
 static inline void deserialize_packed_as(istream &stream, C &value, const field_attributes &field)
 {
-    for (size_t i = 0; i < value.size(); i++) {
-        if constexpr (std::is_same_v<typename C::value_type, bool>) {
+    for (size_t i = 0; i < value.size(); i++)
+    {
+        if constexpr (std::is_same_v<typename C::value_type, bool>)
+        {
             value[i] = read_varint<bool>(stream);
-        } else {
+        }
+        else
+        {
             typename C::value_type tmp;
             deserialize_as<encoder>(stream, tmp, field);
             value[i] = tmp;
@@ -480,15 +537,21 @@ static inline void deserialize_as(istream &stream, C &value, const field_attribu
 template <scalar_encoder encoder, spb::detail::proto_label_repeated C>
 static inline void deserialize_as(istream &stream, C &value, const field_attributes &field)
 {
-    if constexpr (scalar_encoder_is_packed(encoder)) {
+    if constexpr (scalar_encoder_is_packed(encoder))
+    {
         deserialize_packed_as<encoder>(stream, value, field);
-    } else {
-        if (field.max_count && value.size() >= field.max_count)
+    }
+    else
+    {
+        if (field.max_count && value.size() >= field.max_count) [[unlikely]]
             throw std::length_error("repeated is too large");
 
-        if constexpr (std::is_same_v<typename C::value_type, bool>) {
+        if constexpr (std::is_same_v<typename C::value_type, bool>)
+        {
             value.emplace_back(read_varint<bool>(stream));
-        } else {
+        }
+        else
+        {
             deserialize_as<encoder>(stream, value.emplace_back(), field);
         }
     }
@@ -506,25 +569,33 @@ static inline void deserialize_as(istream &stream, std::map<keyT, valueT> &value
     auto pair = std::pair<keyT, valueT>();
     auto key_defined = false;
     auto value_defined = false;
-    while (!stream.empty()) {
+    while (!stream.empty())
+    {
         const auto tag = tag_type(read_varint<uint32_t>(stream));
         const auto field_number = field_from_tag(tag);
         const auto field_type = wire_type_from_tag(tag);
 
         check_tag(tag);
 
-        switch (field_number) {
+        switch (field_number)
+        {
         case 1:
             check_wire_type(field_type, field.type);
-            if constexpr (std::is_integral_v<keyT>) {
+            if constexpr (std::is_integral_v<keyT>)
+            {
                 deserialize_as<key_encoder>(stream, pair.first, field);
-            } else {
-                if (field_type == wire_type::length_delimited) {
+            }
+            else
+            {
+                if (field_type == wire_type::length_delimited)
+                {
                     const auto size = read_varint<uint32_t>(stream);
                     auto substream = stream.sub_stream(size);
                     deserialize(substream, pair.first, field);
                     check_if_empty(substream);
-                } else {
+                }
+                else
+                {
                     deserialize(stream, pair.first, field);
                 }
             }
@@ -532,15 +603,21 @@ static inline void deserialize_as(istream &stream, std::map<keyT, valueT> &value
             break;
         case 2:
             check_wire_type(field_type, field.type);
-            if constexpr (spb::detail::proto_field_number<valueT>) {
+            if constexpr (spb::detail::proto_field_number<valueT>)
+            {
                 deserialize_as<value_encoder>(stream, pair.second, field);
-            } else {
-                if (field_type == wire_type::length_delimited) {
+            }
+            else
+            {
+                if (field_type == wire_type::length_delimited)
+                {
                     const auto size = read_varint<uint32_t>(stream);
                     auto substream = stream.sub_stream(size);
                     deserialize(substream, pair.second, field);
                     check_if_empty(substream);
-                } else {
+                }
+                else [[unlikely]]
+                {
                     throw std::runtime_error("invalid field");
                 }
             }
@@ -550,9 +627,12 @@ static inline void deserialize_as(istream &stream, std::map<keyT, valueT> &value
             throw std::runtime_error("invalid field");
         }
     }
-    if (key_defined && value_defined) {
+    if (key_defined && value_defined)
+    {
         value.insert(std::move(pair));
-    } else {
+    }
+    else [[unlikely]]
+    {
         throw std::runtime_error("invalid map item");
     }
 }
@@ -571,19 +651,23 @@ static inline void deserialize_variant_as(istream &stream, T &variant, const fie
 
 static inline void deserialize_main(istream &stream, spb::detail::proto_message auto &value)
 {
-    for (;;) {
+    for (;;)
+    {
         const auto tag = read_tag_or_eof(stream);
         if (tag == tag_type::invalid)
             break;
 
         const auto field_type = wire_type_from_tag(tag);
 
-        if (field_type == wire_type::length_delimited) {
+        if (field_type == wire_type::length_delimited)
+        {
             const auto size = read_varint<uint32_t>(stream);
             auto substream = stream.sub_stream(size);
             deserialize_value(substream, value, tag);
             check_if_empty(substream);
-        } else {
+        }
+        else
+        {
             deserialize_value(stream, value, tag);
         }
     }
@@ -594,17 +678,21 @@ static inline void deserialize(istream &stream, spb::detail::proto_message auto 
 {
     check_wire_type(field.type, wire_type::length_delimited);
 
-    while (!stream.empty()) {
+    while (!stream.empty())
+    {
         const auto tag = tag_type(read_varint<uint32_t>(stream));
         const auto field_type = wire_type_from_tag(tag);
         check_tag(tag);
 
-        if (field_type == wire_type::length_delimited) {
+        if (field_type == wire_type::length_delimited)
+        {
             const auto size = read_varint<uint32_t>(stream);
             auto substream = stream.sub_stream(size);
             deserialize_value(substream, value, tag);
             check_if_empty(substream);
-        } else {
+        }
+        else
+        {
             deserialize_value(stream, value, tag);
         }
     }
@@ -618,7 +706,8 @@ inline void istream::deserialize(auto &value, const field_attributes &field)
 inline void istream::read_skip(size_t size)
 {
     uint8_t buffer[64];
-    while (size > 0) {
+    while (size > 0)
+    {
         auto chunk_size = std::min(size, sizeof(buffer));
         read_exact(buffer, chunk_size);
         size -= chunk_size;
@@ -627,7 +716,8 @@ inline void istream::read_skip(size_t size)
 
 inline void istream::skip(wire_type type)
 {
-    switch (type) {
+    switch (type)
+    {
     case wire_type::varint:
         return (void)read_varint<uint64_t>(*this);
     case wire_type::length_delimited:

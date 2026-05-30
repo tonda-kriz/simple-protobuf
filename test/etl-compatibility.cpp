@@ -72,7 +72,8 @@ concept is_gpb_repeated = requires(T t) {
 
 template <typename T> auto opt_size(const std::optional<T> &opt) -> std::size_t
 {
-    if (opt.has_value()) {
+    if (opt.has_value())
+    {
         return opt.value().size();
     }
     return 0;
@@ -89,12 +90,16 @@ template <typename GPB, typename SPB> void gpb_test(const SPB &spb)
     auto spb_serialized = spb::pb::serialize(spb);
 
     REQUIRE(gpb.ParseFromString(spb_serialized));
-    if constexpr (is_gpb_repeated<GPB>) {
+    if constexpr (is_gpb_repeated<GPB>)
+    {
         REQUIRE(gpb.value().size() == opt_size(spb.value));
-        for (size_t i = 0; i < opt_size(spb.value); ++i) {
+        for (size_t i = 0; i < opt_size(spb.value); ++i)
+        {
             REQUIRE(gpb.value(i) == spb.value[i]);
         }
-    } else {
+    }
+    else
+    {
         REQUIRE(spb.value == gpb.value());
     }
     auto gpb_serialized = std::string();
@@ -110,12 +115,16 @@ template <typename GPB, typename SPB> void gpb_json(const SPB &spb)
     auto parse_options = google::protobuf::util::JsonParseOptions{};
     (void)JsonStringToMessage(spb_serialized, &gpb, parse_options);
 
-    if constexpr (is_gpb_repeated<GPB>) {
+    if constexpr (is_gpb_repeated<GPB>)
+    {
         REQUIRE(gpb.value().size() == opt_size(spb.value));
-        for (size_t i = 0; i < opt_size(spb.value); ++i) {
+        for (size_t i = 0; i < opt_size(spb.value); ++i)
+        {
             REQUIRE(gpb.value(i) == spb.value[i]);
         }
-    } else {
+    }
+    else
+    {
         REQUIRE(spb.value == gpb.value());
     }
     auto json_string = std::string();
@@ -543,7 +552,8 @@ TEST_CASE("person")
         REQUIRE(gpb.id() == spb.id);
         REQUIRE(gpb.email() == spb.email);
         REQUIRE(gpb.phones_size() == 2);
-        for (auto i = 0; i < gpb.phones_size(); i++) {
+        for (auto i = 0; i < gpb.phones_size(); i++)
+        {
             REQUIRE(gpb.phones(i).number() == spb.phones[i].number);
             REQUIRE(int(gpb.phones(i).type()) == int(spb.phones[i].type.value()));
         }
@@ -563,7 +573,8 @@ TEST_CASE("person")
         REQUIRE(gpb.id() == spb.id);
         REQUIRE(gpb.email() == spb.email);
         REQUIRE(gpb.phones_size() == 2);
-        for (auto i = 0; i < gpb.phones_size(); i++) {
+        for (auto i = 0; i < gpb.phones_size(); i++)
+        {
             REQUIRE(gpb.phones(i).number() == spb.phones[i].number);
             REQUIRE(int(gpb.phones(i).type()) == int(spb.phones[i].type.value()));
         }

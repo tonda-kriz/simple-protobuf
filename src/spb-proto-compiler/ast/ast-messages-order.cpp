@@ -23,8 +23,10 @@
 namespace
 {
 
-struct search_state {
-    enum resolve_mode {
+struct search_state
+{
+    enum resolve_mode
+    {
         //- only check if type is already defined
         dependencies_only,
         //- for optional fields create an std::unique_ptr< T > type and forward declare T
@@ -46,7 +48,8 @@ struct search_state {
  * dependencies. The proper order is defined by the value of `.resolved` for every message
  *
  */
-struct search_ctx {
+struct search_ctx
+{
     proto_message &message;
     //- parent message (is null for top level)
     search_ctx *p_parent;
@@ -69,7 +72,8 @@ auto is_last_part(const proto_field &field, size_t type_part) -> bool
 auto get_type_part(const proto_field &field, size_t type_part) -> std::string_view
 {
     auto type_name = field.type_name.proto_name;
-    for (; type_part > 0; type_part--) {
+    for (; type_part > 0; type_part--)
+    {
         const auto dot_index = type_name.find('.');
         if (dot_index == type_name.npos)
             return {};
@@ -100,7 +104,8 @@ auto is_self(const search_ctx &ctx, proto_field &field, size_t type_part) -> boo
     if (get_type_part(field, type_part) != ctx.message.name.proto_name)
         return false;
 
-    switch (field.label) {
+    switch (field.label)
+    {
     case proto_field::Label::NONE:
         throw_parse_error(ctx.state.file, field.name.proto_name,
                           "Field '" + std::string(field.name.proto_name) +
@@ -128,7 +133,8 @@ auto is_self(const search_ctx &ctx, const proto_field &field, size_t type_part) 
     if (get_type_part(field, type_part) != ctx.message.name.proto_name)
         return false;
 
-    switch (field.label) {
+    switch (field.label)
+    {
     case proto_field::Label::REPEATED:
     case proto_field::Label::PTR:
         return true;
@@ -154,15 +160,18 @@ auto is_forwarded(search_ctx &ctx, proto_field &field, size_t type_part) -> bool
     if (!is_last_part(field, type_part))
         return false;
 
-    for (const auto &message : ctx.p_parent->message.messages) {
+    for (const auto &message : ctx.p_parent->message.messages)
+    {
         if (get_type_part(field, type_part) != message.name.proto_name)
             continue;
 
-        switch (field.label) {
+        switch (field.label)
+        {
         case proto_field::Label::NONE:
             return false;
         case proto_field::Label::OPTIONAL:
-            switch (ctx.state.mode) {
+            switch (ctx.state.mode)
+            {
             case search_state::dependencies_only:
                 return false;
 
@@ -190,9 +199,8 @@ auto get_sub_message(const proto_message &message, const proto_field &field, siz
 {
     const auto type_name = get_type_part(field, type_part);
     const auto index = std::find_if(
-        message.messages.begin(), message.messages.end(), [type_name](const auto &sub_message) -> bool {
-            return type_name == sub_message.name.proto_name && sub_message.resolved > 0;
-        });
+        message.messages.begin(), message.messages.end(), [type_name](const auto &sub_message) -> bool
+        { return type_name == sub_message.name.proto_name && sub_message.resolved > 0; });
     return (index != message.messages.end()) ? &*index : nullptr;
 }
 
@@ -228,7 +236,8 @@ auto resolve_from_message(const proto_message &message, const proto_field &field
     if (const auto type = is_enum(message, field, type_part); type)
         return type;
 
-    if (const auto *sub_message = get_sub_message(message, field, type_part); sub_message) {
+    if (const auto *sub_message = get_sub_message(message, field, type_part); sub_message)
+    {
         if (is_last_part(field, type_part))
             return true;
 
@@ -265,13 +274,13 @@ auto resolve_from_parent(const search_ctx &self, const proto_field &field, size_
 [[nodiscard]]
 auto resolve_from_import(const proto_file &import, const proto_field &field) -> bool
 {
-    if (import.package.name.proto_name.empty()) {
+    if (import.package.name.proto_name.empty())
         return resolve_from_message(import.package, field, 0);
-    }
 
     if (field.type_name.proto_name.size() > import.package.name.proto_name.size() &&
         field.type_name.proto_name[import.package.name.proto_name.size()] == '.' &&
-        field.type_name.proto_name.starts_with(import.package.name.proto_name)) {
+        field.type_name.proto_name.starts_with(import.package.name.proto_name))
+    {
         return resolve_from_message(import.package, field, type_parts(import.package.name.proto_name) + 1);
     }
 
@@ -284,7 +293,8 @@ auto resolve_from_imports(const search_ctx &self, const proto_field &field, size
     if (type_part > 0)
         return false;
 
-    for (const auto &import : self.state.file.imports) {
+    for (const auto &import : self.state.file.imports)
+    {
         if (resolve_from_import(import, field))
             return true;
     }
@@ -330,18 +340,22 @@ void resolve_message_fields(search_ctx &ctx)
     if (ctx.message.resolved > 0)
         return;
 
-    for (auto &field : ctx.message.fields) {
+    for (auto &field : ctx.message.fields)
+    {
         if (!resolve_field(ctx, field, 0))
             return;
     }
 
-    for (const auto &map : ctx.message.maps) {
+    for (const auto &map : ctx.message.maps)
+    {
         if (!resolve_field(ctx, map.value, 0))
             return;
     }
 
-    for (const auto &oneof : ctx.message.oneofs) {
-        for (const auto &field : oneof.fields) {
+    for (const auto &oneof : ctx.message.oneofs)
+    {
+        for (const auto &field : oneof.fields)
+        {
             if (!resolve_field(ctx, field, 0))
                 return;
         }
@@ -356,7 +370,8 @@ void resolve_message_dependencies(search_ctx &ctx)
     if (ctx.message.resolved > 0)
         return;
 
-    for (auto &message : ctx.message.messages) {
+    for (auto &message : ctx.message.messages)
+    {
         auto sub_ctx = search_ctx{
             .message = message,
             .p_parent = &ctx,
@@ -370,10 +385,10 @@ void resolve_message_dependencies(search_ctx &ctx)
 
 [[noreturn]] void dump_unresolved_message(const proto_messages &messages, const proto_file &file)
 {
-    for (const auto &message : messages) {
-        if (message.resolved == 0) {
+    for (const auto &message : messages)
+    {
+        if (message.resolved == 0)
             throw_parse_error(file, message.name.proto_name, "type dependency can't be resolved");
-        }
     }
     throw_parse_error(file, file.content, "type dependency can't be resolved");
 }
@@ -383,7 +398,8 @@ void sort_messages(proto_messages &messages)
     std::sort(messages.begin(), messages.end(),
               [](const auto &a, const auto &b) { return a.resolved < b.resolved; });
 
-    for (auto &message : messages) {
+    for (auto &message : messages)
+    {
         sort_messages(message.messages);
     }
 }
@@ -398,7 +414,8 @@ void resolve_messages_order(proto_file &file)
         .file = file,
     };
 
-    while (!all_types_are_resolved(file.package.messages)) {
+    while (!all_types_are_resolved(file.package.messages))
+    {
         const auto resolved_messages = state.resolved_messages;
 
         auto top_level_ctx = search_ctx{
@@ -409,8 +426,10 @@ void resolve_messages_order(proto_file &file)
 
         resolve_message_dependencies(top_level_ctx);
 
-        if (resolved_messages == state.resolved_messages) {
-            if (state.mode == search_state::dependencies_only) {
+        if (resolved_messages == state.resolved_messages)
+        {
+            if (state.mode == search_state::dependencies_only)
+            {
                 //- no messages were resolved using only dependencies?
                 //- try to break cyclic dependency by using forward pointers declaration
                 state.mode = search_state::optional_pointers;

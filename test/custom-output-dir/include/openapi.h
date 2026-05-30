@@ -1,5 +1,6 @@
 #pragma once
 
-struct openapi {
+struct openapi
+{
     int token;
 };

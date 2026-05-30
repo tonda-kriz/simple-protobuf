@@ -8,9 +8,12 @@
 
 template <typename T> static void pb_decode(const uint8_t *Data, size_t Size)
 {
-    try {
+    try
+    {
         auto result = spb::pb::deserialize<T>({reinterpret_cast<const char *>(Data), Size});
-    } catch (...) {
+    }
+    catch (...)
+    {
     }
 }
 

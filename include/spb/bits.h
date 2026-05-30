@@ -30,9 +30,8 @@ static inline void check_if_value_fit_in_bits(signed_int auto value, uint32_t bi
     decltype(value) max = (1LL << (bits - 1)) - 1;
     decltype(value) min = -(1LL << (bits - 1));
 
-    if ((value < min) | (value > max)) [[unlikely]] {
+    if ((value < min) | (value > max)) [[unlikely]]
         throw std::runtime_error("bitfield overflow");
-    }
 }
 
 static inline void check_if_value_fit_in_bits(unsigned_int auto value, uint32_t bits)
@@ -41,9 +40,8 @@ static inline void check_if_value_fit_in_bits(unsigned_int auto value, uint32_t 
 
     decltype(value) max = (1LL << bits) - 1;
 
-    if (value > max) [[unlikely]] {
+    if (value > max) [[unlikely]]
         throw std::runtime_error("bitfield overflow");
-    }
 }
 
 } // namespace spb::detail

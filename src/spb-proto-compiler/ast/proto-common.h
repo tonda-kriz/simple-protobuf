@@ -23,12 +23,14 @@
 using proto_reserved_range = std::vector<std::pair<int32_t, int32_t>>;
 using proto_reserved_name = std::unordered_set<std::string_view>;
 
-struct proto_reserved {
+struct proto_reserved
+{
     proto_reserved_range reserved_range;
     proto_reserved_name reserved_name;
 };
 
-struct cpp_ident {
+struct cpp_ident
+{
     //- points to .proto file
     std::string_view proto_name{};
 
@@ -46,7 +48,8 @@ struct cpp_ident {
  * @brief base attributes for most proto types
  *
  */
-struct proto_base {
+struct proto_base
+{
     cpp_ident name;
 
     //- field number

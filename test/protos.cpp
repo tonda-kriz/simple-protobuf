@@ -8,7 +8,8 @@ static auto load_file(const std::filesystem::path &file_path) -> std::string
     const auto file_size = std::filesystem::file_size(file_path);
     auto file_content = std::string(file_size, '\0');
 
-    if (auto *p_file = fopen(file_path.string().c_str(), "rb"); p_file) {
+    if (auto *p_file = fopen(file_path.string().c_str(), "rb"); p_file)
+    {
         const auto read = fread(file_content.data(), 1, file_content.size(), p_file);
         fclose(p_file);
         file_content.resize(read);
@@ -20,10 +21,12 @@ static auto load_file(const std::filesystem::path &file_path) -> std::string
 
 static void save_file(const std::filesystem::path &file_path, std::string_view file_content)
 {
-    if (auto *p_file = fopen(file_path.string().c_str(), "wb"); p_file) {
+    if (auto *p_file = fopen(file_path.string().c_str(), "wb"); p_file)
+    {
         const auto written = fwrite(file_content.data(), 1, file_content.size(), p_file);
         fclose(p_file);
-        if (written == file_content.size()) {
+        if (written == file_content.size())
+        {
             return;
         }
     }
@@ -33,7 +36,8 @@ static void save_file(const std::filesystem::path &file_path, std::string_view f
 
 auto main(int argc, char *argv[]) -> int
 {
-    if (argc != 3) {
+    if (argc != 3)
+    {
         fprintf(stderr, "usage %s, <in.file.json> <out.file.json>\n", argv[0]);
         return 1;
     }

@@ -2,6 +2,6 @@
 BasedOnStyle: LLVM
 IndentWidth: 4
 UseTab: Never
-BreakBeforeBraces: Linux
+BreakBeforeBraces: Allman
 AllowShortFunctionsOnASingleLine: false
 ColumnLimit: 110

@@ -71,25 +71,29 @@ static auto inline decode_point(uint32_t *state, uint32_t *codep, uint8_t byte) 
  */
 static inline auto encode_point(uint32_t unicode, char utf8[4]) -> uint32_t
 {
-    if (unicode <= 0x7F) {
+    if (unicode <= 0x7F)
+    {
         utf8[0] = (char)unicode;
         return 1;
     }
-    if (unicode <= 0x7FF) {
+    if (unicode <= 0x7FF)
+    {
         utf8[0] = (char)((unicode >> 6) | 0xC0);
         utf8[1] = (char)((unicode & 0x3F) | 0x80);
         return 2;
     }
-    if (unicode >= 0xD800 && unicode < 0xE000) {
+    if (unicode >= 0xD800 && unicode < 0xE000)
         return 0;
-    }
-    if (unicode <= 0xFFFF) {
+
+    if (unicode <= 0xFFFF)
+    {
         utf8[0] = (char)((unicode >> 12) | 0xE0);
         utf8[1] = (char)(((unicode >> 6) & 0x3F) | 0x80);
         utf8[2] = (char)((unicode & 0x3F) | 0x80);
         return 3;
     }
-    if (unicode <= 0x10FFFF) {
+    if (unicode <= 0x10FFFF)
+    {
         utf8[0] = (char)((unicode >> 18) | 0xF0);
         utf8[1] = (char)(((unicode >> 12) & 0x3F) | 0x80);
         utf8[2] = (char)(((unicode >> 6) & 0x3F) | 0x80);
@@ -104,7 +108,8 @@ static inline auto is_valid(std::string_view str) -> bool
     uint32_t codepoint;
     uint32_t state = ok;
 
-    for (uint8_t c : str) {
+    for (uint8_t c : str)
+    {
         decode_point(&state, &codepoint, c);
     }
 
@@ -113,9 +118,8 @@ static inline auto is_valid(std::string_view str) -> bool
 
 static inline void validate(std::string_view value)
 {
-    if (!spb::detail::utf8::is_valid(std::string_view(value.data(), value.size()))) {
+    if (!spb::detail::utf8::is_valid(std::string_view(value.data(), value.size()))) [[unlikely]]
         throw std::runtime_error("invalid utf8 string");
-    }
 }
 
 } // namespace spb::detail::utf8

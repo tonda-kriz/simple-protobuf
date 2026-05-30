@@ -20,7 +20,8 @@ auto base64_encode(std::string_view value) -> std::string
 {
     auto encode_size = base64_encode_size(value);
     auto result = std::string(encode_size, '\0');
-    auto writer = [ptr = result.data()](const void *data, size_t size) mutable {
+    auto writer = [ptr = result.data()](const void *data, size_t size) mutable
+    {
         memcpy(ptr, data, size);
         ptr += size;
     };
@@ -33,7 +34,8 @@ auto base64_encode(std::string_view value) -> std::string
 auto generate_random_bytes(size_t size) -> std::string
 {
     auto result = std::string(size, 0);
-    for (auto &c : result) {
+    for (auto &c : result)
+    {
         c = (char)rand();
     }
     return result;
@@ -42,7 +44,8 @@ auto generate_random_bytes(size_t size) -> std::string
 auto base64_decode(std::string_view value) -> std::string
 {
     auto reader = [ptr = value.data(), end = value.data() + value.size()](void *data,
-                                                                          size_t size) mutable -> size_t {
+                                                                          size_t size) mutable -> size_t
+    {
         size_t bytes_left = end - ptr;
 
         size = std::min(size, bytes_left);
@@ -64,7 +67,8 @@ auto base64_decode(std::string_view value) -> std::string
 template <size_t N> auto base64_decode_fixed(std::string_view value) -> std::string
 {
     auto reader = [ptr = value.data(), end = value.data() + value.size()](void *data,
-                                                                          size_t size) mutable -> size_t {
+                                                                          size_t size) mutable -> size_t
+    {
         size_t bytes_left = end - ptr;
 
         size = std::min(size, bytes_left);
@@ -129,7 +133,8 @@ TEST_CASE("base64")
     SUBCASE("encode/decode")
     {
         const auto buffer_max_size = SPB_READ_BUFFER_SIZE * 10;
-        for (auto i = 8U; i <= buffer_max_size; i++) {
+        for (auto i = 8U; i <= buffer_max_size; i++)
+        {
             srand(i);
 
             auto bytes = generate_random_bytes(i);
@@ -140,11 +145,13 @@ TEST_CASE("base64")
                 auto decoded = base64_decode('"' + encoded + '"');
                 CHECK(decoded == bytes);
             }
-            if (i == 8) {
+            if (i == 8)
+            {
                 auto decoded = base64_decode_fixed<8>('"' + encoded + '"');
                 CHECK(decoded == bytes);
             }
-            if (i == buffer_max_size) {
+            if (i == buffer_max_size)
+            {
                 auto decoded = base64_decode_fixed<buffer_max_size>('"' + encoded + '"');
                 CHECK(decoded == bytes);
             }

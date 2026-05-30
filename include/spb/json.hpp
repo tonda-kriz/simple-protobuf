@@ -55,7 +55,8 @@ static inline auto serialize(const Message &message, Container &result) -> size_
 {
     const auto size = serialize_size(message);
     result.resize(size);
-    auto writer = [ptr = result.data()](const void *data, size_t size) mutable {
+    auto writer = [ptr = result.data()](const void *data, size_t size) mutable
+    {
         memcpy(ptr, data, size);
         ptr += size;
     };
@@ -108,7 +109,8 @@ static inline void deserialize(Message &message, const Container &json)
     auto ptr = json.data();
     const auto end = json.data() + json.size();
 
-    auto reader = [ptr, end](void *data, size_t size) mutable -> size_t {
+    auto reader = [ptr, end](void *data, size_t size) mutable -> size_t
+    {
         const size_t bytes_left = end - ptr;
 
         size = std::min(size, bytes_left);

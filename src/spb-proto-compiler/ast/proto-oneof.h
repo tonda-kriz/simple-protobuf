@@ -15,7 +15,8 @@
 #include "proto-field.h"
 #include <vector>
 
-struct proto_oneof : public proto_base {
+struct proto_oneof : public proto_base
+{
     proto_fields fields;
 };
 

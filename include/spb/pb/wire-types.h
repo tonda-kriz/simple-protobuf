@@ -15,10 +15,14 @@
 
 namespace spb::pb::detail
 {
-enum class tag_type : uint32_t { invalid = 0 };
+enum class tag_type : uint32_t
+{
+    invalid = 0
+};
 
 //- https://protobuf.dev/programming-guides/encoding/
-enum class wire_type : uint8_t {
+enum class wire_type : uint8_t
+{
     //- int32, int64, uint32, uint64, sint32, sint64, bool, enum
     varint = 0,
     //- fixed64, sfixed64, double
@@ -34,7 +38,8 @@ enum class wire_type : uint8_t {
 };
 
 //- type1, type2 and packed flag
-enum class scalar_encoder : uint8_t {
+enum class scalar_encoder : uint8_t
+{
     //- int32, int64, uint32, uint64, bool
     varint = 0x01,
     //- zigzag int32 or int64
@@ -47,8 +52,10 @@ enum class scalar_encoder : uint8_t {
     packed = 0x08
 };
 
-struct field_attributes {
-    union {
+struct field_attributes
+{
+    union
+    {
         uint32_t number;
         wire_type type;
     };
@@ -92,7 +99,8 @@ static constexpr auto scalar_encoder_type2(scalar_encoder a) noexcept -> scalar_
 
 static constexpr auto wire_type_from_scalar_encoder(scalar_encoder a) noexcept -> wire_type
 {
-    switch (scalar_encoder_type1(a)) {
+    switch (scalar_encoder_type1(a))
+    {
     case scalar_encoder::i32:
         return wire_type::fixed32;
     case scalar_encoder::i64:

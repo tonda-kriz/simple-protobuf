@@ -37,16 +37,17 @@ using cpp_includes = std::set<std::string>;
 
 void dump_comment(std::ostream &stream, const proto_comment &comment)
 {
-    for (const auto &comm : comment.comments) {
-        if (comm.starts_with("//[[")) {
+    for (const auto &comm : comment.comments)
+    {
+        if (comm.starts_with("//[["))
+        {
             //- ignore options in comments
             continue;
         }
 
         stream << comm;
-        if (comm.back() != '\n') {
+        if (comm.back() != '\n')
             stream << '\n';
-        }
     }
 }
 
@@ -54,62 +55,61 @@ auto trim_include(std::string_view str) -> std::string
 {
     auto p_begin = str.data();
     auto p_end = str.data() + str.size();
-    while (p_begin < p_end && isspace(*p_begin)) {
+    while (p_begin < p_end && isspace(*p_begin))
+    {
         p_begin++;
     }
 
-    while (p_begin < p_end && isspace(p_end[-1])) {
+    while (p_begin < p_end && isspace(p_end[-1]))
+    {
         p_end--;
     }
 
-    if (p_begin == p_end) {
+    if (p_begin == p_end)
         return {};
-    }
 
     auto add_prefix = *p_begin != '"' && *p_begin != '<';
     auto add_postfix = p_end[-1] != '"' && p_end[-1] != '>';
 
-    if (add_prefix || add_postfix) {
+    if (add_prefix || add_postfix)
         return '"' + std::string(str) + '"';
-    }
+
     return std::string(str);
 }
 
 void dump_includes(std::ostream &stream, const cpp_includes &includes)
 {
-    for (auto &include : includes) {
+    for (auto &include : includes)
+    {
         auto file = trim_include(include);
-        if (!file.empty()) {
+        if (!file.empty())
             stream << "#include " << file << "\n";
-        }
     }
     stream << "\n";
 }
 
 auto contains_map(const proto_messages &messages) -> bool
 {
-    for (const auto &message : messages) {
-        if (!message.maps.empty()) {
+    for (const auto &message : messages)
+    {
+        if (!message.maps.empty())
             return true;
-        }
 
-        if (contains_map(message.messages)) {
+        if (contains_map(message.messages))
             return true;
-        }
     }
     return false;
 }
 
 auto contains_oneof(const proto_messages &messages) -> bool
 {
-    for (const auto &message : messages) {
-        if (!message.oneofs.empty()) {
+    for (const auto &message : messages)
+    {
+        if (!message.oneofs.empty())
             return true;
-        }
 
-        if (contains_oneof(message.messages)) {
+        if (contains_oneof(message.messages))
             return true;
-        }
     }
     return false;
 }
@@ -138,7 +138,8 @@ void get_user_includes(cpp_includes &includes, const proto_file &file)
 
 void get_imports(cpp_includes &includes, const proto_file &file)
 {
-    for (const auto &import : file.imports) {
+    for (const auto &import : file.imports)
+    {
         if (file.attributes.exclude.contains(import.path.filename().string()))
             continue;
 
@@ -169,10 +170,10 @@ auto type_literal_suffix(proto_field::Type type) -> std::string_view
         {proto_field::Type::FLOAT, "F"},
     }};
 
-    for (auto [proto_type, suffix] : type_map) {
-        if (type == proto_type) {
+    for (auto [proto_type, suffix] : type_map)
+    {
+        if (type == proto_type)
             return suffix;
-        }
     }
 
     return {};
@@ -180,9 +181,11 @@ auto type_literal_suffix(proto_field::Type type) -> std::string_view
 
 auto get_field_bits(const proto_field &field) -> std::string_view
 {
-    if (auto name = field.attributes.type; !name.empty()) {
+    if (auto name = field.attributes.type; !name.empty())
+    {
         auto bitfield = name;
-        if (auto index = bitfield.find(':'); index != std::string_view::npos) {
+        if (auto index = bitfield.find(':'); index != std::string_view::npos)
+        {
             const_cast<proto_field &>(field).bit_field = bitfield.substr(index + 1);
             return bitfield.substr(index);
         }
@@ -200,9 +203,8 @@ auto get_container_type(std::string_view options, std::string_view message_optio
     if (!message_options.empty())
         return replace(message_options, "$", ctype);
 
-    if (!file_options.empty()) {
+    if (!file_options.empty())
         return replace(file_options, "$", ctype);
-    }
 
     return replace(default_type, "$", ctype);
 }
@@ -219,11 +221,12 @@ auto get_enum_type(const proto_file &file, const proto_attributes &attributes,
         {"int32"sv, "int32_t"sv},
     }};
 
-    auto ctype_from_pb = [&](std::string_view type) {
-        for (auto [proto_type, c_type] : type_map) {
-            if (type == proto_type) {
+    auto ctype_from_pb = [&](std::string_view type)
+    {
+        for (auto [proto_type, c_type] : type_map)
+        {
+            if (type == proto_type)
                 return c_type;
-            }
         }
         throw_parse_error(file, type, "invalid enum type: " + std::string(type));
     };
@@ -243,8 +246,10 @@ auto get_enum_type(const proto_file &file, const proto_attributes &attributes,
 auto convert_to_ctype(const proto_file &file, const proto_field &field, const proto_message &message = {})
     -> std::string
 {
-    if (field.bit_type != proto_field::BitType::NONE) {
-        switch (field.bit_type) {
+    if (field.bit_type != proto_field::BitType::NONE)
+    {
+        switch (field.bit_type)
+        {
         case proto_field::BitType::NONE:
             throw_parse_error(file, field.type_name.proto_name, "invalid type");
         case proto_field::BitType::INT8:
@@ -266,7 +271,8 @@ auto convert_to_ctype(const proto_file &file, const proto_field &field, const pr
         }
     }
 
-    switch (field.type) {
+    switch (field.type)
+    {
     case proto_field::Type::NONE:
         throw_parse_error(file, field.type_name.proto_name, "invalid type");
 
@@ -310,7 +316,8 @@ void dump_field_type_and_name(std::ostream &stream, const proto_field &field, co
 {
     const auto ctype = convert_to_ctype(file, field, message);
 
-    switch (field.label) {
+    switch (field.label)
+    {
     case proto_field::Label::NONE:
         stream << ctype << ' ' << field.name.get_name() << get_field_bits(field);
         return;
@@ -327,9 +334,9 @@ void dump_field_type_and_name(std::ostream &stream, const proto_field &field, co
                                      file.attributes.pointer, ctype, "std::unique_ptr<$>");
         break;
     }
-    if (auto bitfield = get_field_bits(field); !bitfield.empty()) {
+    if (auto bitfield = get_field_bits(field); !bitfield.empty())
         throw_parse_error(file, bitfield, "bitfield can be used only with `required` label");
-    }
+
     stream << ' ' << field.name.get_name();
 }
 
@@ -348,7 +355,8 @@ void dump_enum(std::ostream &stream, const proto_enum &my_enum, const proto_mess
     stream << "enum class " << my_enum.name.get_name() << " : "
            << get_enum_type(file, my_enum.attributes, message.attributes, file.attributes, "int32_t")
            << "\n{\n";
-    for (const auto &field : my_enum.fields) {
+    for (const auto &field : my_enum.fields)
+    {
         dump_enum_field(stream, field);
     }
     stream << "};\n";
@@ -360,10 +368,10 @@ void dump_message_oneof(std::ostream &stream, const proto_oneof &oneof, const pr
 
     auto put_comma = false;
     stream << "std::variant< ";
-    for (const auto &field : oneof.fields) {
-        if (put_comma) {
+    for (const auto &field : oneof.fields)
+    {
+        if (put_comma)
             stream << ", ";
-        }
 
         stream << convert_to_ctype(file, field);
         put_comma = true;
@@ -386,12 +394,17 @@ void dump_default_value(std::ostream &stream, const proto_field &field)
     if (default_value.empty())
         return;
 
-    if (field.type == proto_field::Type::ENUM) {
+    if (field.type == proto_field::Type::ENUM)
+    {
         stream << " = " << field.type_name.get_name() << "::" << default_value;
-    } else if (field.type == proto_field::Type::STRING &&
-               (default_value.size() < 2 || default_value.front() != '"' || default_value.back() != '"')) {
+    }
+    else if (field.type == proto_field::Type::STRING &&
+             (default_value.size() < 2 || default_value.front() != '"' || default_value.back() != '"'))
+    {
         stream << " = \"" << default_value << "\"";
-    } else {
+    }
+    else
+    {
         stream << " = " << default_value << type_literal_suffix(field.type);
     }
 }
@@ -414,12 +427,12 @@ void dump_message_field(std::ostream &stream, const proto_field &field, const pr
 
 void dump_forwards(std::ostream &stream, const forwarded_declarations &forwards)
 {
-    for (const auto &forward : forwards) {
+    for (const auto &forward : forwards)
+    {
         stream << "struct " << forward << ";\n";
     }
-    if (!forwards.empty()) {
+    if (!forwards.empty())
         stream << '\n';
-    }
 }
 
 void dump_message(std::ostream &stream, const proto_message &message, const proto_file &file)
@@ -429,23 +442,28 @@ void dump_message(std::ostream &stream, const proto_message &message, const prot
     stream << "struct " << message.name.get_name() << "\n{\n";
 
     dump_forwards(stream, message.forwards);
-    for (const auto &sub_enum : message.enums) {
+    for (const auto &sub_enum : message.enums)
+    {
         dump_enum(stream, sub_enum, message, file);
     }
 
-    for (const auto &sub_message : message.messages) {
+    for (const auto &sub_message : message.messages)
+    {
         dump_message(stream, sub_message, file);
     }
 
-    for (const auto &field : message.fields) {
+    for (const auto &field : message.fields)
+    {
         dump_message_field(stream, field, message, file);
     }
 
-    for (const auto &map : message.maps) {
+    for (const auto &map : message.maps)
+    {
         dump_message_map(stream, map, file);
     }
 
-    for (const auto &oneof : message.oneofs) {
+    for (const auto &oneof : message.oneofs)
+    {
         dump_message_oneof(stream, oneof, file);
     }
 
@@ -459,14 +477,16 @@ void dump_message(std::ostream &stream, const proto_message &message, const prot
 void dump_messages(std::ostream &stream, const proto_file &file)
 {
     dump_forwards(stream, file.package.forwards);
-    for (const auto &message : file.package.messages) {
+    for (const auto &message : file.package.messages)
+    {
         dump_message(stream, message, file);
     }
 }
 
 void dump_enums(std::ostream &stream, const proto_file &file)
 {
-    for (const auto &my_enum : file.package.enums) {
+    for (const auto &my_enum : file.package.enums)
+    {
         dump_enum(stream, my_enum, file.package, file);
     }
 }
@@ -474,16 +494,14 @@ void dump_enums(std::ostream &stream, const proto_file &file)
 void dump_package_begin(std::ostream &stream, const proto_file &file)
 {
     dump_comment(stream, file.package.comment);
-    if (!file.package.name.get_name().empty()) {
+    if (!file.package.name.get_name().empty())
         stream << "namespace " << file.package.name.get_name() << "\n{\n";
-    }
 }
 
 void dump_package_end(std::ostream &stream, const proto_file &file)
 {
-    if (!file.package.name.get_name().empty()) {
+    if (!file.package.name.get_name().empty())
         stream << "}// namespace " << file.package.name.get_name() << "\n\n";
-    }
 }
 } // namespace
 
@@ -514,7 +532,8 @@ auto replace(std::string_view input, std::string_view what, std::string_view wit
     auto result = std::string(input);
     auto pos = size_t{};
 
-    while ((pos = result.find(what, pos)) != std::string::npos) {
+    while ((pos = result.find(what, pos)) != std::string::npos)
+    {
         result.replace(pos, what.size(), with);
         pos += with.size();
     }

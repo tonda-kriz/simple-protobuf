@@ -11,13 +11,15 @@ namespace
 
 auto load_file(const std::filesystem::path &file_path) -> std::string
 {
-    if (!std::filesystem::exists(file_path)) {
+    if (!std::filesystem::exists(file_path))
+    {
         return "{}";
     }
     const auto file_size = std::filesystem::file_size(file_path);
     auto file_content = std::string(file_size, '\0');
 
-    if (auto *p_file = fopen(file_path.string().c_str(), "rb"); p_file) {
+    if (auto *p_file = fopen(file_path.string().c_str(), "rb"); p_file)
+    {
         const auto read = fread(file_content.data(), 1, file_content.size(), p_file);
         fclose(p_file);
         file_content.resize(read);
@@ -30,10 +32,12 @@ auto load_file(const std::filesystem::path &file_path) -> std::string
 
 void save_file(const std::filesystem::path &file_path, std::string_view file_content)
 {
-    if (auto *p_file = fopen(file_path.string().c_str(), "wb"); p_file) {
+    if (auto *p_file = fopen(file_path.string().c_str(), "wb"); p_file)
+    {
         const auto written = fwrite(file_content.data(), 1, file_content.size(), p_file);
         fclose(p_file);
-        if (written == file_content.size()) {
+        if (written == file_content.size())
+        {
             return;
         }
     }
@@ -53,15 +57,18 @@ void PromptForAddress(tutorial::Person &person)
     std::cout << "Enter email address (blank for none): ";
     std::string email;
     getline(std::cin, email);
-    if (!email.empty()) {
+    if (!email.empty())
+    {
         person.email = std::move(email);
     }
 
-    while (true) {
+    while (true)
+    {
         std::cout << "Enter a phone number (or leave blank to finish): ";
         std::string number;
         getline(std::cin, number);
-        if (number.empty()) {
+        if (number.empty())
+        {
             break;
         }
 
@@ -71,13 +78,20 @@ void PromptForAddress(tutorial::Person &person)
         std::cout << "Is this a mobile, home, or work phone? ";
         std::string type;
         getline(std::cin, type);
-        if (type == "mobile") {
+        if (type == "mobile")
+        {
             phone_number.type = tutorial::Person::PhoneType::PHONE_TYPE_MOBILE;
-        } else if (type == "home") {
+        }
+        else if (type == "home")
+        {
             phone_number.type = tutorial::Person::PhoneType::PHONE_TYPE_HOME;
-        } else if (type == "work") {
+        }
+        else if (type == "work")
+        {
             phone_number.type = tutorial::Person::PhoneType::PHONE_TYPE_WORK;
-        } else {
+        }
+        else
+        {
             std::cout << "Unknown phone type.  Using default." << std::endl;
         }
     }
@@ -89,12 +103,14 @@ void PromptForAddress(tutorial::Person &person)
 //   file.
 auto main(int argc, char *argv[]) -> int
 {
-    if (argc != 2) {
+    if (argc != 2)
+    {
         std::cerr << "Usage:  " << argv[0] << " ADDRESS_BOOK_FILE" << std::endl;
         return -1;
     }
 
-    try {
+    try
+    {
         auto address_book = spb::json::deserialize<tutorial::AddressBook>(load_file(argv[1]));
 
         // Add an address.
@@ -102,7 +118,9 @@ auto main(int argc, char *argv[]) -> int
 
         // Write the new address book back to disk.
         save_file(argv[1], spb::json::serialize(address_book));
-    } catch (const std::exception &e) {
+    }
+    catch (const std::exception &e)
+    {
         std::cerr << "Exception: " << e.what() << std::endl;
         return 1;
     }

@@ -150,7 +150,8 @@ auto pb_serialize_as(const T &value) -> std::string
                                            value);
     const auto size = size_stream.size();
     auto result = std::string(size, '\0');
-    auto writer = [ptr = result.data()](const void *data, size_t size) mutable {
+    auto writer = [ptr = result.data()](const void *data, size_t size) mutable
+    {
         memcpy(ptr, data, size);
         ptr += size;
     };
@@ -177,20 +178,26 @@ template <typename T> void pb_test(const T &value, std::string_view protobuf)
 
     {
         auto deserialized = spb::pb::deserialize<T>(protobuf);
-        if constexpr (HasValueMember<T>) {
+        if constexpr (HasValueMember<T>)
+        {
             using valueT = decltype(T::value);
             CHECK(valueT(deserialized.value) == valueT(value.value));
-        } else {
+        }
+        else
+        {
             CHECK(deserialized == value);
         }
     }
     {
         auto deserialized = T();
         spb::pb::deserialize(deserialized, protobuf);
-        if constexpr (HasValueMember<T>) {
+        if constexpr (HasValueMember<T>)
+        {
             using valueT = decltype(T::value);
             CHECK(valueT(deserialized.value) == valueT(value.value));
-        } else {
+        }
+        else
+        {
             CHECK(deserialized == value);
         }
     }
@@ -214,20 +221,26 @@ template <typename T> void json_test(const T &value, std::string_view json)
 
     {
         auto deserialized = spb::json::deserialize<T>(json);
-        if constexpr (HasValueMember<T>) {
+        if constexpr (HasValueMember<T>)
+        {
             using valueT = decltype(T::value);
             CHECK(valueT(deserialized.value) == valueT(value.value));
-        } else {
+        }
+        else
+        {
             CHECK(deserialized == value);
         }
     }
     {
         auto deserialized = T();
         spb::json::deserialize(deserialized, json);
-        if constexpr (HasValueMember<T>) {
+        if constexpr (HasValueMember<T>)
+        {
             using valueT = decltype(T::value);
             CHECK(valueT(deserialized.value) == valueT(value.value));
-        } else {
+        }
+        else
+        {
             CHECK(deserialized == value);
         }
     }

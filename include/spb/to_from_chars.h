@@ -27,12 +27,14 @@ namespace spb_std_emu = std;
 
 namespace spb::std_emu
 {
-struct from_chars_result {
+struct from_chars_result
+{
     const char *ptr;
     std::errc ec;
 };
 
-struct to_chars_result {
+struct to_chars_result
+{
     const char *ptr;
     std::errc ec;
 };
@@ -53,40 +55,59 @@ static inline auto from_chars(const char *first, const char *last, std::integral
     errno = 0;
     auto result = T(0);
 
-    if constexpr (std::is_signed_v<T>) {
-        if constexpr (sizeof(number) < 4) {
+    if constexpr (std::is_signed_v<T>)
+    {
+        if constexpr (sizeof(number) < 4)
+        {
             auto tmp = strtol(buffer, (char **)&end, base);
-            if (tmp <= std::numeric_limits<T>::max() && tmp >= std::numeric_limits<T>::min()) [[likely]] {
+            if (tmp <= std::numeric_limits<T>::max() && tmp >= std::numeric_limits<T>::min()) [[likely]]
+            {
                 result = T(tmp);
-            } else {
+            }
+            else
+            {
                 errno = ERANGE;
             }
-        } else if constexpr (sizeof(number) == 4) {
+        }
+        else if constexpr (sizeof(number) == 4)
+        {
             result = strtol(buffer, (char **)&end, base);
-        } else if constexpr (sizeof(number) == 8) {
+        }
+        else if constexpr (sizeof(number) == 8)
+        {
             result = strtoll(buffer, (char **)&end, base);
         }
-    } else {
-        if constexpr (sizeof(number) < 4) {
+    }
+    else
+    {
+        if constexpr (sizeof(number) < 4)
+        {
             auto tmp = strtoul(buffer, (char **)&end, base);
-            if (tmp <= std::numeric_limits<T>::max()) [[likely]] {
+            if (tmp <= std::numeric_limits<T>::max()) [[likely]]
+            {
                 result = T(tmp);
-            } else {
+            }
+            else
+            {
                 errno = ERANGE;
             }
-        } else if constexpr (sizeof(number) == 4) {
+        }
+        else if constexpr (sizeof(number) == 4)
+        {
             result = strtoul(buffer, (char **)&end, base);
-        } else if constexpr (sizeof(number) == 8) {
+        }
+        else if constexpr (sizeof(number) == 8)
+        {
             result = strtoull(buffer, (char **)&end, base);
         }
     }
     end = first + (end - buffer);
-    if (end == first) {
+    if (end == first)
         return {first, std::errc::invalid_argument};
-    }
-    if (errno == ERANGE) {
+
+    if (errno == ERANGE)
         return {end, std::errc::result_out_of_range};
-    }
+
     number = result;
     return {end, std::errc()};
 }
@@ -104,18 +125,21 @@ static inline auto from_chars(const char *first, const char *last, std::floating
     static_assert(sizeof(number) == 4 || sizeof(number) == 8, "unsupported size");
     errno = 0;
     auto result = std::decay_t<decltype(number)>{0};
-    if constexpr (sizeof(number) == 4) {
+    if constexpr (sizeof(number) == 4)
+    {
         result = strtof(buffer, (char **)&end);
-    } else if constexpr (sizeof(number) == 8) {
+    }
+    else if constexpr (sizeof(number) == 8)
+    {
         result = strtod(buffer, (char **)&end);
     }
     end = first + (end - buffer);
-    if (end == first) {
+    if (end == first)
         return {end, std::errc::invalid_argument};
-    }
-    if (errno == ERANGE) {
+
+    if (errno == ERANGE)
         return {end, std::errc::result_out_of_range};
-    }
+
     number = result;
     return {end, std::errc()};
 }
@@ -123,20 +147,17 @@ static inline auto from_chars(const char *first, const char *last, std::floating
 static inline auto to_chars(char *first, char *last, const std::integral auto &number, int base = 10)
     -> to_chars_result
 {
-    if (base != 10) {
+    if (base != 10)
         return {first, std::errc::invalid_argument};
-    }
 
-    if (last <= first) {
+    if (last <= first)
         return {first, std::errc::value_too_large};
-    }
 
     const auto result = std::to_string(number);
     const auto buffer_size = static_cast<size_t>(last - first);
 
-    if (result.size() > buffer_size) {
+    if (result.size() > buffer_size)
         return {first, std::errc::value_too_large};
-    }
 
     memcpy(first, result.data(), result.size());
     return {first + result.size(), std::errc{}};
@@ -145,26 +166,33 @@ static inline auto to_chars(char *first, char *last, const std::integral auto &n
 static inline auto to_chars(char *first, char *last, const std::floating_point auto &number)
     -> to_chars_result
 {
-    if (last <= first) {
+    if (last <= first)
         return {first, std::errc::value_too_large};
-    }
 
     const auto buffer_size = last - first;
 
     const char *format;
 
-    if constexpr (std::is_same_v<std::remove_cvref_t<decltype(number)>, double>) {
+    if constexpr (std::is_same_v<std::remove_cvref_t<decltype(number)>, double>)
+    {
         format = "%lg";
-    } else if constexpr (std::is_same_v<std::remove_cvref_t<decltype(number)>, long double>) {
+    }
+    else if constexpr (std::is_same_v<std::remove_cvref_t<decltype(number)>, long double>)
+    {
         format = "%Lg";
-    } else {
+    }
+    else
+    {
         format = "%g";
     }
 
     const int written = snprintf(first, buffer_size, format, number);
-    if (written < 0) {
+    if (written < 0)
+    {
         return {first, std::errc::invalid_argument};
-    } else if (written > buffer_size) {
+    }
+    else if (written > buffer_size)
+    {
         return {first, std::errc::value_too_large};
     }
 

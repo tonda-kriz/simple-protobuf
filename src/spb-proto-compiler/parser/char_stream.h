@@ -19,7 +19,8 @@
 namespace spb
 {
 
-struct char_stream {
+struct char_stream
+{
   private:
     //- start of the stream
     const char *p_start = nullptr;
@@ -37,11 +38,12 @@ struct char_stream {
      */
     void update_current(bool skip_white_space) noexcept
     {
-        while (p_begin < p_end) {
+        while (p_begin < p_end)
+        {
             m_current = *p_begin;
-            if (!skip_white_space || isspace(m_current) == 0) {
+            if (!skip_white_space || isspace(m_current) == 0)
                 return;
-            }
+
             p_begin += 1;
         }
         m_current = {};
@@ -82,7 +84,8 @@ struct char_stream {
      */
     [[nodiscard]] auto consume(char c) noexcept -> bool
     {
-        if (auto current = current_char(); current == c) {
+        if (auto current = current_char(); current == c)
+        {
             consume_current_char(true);
             return true;
         }
@@ -99,11 +102,13 @@ struct char_stream {
     {
         const auto state = *this;
 
-        if (content().starts_with(token)) {
+        if (content().starts_with(token))
+        {
             p_begin += token.size();
             update_current(false);
             auto next = current_char();
-            if (isspace(next) || !isalnum(next)) {
+            if (isspace(next) || !isalnum(next))
+            {
                 update_current(true);
                 return true;
             }
@@ -114,7 +119,8 @@ struct char_stream {
 
     void consume_current_char(bool skip_white_space) noexcept
     {
-        if (begin() < end()) {
+        if (begin() < end())
+        {
             p_begin += 1;
             update_current(skip_white_space);
         }
@@ -149,9 +155,9 @@ struct char_stream {
     {
         auto parsed = std::string_view(p_start, p_begin - p_start);
 
-        if (auto p = parsed.rfind('\n'); p != std::string_view::npos) {
+        if (auto p = parsed.rfind('\n'); p != std::string_view::npos)
             parsed.remove_prefix(p);
-        }
+
         return std::max<size_t>(parsed.size(), 1);
     }
     [[noreturn]] void throw_parse_error(std::string_view message)

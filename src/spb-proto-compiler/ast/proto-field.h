@@ -16,8 +16,10 @@
 #include <string_view>
 #include <vector>
 
-struct proto_field : public proto_base {
-    enum Type {
+struct proto_field : public proto_base
+{
+    enum Type
+    {
         NONE,
         BOOL,
         BYTES,
@@ -38,7 +40,8 @@ struct proto_field : public proto_base {
         UINT64,
     };
 
-    enum class BitType {
+    enum class BitType
+    {
         NONE,
         INT8,
         INT16,
@@ -50,7 +53,8 @@ struct proto_field : public proto_base {
         UINT64,
     };
 
-    enum class Label {
+    enum class Label
+    {
         //- no type modifier, only `type`
         NONE = 0,
         //- std::optional< type >

@@ -26,7 +26,8 @@ struct proto_file;
 
 using proto_files = std::vector<proto_file>;
 
-struct proto_file {
+struct proto_file
+{
     std::filesystem::path path;
     std::string content;
     proto_syntax syntax;

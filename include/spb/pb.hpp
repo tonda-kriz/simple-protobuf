@@ -18,7 +18,8 @@
 namespace spb::pb
 {
 
-struct serialize_options {
+struct serialize_options
+{
     /**
      * @brief Writes the size of the message (as a varint) before the message itself.
      *        Compatible with Google's `writeDelimitedTo` and NanoPb's PB_ENCODE_DELIMITED.
@@ -26,7 +27,8 @@ struct serialize_options {
     bool delimited = false;
 };
 
-struct deserialize_options {
+struct deserialize_options
+{
     /**
      * @brief Expect the size of the message (encoded as a varint) to come before the message
      * itself. Compatible with Google's `parseDelimitedFrom` and NanoPb's PB_DECODE_DELIMITED. Will
@@ -86,7 +88,8 @@ static inline auto serialize(const Message &message, Container &result, const se
 {
     const auto size = serialize_size(message, options);
     result.resize(size);
-    auto writer = [ptr = result.data()](const void *data, size_t size) mutable {
+    auto writer = [ptr = result.data()](const void *data, size_t size) mutable
+    {
         memcpy(ptr, data, size);
         ptr += size;
     };
@@ -150,7 +153,8 @@ static inline void deserialize(Message &message, const Container &protobuf,
     auto ptr = protobuf.data();
     const auto end = protobuf.data() + protobuf.size();
 
-    auto reader = [ptr, end](void *data, size_t size) mutable -> size_t {
+    auto reader = [ptr, end](void *data, size_t size) mutable -> size_t
+    {
         const size_t bytes_left = end - ptr;
 
         size = std::min(size, bytes_left);

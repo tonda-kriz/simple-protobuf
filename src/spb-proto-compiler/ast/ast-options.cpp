@@ -16,7 +16,8 @@
 
 namespace
 {
-enum class option_type {
+enum class option_type
+{
     option_file,
     option_message,
     option_field,
@@ -48,7 +49,8 @@ auto option_value(std::span<const std::string_view> path, const proto_option &op
     if (path.empty())
         return &option;
 
-    for (const auto &options : option.options) {
+    for (const auto &options : option.options)
+    {
         if (auto result = option_value(path, options); result)
             return result;
     }
@@ -108,20 +110,18 @@ void convert_nanopb_options(const proto_file &file, proto_attributes &attributes
     if (auto values = option_values({opt_value, "include"}, options); !values.empty())
         attributes.include.insert(values.begin(), values.end());
 
-    if (auto value = option_value_int<uint32_t>(file, {opt_value, "max_size"}, options); value.has_value()) {
+    if (auto value = option_value_int<uint32_t>(file, {opt_value, "max_size"}, options); value.has_value())
         attributes.max_size = *value;
-    }
 
-    if (auto value = option_value_int<uint32_t>(file, {opt_value, "max_length"}, options);
-        value.has_value()) {
+    if (auto value = option_value_int<uint32_t>(file, {opt_value, "max_length"}, options); value.has_value())
         attributes.max_size = *value + 1;
-    }
 }
 
 void convert_nanopb_options(const proto_file &file, proto_attributes &attributes,
                             const proto_options &options, option_type type)
 {
-    switch (type) {
+    switch (type)
+    {
     case option_type::option_field:
         return convert_nanopb_options(file, attributes, options, "nanopb");
     case option_type::option_message:
@@ -195,13 +195,11 @@ void convert_spb_options(const proto_file &file, proto_attributes &attributes, c
     if (auto value = option_value({opt_name, "string"}, options); !value.empty())
         attributes.string = value;
 
-    if (auto value = option_value_int<uint32_t>(file, {opt_name, "max_size"}, options); value.has_value()) {
+    if (auto value = option_value_int<uint32_t>(file, {opt_name, "max_size"}, options); value.has_value())
         attributes.max_size = value;
-    }
 
-    if (auto value = option_value_int<uint32_t>(file, {opt_name, "max_count"}, options); value.has_value()) {
+    if (auto value = option_value_int<uint32_t>(file, {opt_name, "max_count"}, options); value.has_value())
         attributes.max_count = value;
-    }
 }
 void convert_spb_options(const proto_file &file, proto_attributes &attributes, const proto_options &options,
                          option_type type, bool legacy)
@@ -209,7 +207,8 @@ void convert_spb_options(const proto_file &file, proto_attributes &attributes, c
     if (legacy)
         convert_spb_options_legacy(attributes, options);
 
-    switch (type) {
+    switch (type)
+    {
     case option_type::option_field:
         return convert_spb_options(file, attributes, options, "spb_opt");
     case option_type::option_message:
@@ -271,14 +270,17 @@ void resolve_options(proto_file &file, proto_message &message)
 {
     convert_options(file, message.attributes, message.options, option_type::option_message, true);
     convert_options(file, file.attributes, message.options, option_type::option_file, false);
-    for (auto &field : message.fields) {
+    for (auto &field : message.fields)
+    {
         convert_options(file, field.attributes, field.options, option_type::option_field, true);
         convert_options(file, message.attributes, field.options, option_type::option_message, false);
     }
-    for (auto &sub_message : message.messages) {
+    for (auto &sub_message : message.messages)
+    {
         resolve_options(file, sub_message);
     }
-    for (auto &enum_ : message.enums) {
+    for (auto &enum_ : message.enums)
+    {
         resolve_options(file, enum_);
     }
 }

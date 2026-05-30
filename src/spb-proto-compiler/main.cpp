@@ -49,7 +49,8 @@ void print_usage()
 auto construct_path(fs::path::iterator begin, fs::path::iterator end) -> fs::path
 {
     fs::path result;
-    for (auto it = begin; it != end; ++it) {
+    for (auto it = begin; it != end; ++it)
+    {
         result /= *it;
     }
 
@@ -58,7 +59,8 @@ auto construct_path(fs::path::iterator begin, fs::path::iterator end) -> fs::pat
 
 auto get_relative_output_dir(const fs::path &input_file, std::span<const fs::path> import_paths) -> fs::path
 {
-    for (const auto &import : import_paths) {
+    for (const auto &import : import_paths)
+    {
         const auto miss = std::mismatch(import.begin(), import.end(), input_file.begin(), input_file.end());
 
         if (miss.first == import.end())
@@ -87,7 +89,8 @@ void process_file(const fs::path &input_file, std::span<const fs::path> import_p
 
 auto main(int argc, char *argv[]) -> int
 {
-    if (argc < 2) {
+    if (argc < 2)
+    {
         print_usage();
         return 1;
     }
@@ -95,21 +98,26 @@ auto main(int argc, char *argv[]) -> int
     auto output_dir = fs::path();
     auto import_paths = std::vector<fs::path>();
 
-    for (; argc > 1 && argv[1][0] == '-'; argc--, argv++) {
+    for (; argc > 1 && argv[1][0] == '-'; argc--, argv++)
+    {
         const auto opt = std::string_view(argv[1]);
 
-        if (opt_help == opt || opt_h == opt) {
+        if (opt_help == opt || opt_h == opt)
+        {
             print_usage();
             return 0;
         }
 
-        if (opt_version == opt || opt_v == opt) {
+        if (opt_version == opt || opt_v == opt)
+        {
             std::cout << "spb-protoc version 0.1.0\n";
             return 0;
         }
 
-        if (opt_cpp_out == opt) {
-            if (argc < 3) {
+        if (opt_cpp_out == opt)
+        {
+            if (argc < 3)
+            {
                 std::cerr << "Missing value for option: " << opt << "\n";
                 return 1;
             }
@@ -119,8 +127,10 @@ auto main(int argc, char *argv[]) -> int
             continue;
         }
 
-        if (opt_i == opt) {
-            if (argc < 3) {
+        if (opt_i == opt)
+        {
+            if (argc < 3)
+            {
                 std::cerr << "Missing value for option: " << opt << "\n";
                 return 1;
             }
@@ -130,38 +140,52 @@ auto main(int argc, char *argv[]) -> int
             continue;
         }
 
-        if (opt.starts_with(opt_proto_path_prefix)) {
+        if (opt.starts_with(opt_proto_path_prefix))
+        {
             import_paths.emplace_back(fs::absolute(opt.substr(opt_proto_path_prefix.size())));
-        } else if (opt.starts_with(opt_i) && opt.size() > opt_i.size()) {
+        }
+        else if (opt.starts_with(opt_i) && opt.size() > opt_i.size())
+        {
             import_paths.emplace_back(fs::absolute(opt.substr(opt_i.size())));
-        } else if (opt.starts_with(opt_cpp_out_prefix)) {
+        }
+        else if (opt.starts_with(opt_cpp_out_prefix))
+        {
             output_dir = fs::absolute(opt.substr(opt_cpp_out_prefix.size()));
-        } else {
+        }
+        else
+        {
             std::cerr << "Unknown option: " << opt << ", use -h or --help\n";
             return 1;
         }
     }
 
     auto input_files = std::vector<fs::path>();
-    for (auto i = 1; i < argc; i++) {
+    for (auto i = 1; i < argc; i++)
+    {
         input_files.emplace_back(fs::absolute(argv[i]));
     }
 
-    if (output_dir.empty()) {
+    if (output_dir.empty())
+    {
         std::cerr << "Missing output directory, use --cpp_out=OUT_DIR:\n";
         return 1;
     }
 
-    if (input_files.empty()) {
+    if (input_files.empty())
+    {
         std::cerr << "Missing input files, use PROTO_FILES:\n";
         return 1;
     }
 
-    try {
-        for (const auto &input_file : input_files) {
+    try
+    {
+        for (const auto &input_file : input_files)
+        {
             process_file(input_file, import_paths, output_dir);
         }
-    } catch (const std::exception &e) {
+    }
+    catch (const std::exception &e)
+    {
         std::cerr << e.what() << '\n';
         return 1;
     }

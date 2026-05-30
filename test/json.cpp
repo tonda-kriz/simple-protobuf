@@ -72,20 +72,26 @@ template <typename T> void json_test(const T &value, std::string_view json)
 
     {
         auto deserialized = spb::json::deserialize<T>(json);
-        if constexpr (HasValueMember<T>) {
+        if constexpr (HasValueMember<T>)
+        {
             using valueT = decltype(T::value);
             CHECK(valueT(deserialized.value) == valueT(value.value));
-        } else {
+        }
+        else
+        {
             CHECK(deserialized == value);
         }
     }
     {
         auto deserialized = T();
         spb::json::deserialize(deserialized, json);
-        if constexpr (HasValueMember<T>) {
+        if constexpr (HasValueMember<T>)
+        {
             using valueT = decltype(T::value);
             CHECK(valueT(deserialized.value) == valueT(value.value));
-        } else {
+        }
+        else
+        {
             CHECK(deserialized == value);
         }
     }
@@ -383,7 +389,8 @@ TEST_CASE("json")
                 R"({"name": "John Doe","id": 123,"email": "QXUeh@example.com", "phones": [ {"number": "555-4321","type": 1}]})",
                 R"({"name2": "Jack","name": "John Doe","id": 123,"email": "QXUeh@example.com", "phones": [ {"number": "555-4321","type": "HOME"}]})",
             };
-            for (auto json : jsons) {
+            for (auto json : jsons)
+            {
                 const auto person = spb::json::deserialize<PhoneBook::Person>(json);
                 CHECK(person.name == "John Doe");
                 CHECK(person.id == 123);
@@ -710,12 +717,14 @@ TEST_CASE("json")
         {
             SUBCASE("escape")
             {
-                for (int c = 0; c <= 0xff; c++) {
+                for (int c = 0; c <= 0xff; c++)
+                {
                     const auto esc = c == '"' || c == '\\' || c == '/' || c == 'b' || c == 'f' || c == 'n' ||
                                      c == 'r' || c == 't';
 
                     char buffer[] = {'"', '\\', char(c), '"', 0};
-                    if (!esc) {
+                    if (!esc)
+                    {
                         CHECK_THROWS((void)spb::json::deserialize<std::string>(std::string_view(buffer)));
                     }
                 }

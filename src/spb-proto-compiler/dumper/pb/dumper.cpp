@@ -37,14 +37,16 @@ void dump_prototypes(std::ostream &stream, const proto_message &message, std::st
 
 void dump_prototypes(std::ostream &stream, const proto_messages &messages, std::string_view parent)
 {
-    for (const auto &message : messages) {
+    for (const auto &message : messages)
+    {
         dump_prototypes(stream, message, parent);
     }
 
-    for (const auto &message : messages) {
-        if (message.messages.empty()) {
+    for (const auto &message : messages)
+    {
+        if (message.messages.empty())
             continue;
-        }
+
         const auto message_with_parent = std::string(parent) + "::" + std::string(message.name.get_name());
         dump_prototypes(stream, message.messages, message_with_parent);
     }
@@ -77,7 +79,8 @@ void dump_cpp_open_namespace(std::ostream &stream, std::string_view name)
 
 auto encoder_type_str(const proto_file &file, const proto_field &field) -> std::string
 {
-    switch (field.type) {
+    switch (field.type)
+    {
     case proto_field::Type::NONE:
     case proto_field::Type::BYTES:
     case proto_field::Type::MESSAGE:
@@ -184,7 +187,8 @@ void dump_cpp_serialize_value(std::ostream &stream, const proto_file &file, cons
 {
     stream << "\t{\n\t\tconst auto index = value." << oneof.name.get_name() << ".index( );\n";
     stream << "\t\tswitch( index )\n\t\t{\n";
-    for (size_t i = 0; i < oneof.fields.size(); ++i) {
+    for (size_t i = 0; i < oneof.fields.size(); ++i)
+    {
         stream << "\t\t\tcase " << i << ":\n\t\t\t\treturn stream.serialize"
                << encoder_type(file, oneof.fields[i]) << "( ";
         dump_field_attributes(stream, file, message, oneof.fields[i]);
@@ -196,21 +200,25 @@ void dump_cpp_serialize_value(std::ostream &stream, const proto_file &file, cons
 void dump_cpp_serialize_value(std::ostream &stream, const proto_file &file, const proto_message &message,
                               std::string_view full_name)
 {
-    if (message.fields.empty() && message.maps.empty() && message.oneofs.empty()) {
+    if (message.fields.empty() && message.maps.empty() && message.oneofs.empty())
+    {
         stream << "void serialize( ostream & , const " << full_name << " & )\n{\n}\n\n";
         return;
     }
 
     stream << "void serialize( ostream & stream, const " << full_name << " & value )\n{\n";
 
-    for (const auto &field : message.fields) {
+    for (const auto &field : message.fields)
+    {
         dump_cpp_serialize_field(stream, file, message, field);
     }
-    for (const auto &map : message.maps) {
+    for (const auto &map : message.maps)
+    {
         stream << "\tstream.serialize" << map_encoder_type(file, map.key, map.value)
                << "( {.number = " << map.number << "}, value." << map.name.get_name() << " );\n";
     }
-    for (const auto &oneof : message.oneofs) {
+    for (const auto &oneof : message.oneofs)
+    {
         dump_cpp_serialize_value(stream, file, message, oneof);
     }
     stream << "}\n";
@@ -219,7 +227,8 @@ void dump_cpp_serialize_value(std::ostream &stream, const proto_file &file, cons
 void dump_cpp_deserialize_value(std::ostream &stream, const proto_file &file, const proto_message &message,
                                 std::string_view full_name)
 {
-    if (message.fields.empty() && message.maps.empty() && message.oneofs.empty()) {
+    if (message.fields.empty() && message.maps.empty() && message.oneofs.empty())
+    {
         stream << "void deserialize_value( istream & stream, " << full_name << " &, tag_type tag )\n{\n";
         stream << "\tstream.skip( wire_type_from_tag( tag ) );\n}\n\n";
         return;
@@ -230,39 +239,49 @@ void dump_cpp_deserialize_value(std::ostream &stream, const proto_file &file, co
 
     stream << "\tswitch( field_from_tag( tag ) )\n\t{\n";
 
-    for (const auto &field : message.fields) {
+    for (const auto &field : message.fields)
+    {
 
         stream << "\t\tcase " << field.number << ":\n\t\t\t";
-        if (!field.bit_field.empty()) {
+        if (!field.bit_field.empty())
+        {
             stream << "value." << field.name.get_name() << " = stream.deserialize_bitfield"
                    << bitfield_encoder_type(file, field) << "( " << field.bit_field << ", ";
             dump_field_attributes_from_tag(stream, file, message, field);
             stream << " );\n";
             stream << "\t\t\treturn;\n";
-        } else {
+        }
+        else
+        {
             stream << "return stream.deserialize" << encoder_type(file, field) << "( value."
                    << field.name.get_name() << ", ";
             dump_field_attributes_from_tag(stream, file, message, field);
             stream << " );\n";
         }
     }
-    for (const auto &map : message.maps) {
+    for (const auto &map : message.maps)
+    {
         stream << "\t\tcase " << map.number << ":\n\t\t\treturn ";
         stream << "\tstream.deserialize" << map_encoder_type(file, map.key, map.value) << "( value."
                << map.name.get_name() << ", ";
         dump_field_attributes_from_tag(stream, file, message, map.value);
         stream << " );\n";
     }
-    for (const auto &oneof : message.oneofs) {
-        for (size_t i = 0; i < oneof.fields.size(); ++i) {
+    for (const auto &oneof : message.oneofs)
+    {
+        for (size_t i = 0; i < oneof.fields.size(); ++i)
+        {
             stream << "\t\tcase " << oneof.fields[i].number << ":\n\t\t\treturn ";
             auto type = encoder_type(file, oneof.fields[i]);
-            if (type.empty()) {
+            if (type.empty())
+            {
                 stream << "\tstream.deserialize_variant< " << i << ">( value." << oneof.name.get_name()
                        << ", ";
                 dump_field_attributes_from_tag(stream, file, message, oneof.fields[i]);
                 stream << " );\n";
-            } else {
+            }
+            else
+            {
                 type.erase(0, 4);
                 stream << "\tstream.deserialize_variant_as< " << i << ", " << type << "( value."
                        << oneof.name.get_name() << ", ";
@@ -294,7 +313,8 @@ void dump_cpp_message(std::ostream &stream, const proto_file &file, const proto_
 void dump_cpp_messages(std::ostream &stream, const proto_file &file, const proto_messages &messages,
                        std::string_view parent)
 {
-    for (const auto &message : messages) {
+    for (const auto &message : messages)
+    {
         dump_cpp_message(stream, file, message, parent);
     }
 }

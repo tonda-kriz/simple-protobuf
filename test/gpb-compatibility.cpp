@@ -121,7 +121,8 @@ concept is_gpb_repeated = requires(T t) {
 
 template <typename T> auto opt_size(const std::optional<T> &opt) -> std::size_t
 {
-    if (opt.has_value()) {
+    if (opt.has_value())
+    {
         return opt.value().size();
     }
     return 0;
@@ -132,11 +133,13 @@ template <typename T> auto opt_size(const std::vector<T> &opt) -> std::size_t
     return opt.size();
 }
 
-template <typename T> struct ExtractOptional {
+template <typename T> struct ExtractOptional
+{
     using type = T;
 };
 
-template <typename T> struct ExtractOptional<std::optional<T>> {
+template <typename T> struct ExtractOptional<std::optional<T>>
+{
     using type = T;
 };
 
@@ -158,32 +161,45 @@ void gpb_test(const SPB &spb, const spb::pb::serialize_options &options = {})
     auto gpb = GPB();
     auto spb_serialized = spb::pb::serialize(spb, options);
 
-    if (options.delimited) {
+    if (options.delimited)
+    {
         std::istringstream input_stream{spb_serialized};
         auto raw_input_stream = google::protobuf::io::IstreamInputStream{&input_stream};
         REQUIRE(google::protobuf::util::ParseDelimitedFromZeroCopyStream(&gpb, &raw_input_stream, nullptr));
-    } else {
+    }
+    else
+    {
         REQUIRE(gpb.ParseFromString(spb_serialized));
     }
 
-    if constexpr (is_gpb_repeated<GPB>) {
+    if constexpr (is_gpb_repeated<GPB>)
+    {
         REQUIRE(gpb.value().size() == opt_size(spb.value));
-        for (size_t i = 0; i < opt_size(spb.value); ++i) {
+        for (size_t i = 0; i < opt_size(spb.value); ++i)
+        {
             using value_type = typename decltype(SPB::value)::value_type;
-            if constexpr (std::is_enum_v<value_type>) {
+            if constexpr (std::is_enum_v<value_type>)
+            {
                 REQUIRE(enum_value(spb.value[i]) == gpb.value(i));
-            } else {
+            }
+            else
+            {
                 REQUIRE(gpb.value(i) == spb.value[i]);
             }
         }
-    } else if constexpr (std::is_enum_v<T>) {
+    }
+    else if constexpr (std::is_enum_v<T>)
+    {
         REQUIRE(enum_value(spb.value) == gpb.value());
-    } else {
+    }
+    else
+    {
         REQUIRE(spb.value == gpb.value());
     }
 
     auto gpb_serialized = std::string();
-    if (options.delimited) {
+    if (options.delimited)
+    {
         std::ostringstream output_stream;
         //- Wrapped so that the destructor of OstreamOutputStream is called,
         //- which flushes the stream.
@@ -192,7 +208,9 @@ void gpb_test(const SPB &spb, const spb::pb::serialize_options &options = {})
             REQUIRE(google::protobuf::util::SerializeDelimitedToZeroCopyStream(gpb, &raw_output_stream));
         }
         gpb_serialized = output_stream.str();
-    } else {
+    }
+    else
+    {
         REQUIRE(gpb.SerializeToString(&gpb_serialized));
     }
 
@@ -214,19 +232,28 @@ template <typename GPB, typename SPB> void gpb_json(const SPB &spb)
     auto parse_options = google::protobuf::util::JsonParseOptions{};
     REQUIRE(JsonStringToMessage(spb_serialized, &gpb, parse_options).ok());
 
-    if constexpr (is_gpb_repeated<GPB>) {
+    if constexpr (is_gpb_repeated<GPB>)
+    {
         REQUIRE(gpb.value().size() == opt_size(spb.value));
-        for (size_t i = 0; i < opt_size(spb.value); ++i) {
+        for (size_t i = 0; i < opt_size(spb.value); ++i)
+        {
             using value_type = typename decltype(SPB::value)::value_type;
-            if constexpr (std::is_enum_v<value_type>) {
+            if constexpr (std::is_enum_v<value_type>)
+            {
                 REQUIRE(enum_value(spb.value[i]) == gpb.value(i));
-            } else {
+            }
+            else
+            {
                 REQUIRE(gpb.value(i) == spb.value[i]);
             }
         }
-    } else if constexpr (std::is_enum_v<T>) {
+    }
+    else if constexpr (std::is_enum_v<T>)
+    {
         REQUIRE(enum_value(spb.value) == gpb.value());
-    } else {
+    }
+    else
+    {
         auto gpb_value = gpb.value();
         REQUIRE(spb.value == gpb_value);
     }
@@ -241,9 +268,11 @@ template <typename GPB, typename SPB> void gpb_json(const SPB &spb)
     json_string.clear();
     REQUIRE(MessageToJsonString(gpb, &json_string, print_options).ok());
     REQUIRE(spb::json::deserialize<SPB>(json_string).value == spb.value);
-    if constexpr (std::is_integral_v<T> && sizeof(T) < sizeof(int64_t)) {
+    if constexpr (std::is_integral_v<T> && sizeof(T) < sizeof(int64_t))
+    {
         auto gpb_value = gpb.value();
-        if (sizeof(gpb_value) < sizeof(int64_t)) {
+        if (sizeof(gpb_value) < sizeof(int64_t))
+        {
             REQUIRE(json_string == spb_serialized);
         }
     }
@@ -272,7 +301,8 @@ template <typename GPB, typename SPB, typename POD> void gpb_compatibility_enum(
 
     CHECK(std::is_same_v<std::underlying_type_t<T>, POD>);
 
-    if constexpr (!std::is_same_v<std::optional<T>, std::decay_t<decltype(SPB::value)>>) {
+    if constexpr (!std::is_same_v<std::optional<T>, std::decay_t<decltype(SPB::value)>>)
+    {
         CHECK(sizeof(SPB) == sizeof(POD));
     }
 }
@@ -302,7 +332,8 @@ template <typename GPB, typename SPB, typename POD> void gpb_compatibility_value
     gpb_compatibility<GPB>(SPB{.value = T(-2)});
     CHECK(std::is_same_v<T, POD>);
 
-    if constexpr (!std::is_same_v<std::optional<T>, std::decay_t<decltype(SPB::value)>>) {
+    if constexpr (!std::is_same_v<std::optional<T>, std::decay_t<decltype(SPB::value)>>)
+    {
         CHECK(sizeof(SPB) == sizeof(POD));
     }
 }
@@ -313,7 +344,8 @@ void gpb_compatibility_bitfield_value(std::initializer_list<POD> values)
     using T = std::decay_t<decltype(SPB::value)>;
     static_assert(std::is_same_v<T, POD>);
 
-    for (auto value : values) {
+    for (auto value : values)
+    {
         gpb_compatibility<GPB>(SPB{.value = value});
     }
 }
@@ -344,10 +376,12 @@ TEST_CASE("string")
 {
     SUBCASE("utf8")
     {
-        for (auto i = 0U; i < 0x10ffff; i++) {
+        for (auto i = 0U; i < 0x10ffff; i++)
+        {
             char buffer[4];
             auto value = std::string(buffer, spb::detail::utf8::encode_point(i, buffer));
-            if (value.empty()) {
+            if (value.empty())
+            {
                 continue;
             }
 
@@ -1419,7 +1453,8 @@ TEST_CASE("person")
         REQUIRE(gpb.id() == spb.id);
         REQUIRE(gpb.email() == spb.email);
         REQUIRE(gpb.phones_size() == 2);
-        for (auto i = 0; i < gpb.phones_size(); i++) {
+        for (auto i = 0; i < gpb.phones_size(); i++)
+        {
             REQUIRE(gpb.phones(i).number() == spb.phones[i].number);
             REQUIRE(int(gpb.phones(i).type()) == int(spb.phones[i].type.value()));
         }
@@ -1440,7 +1475,8 @@ TEST_CASE("person")
         REQUIRE(gpb.id() == spb.id);
         REQUIRE(gpb.email() == spb.email);
         REQUIRE(gpb.phones_size() == 2);
-        for (auto i = 0; i < gpb.phones_size(); i++) {
+        for (auto i = 0; i < gpb.phones_size(); i++)
+        {
             REQUIRE(gpb.phones(i).number() == spb.phones[i].number);
             REQUIRE(int(gpb.phones(i).type()) == int(spb.phones[i].type.value()));
         }

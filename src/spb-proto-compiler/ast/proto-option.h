@@ -24,12 +24,14 @@ using proto_option_value = std::string_view;
 
 using proto_options = std::map<proto_option_name, proto_option>;
 
-struct proto_option {
+struct proto_option
+{
     std::vector<proto_option_value> value;
     std::vector<proto_options> options;
 };
 
-struct proto_attributes {
+struct proto_attributes
+{
     // default field value
     std::string_view default_;
 

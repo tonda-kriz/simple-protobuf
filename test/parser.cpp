@@ -15,7 +15,8 @@ namespace
 {
 using namespace std::literals;
 
-struct proto_file_test {
+struct proto_file_test
+{
     const std::string_view file_content;
     size_t error_line = 0;
 };
@@ -24,13 +25,16 @@ void test_proto_file(const proto_file_test &test, const std::string &test_file =
                      std::span<const std::filesystem::path> import_paths = {})
 {
     REQUIRE_NOTHROW(save_file(test_file, test.file_content));
-    try {
+    try
+    {
         auto file = parse_proto_file(test_file, import_paths);
         auto stream = std::stringstream();
         dump_cpp_header(file, stream);
         dump_cpp(file, "header.pb.h", stream);
         REQUIRE(test.error_line == 0);
-    } catch (const std::exception &ex) {
+    }
+    catch (const std::exception &ex)
+    {
         auto message = std::string_view(ex.what());
         REQUIRE(message.find(test_file + ":") != message.npos);
         message.remove_prefix(message.find(test_file + ":") + 1 + test_file.size());
@@ -43,7 +47,8 @@ void test_proto_file(const proto_file_test &test, const std::string &test_file =
 void test_files(std::span<const proto_file_test> files, const std::string &test_file = "tmp_test.proto",
                 std::span<const std::filesystem::path> import_paths = {})
 {
-    for (const auto &file : files) {
+    for (const auto &file : files)
+    {
         test_proto_file(file, test_file, import_paths);
     }
 }

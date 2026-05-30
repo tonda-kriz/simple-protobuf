@@ -42,7 +42,8 @@ class buffered_reader
 
     void shift_data_to_start() noexcept
     {
-        if (begin_index > 0) {
+        if (begin_index > 0)
+        {
             memmove(buffer.data(), buffer.data() + begin_index, bytes_in_buffer());
             end_index -= begin_index;
             begin_index = 0;
@@ -53,7 +54,8 @@ class buffered_reader
     {
         shift_data_to_start();
 
-        while (bytes_in_buffer() < SPB_READ_BUFFER_SIZE && !eof_reached) {
+        while (bytes_in_buffer() < SPB_READ_BUFFER_SIZE && !eof_reached)
+        {
             auto bytes_in = on_read(&buffer[end_index], space_left_in_buffer());
             eof_reached |= bytes_in == 0;
             end_index += bytes_in;
@@ -68,9 +70,9 @@ class buffered_reader
     [[nodiscard]] auto view(size_t minimal_size) -> std::string_view
     {
         minimal_size = std::max<size_t>(minimal_size, 1U);
-        if (bytes_in_buffer() < minimal_size) {
+        if (bytes_in_buffer() < minimal_size)
             read_buffer();
-        }
+
         return std::string_view(&buffer[begin_index], bytes_in_buffer());
     }
 

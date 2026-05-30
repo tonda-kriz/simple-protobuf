@@ -35,7 +35,8 @@
 
 namespace spb::json::detail
 {
-struct ostream {
+struct ostream
+{
   private:
     size_t bytes_written = 0;
     spb::io::writer on_write;
@@ -56,21 +57,22 @@ struct ostream {
 
     void write(char c) noexcept
     {
-        if (on_write) {
+        if (on_write)
             on_write(&c, sizeof(c));
-        }
 
         bytes_written += sizeof(c);
     }
 
     void write_unicode(uint32_t codepoint)
     {
-        if (codepoint <= 0xffff) {
+        if (codepoint <= 0xffff)
+        {
             char buffer[8] = {};
             auto size = snprintf(buffer, sizeof(buffer), "\\u%04" PRIx32, codepoint);
             return write(std::string_view(buffer, size));
         }
-        if (codepoint <= 0x10FFFF) {
+        if (codepoint <= 0x10FFFF)
+        {
             codepoint -= 0x10000;
 
             auto high = static_cast<uint16_t>((codepoint >> 10) + 0xD800);
@@ -84,16 +86,16 @@ struct ostream {
 
     void write(std::string_view str)
     {
-        if (on_write) {
+        if (on_write)
             on_write(str.data(), str.size());
-        }
 
         bytes_written += str.size();
     }
 
     void write_escaped(std::string_view str)
     {
-        if (!has_escape_chars(str)) {
+        if (!has_escape_chars(str))
+        {
             write(str);
             return;
         }
@@ -102,16 +104,21 @@ struct ostream {
         uint32_t codepoint = 0;
         uint32_t state = spb::detail::utf8::ok;
         bool decoding_utf8 = false;
-        for (uint8_t c : str) {
-            if (decoding_utf8) {
-                if (spb::detail::utf8::decode_point(&state, &codepoint, c) == spb::detail::utf8::ok) {
+        for (uint8_t c : str)
+        {
+            if (decoding_utf8)
+            {
+                if (spb::detail::utf8::decode_point(&state, &codepoint, c) == spb::detail::utf8::ok)
+                {
                     write_unicode(codepoint);
                     decoding_utf8 = false;
                 }
                 continue;
             }
-            if (is_escape(c)) {
-                switch (c) {
+            if (is_escape(c))
+            {
+                switch (c)
+                {
                 case '"':
                     write(R"(\")"sv);
                     break;
@@ -135,16 +142,20 @@ struct ostream {
                     break;
                 default:
                     decoding_utf8 = true;
-                    if (spb::detail::utf8::decode_point(&state, &codepoint, c) == spb::detail::utf8::ok) {
+                    if (spb::detail::utf8::decode_point(&state, &codepoint, c) == spb::detail::utf8::ok)
+                    {
                         write_unicode(codepoint);
                         decoding_utf8 = false;
                     }
                 }
-            } else {
+            }
+            else
+            {
                 write(c);
             }
         }
-        if (state != spb::detail::utf8::ok) {
+        if (state != spb::detail::utf8::ok)
+        {
             throw std::runtime_error("invalid utf8");
         }
     }
@@ -174,16 +185,17 @@ using namespace std::literals;
 
 static inline void serialize_key(ostream &stream, std::string_view key)
 {
-    if (stream.put_comma) {
+    if (stream.put_comma)
         stream.write(',');
-    }
+
     stream.put_comma = true;
 
-    if (!key.empty()) {
-        stream.write('"');
-        stream.write_escaped(key);
-        stream.write(R"(":)"sv);
-    }
+    if (key.empty())
+        return;
+
+    stream.write('"');
+    stream.write_escaped(key);
+    stream.write(R"(":)"sv);
 }
 
 static inline void serialize(ostream &stream, const bool &value, const field_attributes &field);
@@ -253,7 +265,7 @@ static inline void serialize(ostream &stream, const spb::detail::proto_field_str
     if (value.empty())
         return;
 
-    if (field.max_size && value.size() > field.max_size)
+    if (field.max_size && value.size() > field.max_size) [[unlikely]]
         throw std::length_error("string is too large");
 
     serialize_key(stream, field.name);
@@ -266,7 +278,7 @@ static inline void serialize(ostream &stream, const spb::detail::proto_field_byt
     if (value.empty())
         return;
 
-    if (field.max_size && value.size() > field.max_size)
+    if (field.max_size && value.size() > field.max_size) [[unlikely]]
         throw std::length_error("bytes is too large");
 
     serialize_key(stream, field.name);
@@ -280,16 +292,20 @@ static inline void serialize(ostream &stream, const spb::detail::proto_label_rep
     if (value.empty())
         return;
 
-    if (field.max_count && value.size() > field.max_count)
+    if (field.max_count && value.size() > field.max_count) [[unlikely]]
         throw std::length_error("repeated is too large");
 
     serialize_key(stream, field.name);
     stream.write('[');
     stream.put_comma = false;
-    for (const auto &v : value) {
-        if constexpr (std::is_same_v<typename std::decay_t<decltype(value)>::value_type, bool>) {
+    for (const auto &v : value)
+    {
+        if constexpr (std::is_same_v<typename std::decay_t<decltype(value)>::value_type, bool>)
+        {
             serialize(stream, bool(v), {});
-        } else {
+        }
+        else
+        {
             serialize(stream, v, {});
         }
     }
@@ -303,10 +319,14 @@ static inline void serialize(ostream &stream, const spb::detail::proto_label_rep
     serialize_key(stream, field.name);
     stream.write('[');
     stream.put_comma = false;
-    for (size_t i = 0; i < value.size(); i++) {
-        if constexpr (std::is_same_v<typename std::decay_t<decltype(value)>::value_type, bool>) {
+    for (size_t i = 0; i < value.size(); i++)
+    {
+        if constexpr (std::is_same_v<typename std::decay_t<decltype(value)>::value_type, bool>)
+        {
             serialize(stream, bool(value[i]));
-        } else {
+        }
+        else
+        {
             serialize(stream, value[i], {});
         }
     }
@@ -320,19 +340,22 @@ template <typename keyT, typename valueT>
 static inline void serialize(ostream &stream, const std::map<keyT, valueT> &map,
                              const field_attributes &field)
 {
-    if (map.empty()) {
+    if (map.empty())
         return;
-    }
+
     serialize_key(stream, field.name);
     stream.write('{');
     stream.put_comma = false;
-    for (auto &[map_key, map_value] : map) {
-        if constexpr (std::is_same_v<keyT, std::string_view> || std::is_same_v<keyT, std::string>) {
+    for (auto &[map_key, map_value] : map)
+    {
+        if constexpr (std::is_same_v<keyT, std::string_view> || std::is_same_v<keyT, std::string>)
+        {
             serialize_key(stream, map_key);
-        } else {
-            if (stream.put_comma) {
+        }
+        else
+        {
+            if (stream.put_comma)
                 stream.write(',');
-            }
 
             stream.write('"');
             serialize(stream, map_key);
@@ -349,18 +372,16 @@ static inline void serialize(ostream &stream, const std::map<keyT, valueT> &map,
 static inline void serialize(ostream &stream, const spb::detail::proto_label_optional auto &p_value,
                              const field_attributes &field)
 {
-    if (p_value.has_value()) {
+    if (p_value.has_value())
         return serialize(stream, *p_value, field);
-    }
 }
 
 template <typename T>
 static inline void serialize(ostream &stream, const std::unique_ptr<T> &p_value,
                              const field_attributes &field)
 {
-    if (p_value) {
+    if (p_value)
         return serialize(stream, *p_value, field);
-    }
 }
 
 static inline void serialize(ostream &stream, const spb::detail::proto_message auto &value,

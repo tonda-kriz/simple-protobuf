@@ -24,7 +24,8 @@ namespace
 {
 using namespace std::literals;
 
-struct search_ctx {
+struct search_ctx
+{
     //- `file` containing `message`
     const proto_file &file;
     //- `message` containing `field`
@@ -48,7 +49,8 @@ using scalar_encoder = spb::pb::detail::scalar_encoder;
 [[nodiscard]] auto get_type_part(const proto_field &field, size_t type_part) -> std::string_view
 {
     auto type_name = field.type_name.proto_name;
-    for (; type_part > 0; type_part--) {
+    for (; type_part > 0; type_part--)
+    {
         const auto dot_index = type_name.find('.');
         if (dot_index == type_name.npos)
             return {};
@@ -98,7 +100,8 @@ using scalar_encoder = spb::pb::detail::scalar_encoder;
                proto_field::BitType::INT64}}},
         }};
 
-    for (auto [proto_type, types] : type_map) {
+    for (auto [proto_type, types] : type_map)
+    {
         if (from == proto_type)
             return std::find(types.begin(), types.end(), to) != types.end();
     }
@@ -107,7 +110,8 @@ using scalar_encoder = spb::pb::detail::scalar_encoder;
 
 [[nodiscard]] auto get_scalar_bit_type(std::string_view type_name) -> proto_field::BitType
 {
-    struct type_table {
+    struct type_table
+    {
         std::string_view name;
         proto_field::BitType type;
     };
@@ -123,7 +127,8 @@ using scalar_encoder = spb::pb::detail::scalar_encoder;
         {"uint64"sv, proto_field::BitType::UINT64},
     }};
 
-    for (const auto item : scalar_types) {
+    for (const auto item : scalar_types)
+    {
         if (item.name == type_name)
             return item.type;
     }
@@ -133,7 +138,8 @@ using scalar_encoder = spb::pb::detail::scalar_encoder;
 
 [[nodiscard]] auto get_scalar_proto_type(std::string_view type_name) -> proto_field::Type
 {
-    struct type_table {
+    struct type_table
+    {
         std::string_view name;
         proto_field::Type type;
     };
@@ -156,7 +162,8 @@ using scalar_encoder = spb::pb::detail::scalar_encoder;
         {"string"sv, proto_field::Type::STRING},
     }};
 
-    for (const auto item : scalar_types) {
+    for (const auto item : scalar_types)
+    {
         if (item.name == type_name)
             return item.type;
     }
@@ -171,9 +178,11 @@ using scalar_encoder = spb::pb::detail::scalar_encoder;
     if (type == proto_field::Type::NONE)
         return {};
 
-    if (const auto name = field.attributes.type; !name.empty()) {
+    if (const auto name = field.attributes.type; !name.empty())
+    {
         const auto field_type = get_scalar_bit_type(remove_bitfield(name));
-        if (!convertible_types(type, field_type)) {
+        if (!convertible_types(type, field_type))
+        {
             throw_parse_error(file, name,
                               std::string("incompatible int type: ") +
                                   std::string(field.type_name.proto_name) + " and " + std::string(name));
@@ -197,9 +206,9 @@ using scalar_encoder = spb::pb::detail::scalar_encoder;
     -> const proto_message *
 {
     const auto type_name = get_type_part(field, type_part);
-    const auto index = std::find_if(
-        message.messages.begin(), message.messages.end(),
-        [type_name](const auto &sub_message) -> bool { return type_name == sub_message.name.proto_name; });
+    const auto index = std::find_if(message.messages.begin(), message.messages.end(),
+                                    [type_name](const auto &sub_message) -> bool
+                                    { return type_name == sub_message.name.proto_name; });
     return (index != message.messages.end()) ? &*index : nullptr;
 }
 
@@ -223,7 +232,8 @@ using scalar_encoder = spb::pb::detail::scalar_encoder;
     if (const auto type = resolve_enum(message, field, type_part); type)
         return type;
 
-    if (const auto *sub_message = get_sub_message(message, field, type_part); sub_message) {
+    if (const auto *sub_message = get_sub_message(message, field, type_part); sub_message)
+    {
         if (is_last_part(field, type_part))
             return proto_field::Type::MESSAGE;
 
@@ -245,13 +255,13 @@ using scalar_encoder = spb::pb::detail::scalar_encoder;
 [[nodiscard]] auto resolve_from_import(const proto_file &import, const proto_field &field)
     -> proto_field::Type
 {
-    if (import.package.name.proto_name.empty()) {
+    if (import.package.name.proto_name.empty())
         return resolve_from_message(import.package, field, 0);
-    }
 
     if (field.type_name.proto_name.size() > import.package.name.proto_name.size() &&
         field.type_name.proto_name[import.package.name.proto_name.size()] == '.' &&
-        field.type_name.proto_name.starts_with(import.package.name.proto_name)) {
+        field.type_name.proto_name.starts_with(import.package.name.proto_name))
+    {
         return resolve_from_message(import.package, field, type_parts(import.package.name.proto_name) + 1);
     }
 
@@ -264,7 +274,8 @@ using scalar_encoder = spb::pb::detail::scalar_encoder;
     if (type_part > 0)
         return proto_field::Type::NONE;
 
-    for (const auto &import : self.file.imports) {
+    for (const auto &import : self.file.imports)
+    {
         if (const auto type = resolve_from_import(import, field); type)
             return type;
     }
@@ -306,7 +317,8 @@ void resolve_types(const search_ctx &self, proto_map &map)
 
 void resolve_types(const search_ctx &self, proto_oneof &oneof)
 {
-    for (auto &field : oneof.fields) {
+    for (auto &field : oneof.fields)
+    {
         resolve_types(self, field);
     }
 }
@@ -319,19 +331,23 @@ void resolve_types(const search_ctx &parent, proto_message &message)
         .p_parent = &parent,
     };
 
-    for (auto &field : message.fields) {
+    for (auto &field : message.fields)
+    {
         resolve_types(ctx, field);
     }
 
-    for (auto &map : message.maps) {
+    for (auto &map : message.maps)
+    {
         resolve_types(ctx, map);
     }
 
-    for (auto &oneof : message.oneofs) {
+    for (auto &oneof : message.oneofs)
+    {
         resolve_types(ctx, oneof);
     }
 
-    for (auto &sub_message : message.messages) {
+    for (auto &sub_message : message.messages)
+    {
         resolve_types(ctx, sub_message);
     }
 }
@@ -347,7 +363,8 @@ auto is_packed_array(const proto_file &file, const proto_field &field) -> bool
 
 auto is_scalar(const proto_field::Type &type) -> bool
 {
-    switch (type) {
+    switch (type)
+    {
     case proto_field::Type::NONE:
     case proto_field::Type::MESSAGE:
     case proto_field::Type::ENUM:
