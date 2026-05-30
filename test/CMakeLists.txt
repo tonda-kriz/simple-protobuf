@@ -25,11 +25,17 @@ if(SPB_PROTO_BUILD_ETL_TESTS)
   configure_file(proto/etl/etl-person.proto.in ${CMAKE_CURRENT_BINARY_DIR}/gpb-etl-person.proto @ONLY)
 endif()
 
-spb_protobuf_generate_cpp(SPB_PROTO_SRCS SPB_PROTO_HDRS ${protos})
-spb_protobuf_generate_cpp(SPB_PROTO_PERSON_SRC SPB_PROTO_PERSON_HDR ${CMAKE_CURRENT_BINARY_DIR}/person.proto)
-spb_protobuf_generate_cpp(SPB_PROTO_RESERVED_SRC SPB_PROTO_PERSON_HDR ${CMAKE_CURRENT_BINARY_DIR}/reserved.proto)
-spb_protobuf_generate_cpp(SPB_PROTO_NAME_SRC SPB_PROTO_NAME_HDR ${CMAKE_CURRENT_BINARY_DIR}/name.proto)
-spb_protobuf_generate_cpp(SPB_PROTO_SCALAR_SRC SPB_PROTO_SCALAR_HDR ${CMAKE_CURRENT_BINARY_DIR}/scalar.proto)
+add_library(spb-generated STATIC 
+  ${protos}
+  ${CMAKE_CURRENT_BINARY_DIR}/person.proto
+  ${CMAKE_CURRENT_BINARY_DIR}/reserved.proto
+  ${CMAKE_CURRENT_BINARY_DIR}/name.proto
+  ${CMAKE_CURRENT_BINARY_DIR}/scalar.proto
+)
+spb_set_compile_options(spb-generated)
+spb_disable_warnings(spb-generated)
+spb_protobuf_generate(LANGUAGE cpp TARGET spb-generated IMPORT_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/../include/spb/proto")
+
 if(SPB_PROTO_BUILD_ETL_TESTS)
   spb_protobuf_generate_cpp(SPB_PROTO_ETL_SCALAR_SRC SPB_PROTO_ETL_HDR ${CMAKE_CURRENT_BINARY_DIR}/etl-scalar.proto)
   spb_protobuf_generate_cpp(SPB_PROTO_ETL_PERSON_SRC SPB_PROTO_ETL_HDR ${CMAKE_CURRENT_BINARY_DIR}/etl-person.proto)
@@ -44,17 +50,17 @@ target_link_libraries(base64-test PUBLIC spb-proto)
 add_dependencies(unit_tests base64-test)
 doctest_discover_tests(base64-test)
 
-add_executable(json-test json.cpp ${SPB_PROTO_PERSON_SRC} ${SPB_PROTO_NAME_SRC} ${SPB_PROTO_SCALAR_SRC})
+add_executable(json-test json.cpp)
 spb_set_compile_options(json-test)
 spb_disable_warnings(json-test)
-target_link_libraries(json-test PUBLIC spb-proto)
+target_link_libraries(json-test PRIVATE spb-generated)
 add_dependencies(unit_tests json-test)
 doctest_discover_tests(json-test)
 
-add_executable(pb-test pb.cpp ${SPB_PROTO_SRCS} ${SPB_PROTO_RESERVED_SRC} ${SPB_PROTO_PERSON_SRC} ${SPB_PROTO_NAME_SRC} ${SPB_PROTO_SCALAR_SRC})
+add_executable(pb-test pb.cpp)
 spb_set_compile_options(pb-test)
 spb_disable_warnings(pb-test)
-target_link_libraries(pb-test PUBLIC spb-proto)
+target_link_libraries(pb-test PRIVATE spb-generated)
 add_dependencies(unit_tests pb-test)
 doctest_discover_tests(pb-test)
 
@@ -62,11 +68,6 @@ if(NOT CMAKE_BUILD_TYPE MATCHES Debug)
   include(CheckIPOSupported)
   check_ipo_supported(RESULT IPO_ENABLED)
 endif()
-
-add_executable(compiled-protos protos.cpp ${SPB_PROTO_SRCS} ${SPB_PROTO_HDRS})
-spb_set_compile_options(compiled-protos)
-spb_disable_warnings(compiled-protos)
-target_link_libraries(compiled-protos PUBLIC spb-proto)
 
 if(SPB_PROTO_BUILD_COMPATIBILITY_TESTS)
   if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND EXISTS "/etc/arch-release")
@@ -100,7 +101,7 @@ if(SPB_PROTO_BUILD_COMPATIBILITY_TESTS)
     add_custom_command(
         OUTPUT ${OUTPUT_CC} ${OUTPUT_H}
         COMMAND protobuf::protoc
-        ARGS --cpp_out=${CMAKE_CURRENT_BINARY_DIR} -I${CMAKE_CURRENT_BINARY_DIR} ${PROTO_FILE}
+        ARGS --cpp_out=${CMAKE_CURRENT_BINARY_DIR} -I${CMAKE_CURRENT_BINARY_DIR} -I${CMAKE_SOURCE_DIR}/include/spb/proto -I${CMAKE_BINARY_DIR}/_deps/protobuf-src/src ${PROTO_FILE}
         DEPENDS ${PROTO_FILE}
         COMMENT "Generating Protobuf files for ${PROTO_FILE} as ${OUTPUT_CC} and ${OUTPUT_H}"
         VERBATIM
@@ -115,6 +116,7 @@ if(SPB_PROTO_BUILD_COMPATIBILITY_TESTS)
     PROTOBUF_GENERATE_CPP(PROTO_RESERVED_SRC PROTO_PERSON_HDR ${CMAKE_CURRENT_BINARY_DIR}/gpb-reserved.proto)
   endif()
   PROTOBUF_GENERATE_CPP(PROTO_NAME_SRC PROTO_NAME_HDR ${CMAKE_CURRENT_BINARY_DIR}/gpb-name.proto)
+  PROTOBUF_GENERATE_CPP(PROTO_SPB_SRC PROTO_SPB_HDR ${CMAKE_SOURCE_DIR}/include/spb/proto/spb.proto)
   PROTOBUF_GENERATE_CPP(PROTO_SCALAR_SRC PROTO_SCALAR_HDR ${CMAKE_CURRENT_BINARY_DIR}/gpb-scalar.proto)
   if(SPB_PROTO_BUILD_ETL_TESTS)
     PROTOBUF_GENERATE_CPP(PROTO_ETL_SCALAR_SRC PROTO_ETL_HDR ${CMAKE_CURRENT_BINARY_DIR}/gpb-etl-scalar.proto)
@@ -122,9 +124,9 @@ if(SPB_PROTO_BUILD_COMPATIBILITY_TESTS)
   endif()
 
 if(Protobuf_VERSION VERSION_GREATER_EQUAL "30")  
-  add_library(gpb-proto STATIC ${PROTO_ETL_PERSON_SRC} ${PROTO_ETL_SCALAR_SRC} ${PROTO_SCALAR_SRC} ${PROTO_PERSON_SRC} ${PROTO_NAME_SRC} ${PROTO_RESERVED_SRC})
+  add_library(gpb-proto STATIC ${PROTO_SPB_SRC} ${PROTO_ETL_PERSON_SRC} ${PROTO_ETL_SCALAR_SRC} ${PROTO_SCALAR_SRC} ${PROTO_PERSON_SRC} ${PROTO_NAME_SRC} ${PROTO_RESERVED_SRC})
 else()
-  add_library(gpb-proto STATIC ${PROTO_ETL_PERSON_SRC} ${PROTO_ETL_SCALAR_SRC} ${PROTO_SCALAR_SRC} ${PROTO_PERSON_SRC} ${PROTO_NAME_SRC})
+  add_library(gpb-proto STATIC ${PROTO_SPB_SRC} ${PROTO_ETL_PERSON_SRC} ${PROTO_ETL_SCALAR_SRC} ${PROTO_SCALAR_SRC} ${PROTO_PERSON_SRC} ${PROTO_NAME_SRC})
 endif()
 
   target_link_libraries(gpb-proto PUBLIC protobuf::libprotobuf)
@@ -132,7 +134,7 @@ endif()
 
   add_executable(gpb-compatibility-test gpb-compatibility.cpp ${SPB_PROTO_PERSON_SRC} ${SPB_PROTO_NAME_SRC} ${SPB_PROTO_SCALAR_SRC})
   spb_set_compile_options(gpb-compatibility-test)
-  target_link_libraries(gpb-compatibility-test PUBLIC spb-proto gpb-proto)
+  target_link_libraries(gpb-compatibility-test PUBLIC spb-proto gpb-proto spb-generated)
   add_dependencies(unit_tests gpb-compatibility-test)
   doctest_discover_tests(gpb-compatibility-test)
 
@@ -166,6 +168,7 @@ if(SPB_PROTO_BUILD_COMPILER_TESTS)
       ../../src/spb-proto-compiler/io/file.cpp
       ../../src/spb-proto-compiler/ast/ast.cpp
       ../../src/spb-proto-compiler/ast/ast-types.cpp
+      ../../src/spb-proto-compiler/ast/ast-options.cpp
       ../../src/spb-proto-compiler/ast/ast-messages-order.cpp
       )
   target_include_directories(spb-protoc-test PUBLIC ${CMAKE_SOURCE_DIR}/src/spb-proto-compiler)

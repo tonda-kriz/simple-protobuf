@@ -3,6 +3,7 @@
 #include <memory>
 #include <name.pb.h>
 #include <person.pb.h>
+#include <proto/options.pb.h>
 #include <scalar.pb.h>
 #include <spb/json/deserialize.hpp>
 #include <spb/json/serialize.hpp>
@@ -19,12 +20,35 @@ auto operator==( const std::span< const std::byte > & lhs,
 }
 }// namespace std
 
+namespace Test
+{
+auto operator==( const TestPerson & lhs, const TestPerson & rhs ) noexcept -> bool
+{
+    return lhs.value == rhs.value;
+}
+
+}// namespace Test
+
 namespace
 {
 template < typename T >
 concept HasValueMember = requires( T t ) {
     { t.value };
 };
+}// namespace
+
+namespace Test
+{
+
+auto operator==( const ::HasValueMember auto & lhs, const ::HasValueMember auto & rhs ) noexcept
+    -> bool
+{
+    return lhs.value == rhs.value;
+}
+}// namespace Test
+
+namespace
+{
 
 template < size_t N >
 auto to_array( const char ( &string )[ N ] )
@@ -98,7 +122,7 @@ TEST_CASE( "json" )
         const auto hash2          = spb::json::detail::djb2_hash( "world" );
         const auto name_hash      = spb::json::detail::djb2_hash( "name" );
         const auto name_collision = spb::json::detail::djb2_hash( "bkfvdzz" );
-        const auto hash3          = spb::json::detail::djb2_hash( { } );
+        const auto hash3          = spb::json::detail::djb2_hash( {} );
         CHECK( hash == collision );
         CHECK( name_hash == name_collision );
         CHECK( hash3 != 0 );
@@ -110,15 +134,263 @@ TEST_CASE( "json" )
     }
     SUBCASE( "deserialize" )
     {
+        SUBCASE( "options" )
+        {
+            SUBCASE( "max_count" )
+            {
+                const auto ints_packed = spb::json::serialize< std::string >(
+                    Test::MaxCountIntPacked{ .value = { 0, 1, 2, 3, 4 } } );
+                const auto ints = spb::json::serialize< std::string >(
+                    Test::MaxCountInt{ .value = { 0, 1, 2, 3, 4 } } );
+                const auto strings = spb::json::serialize< std::string >(
+                    Test::MaxCountString{ .value = { "0", "1", "2", "3", "4" } } );
+                const auto bytes   = spb::json::serialize< std::string >( Test::MaxCountBytes{
+                    .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ), to_bytes( "3" ),
+                               to_bytes( "4" ) } } );
+                const auto person  = Test::TestPerson{ .value = "3" };
+                const auto persons = spb::json::serialize< std::string >(
+                    Test::MaxCountPerson{ .value = { person, person, person, person, person } } );
+
+                CHECK_THROWS( ( void ) spb::json::deserialize< Test::MaxCountFieldIntPacked >(
+                    ints_packed ) );
+                CHECK( spb::json::deserialize< Test::MaxCountFieldIntPacked >(
+                           R"({"value":[0,1,2,3]})"sv ) ==
+                       Test::MaxCountFieldIntPacked{ .value = { 0, 1, 2, 3 } } );
+
+                CHECK_THROWS( ( void ) spb::json::deserialize< Test::MaxCountFieldInt >( ints ) );
+                CHECK( spb::json::deserialize< Test::MaxCountFieldInt >(
+                           R"({"value":[0,1,2,3]})"sv ) ==
+                       Test::MaxCountFieldInt{ .value = { 0, 1, 2, 3 } } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxCountMsgCommentInt >( ints ) );
+                CHECK( spb::json::deserialize< Test::MaxCountMsgCommentInt >(
+                           R"({"value":[0,1,2,3]})"sv ) ==
+                       Test::MaxCountMsgCommentInt{ .value = { 0, 1, 2, 3 } } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxCountFieldCommentIntPacked >(
+                        ints_packed ) );
+                CHECK( spb::json::deserialize< Test::MaxCountFieldCommentIntPacked >(
+                           R"({"value":[0,1,2,3]})"sv ) ==
+                       Test::MaxCountFieldCommentIntPacked{ .value = { 0, 1, 2, 3 } } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxCountMsgIntPacked >( ints_packed ) );
+                CHECK( spb::json::deserialize< Test::MaxCountMsgIntPacked >(
+                           R"({"value":[0,1,2,3]})"sv ) ==
+                       Test::MaxCountMsgIntPacked{ .value = { 0, 1, 2, 3 } } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxCountMsgIntPacked >( strings ) );
+                CHECK( spb::json::deserialize< Test::MaxCountFieldString >(
+                           R"({"value":["0","1","2","3"]})"sv ) ==
+                       Test::MaxCountFieldString{ .value = { "0", "1", "2", "3" } } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxCountMsgIntPacked >( strings ) );
+                CHECK( spb::json::deserialize< Test::MaxCountMsgCommentString >(
+                           R"({"value":["0","1","2","3"]})"sv ) ==
+                       Test::MaxCountMsgCommentString{ .value = { "0", "1", "2", "3" } } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxCountMsgIntPacked >( strings ) );
+                CHECK( spb::json::deserialize< Test::MaxCountMsgString >(
+                           R"({"value":["0","1","2","3"]})"sv ) ==
+                       Test::MaxCountMsgString{ .value = { "0", "1", "2", "3" } } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxCountMsgIntPacked >( strings ) );
+                CHECK( spb::json::deserialize< Test::MaxCountFieldCommentString >(
+                           R"({"value":["0","1","2","3"]})"sv ) ==
+                       Test::MaxCountFieldCommentString{ .value = { "0", "1", "2", "3" } } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxCountMsgIntPacked >( bytes ) );
+                CHECK( spb::json::deserialize< Test::MaxCountFieldBytes >(
+                           R"({"value":["MA==","MQ==","Mg==","Mw=="]})"sv ) ==
+                       Test::MaxCountFieldBytes{
+                           .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ),
+                                      to_bytes( "3" ) },
+                       } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxCountMsgIntPacked >( bytes ) );
+                CHECK( spb::json::deserialize< Test::MaxCountMsgCommentBytes >(
+                           R"({"value":["MA==","MQ==","Mg==","Mw=="]})"sv ) ==
+                       Test::MaxCountMsgCommentBytes{
+                           .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ),
+                                      to_bytes( "3" ) },
+                       } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxCountMsgIntPacked >( bytes ) );
+                CHECK( spb::json::deserialize< Test::MaxCountMsgbytes >(
+                           R"({"value":["MA==","MQ==","Mg==","Mw=="]})"sv ) ==
+                       Test::MaxCountMsgbytes{
+                           .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ),
+                                      to_bytes( "3" ) },
+                       } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxCountMsgIntPacked >( bytes ) );
+                CHECK( spb::json::deserialize< Test::MaxCountFieldCommentBytes >(
+                           R"({"value":["MA==","MQ==","Mg==","Mw=="]})"sv ) ==
+                       Test::MaxCountFieldCommentBytes{
+                           .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ),
+                                      to_bytes( "3" ) },
+                       } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxCountMsgIntPacked >( persons ) );
+                CHECK(
+                    spb::json::deserialize< Test::MaxCountFieldPerson >(
+                        R"({"value":[{"value":"3"},{"value":"3"},{"value":"3"},{"value":"3"}]})"sv ) ==
+                    Test::MaxCountFieldPerson{
+                        .value = { person, person, person, person },
+                    } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxCountMsgIntPacked >( persons ) );
+                CHECK(
+                    spb::json::deserialize< Test::MaxCountFieldCommentPerson >(
+                        R"({"value":[{"value":"3"},{"value":"3"},{"value":"3"},{"value":"3"}]})"sv ) ==
+                    Test::MaxCountFieldCommentPerson{
+                        .value = { person, person, person, person },
+                    } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxCountMsgIntPacked >( persons ) );
+                CHECK(
+                    spb::json::deserialize< Test::MaxCountMsgPerson >(
+                        R"({"value":[{"value":"3"},{"value":"3"},{"value":"3"},{"value":"3"}]})"sv ) ==
+                    Test::MaxCountMsgPerson{
+                        .value = { person, person, person, person },
+                    } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxCountMsgIntPacked >( persons ) );
+                CHECK(
+                    spb::json::deserialize< Test::MaxCountMsgCommentPerson >(
+                        R"({"value":[{"value":"3"},{"value":"3"},{"value":"3"},{"value":"3"}]})"sv ) ==
+                    Test::MaxCountMsgCommentPerson{
+                        .value = { person, person, person, person },
+                    } );
+            }
+            SUBCASE( "max_size" )
+            {
+                const auto long_string = spb::json::serialize< std::string >(
+                    Test::MaxSizeOptString{ .value = "01234" } );
+
+                const auto long_bytes = spb::json::serialize< std::string >(
+                    Test::MaxSizeOptBytes{ .value = to_bytes( "01234" ) } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxSizeOptStringField >( long_string ) );
+                CHECK( spb::json::deserialize< Test::MaxSizeOptStringField >(
+                           R"({"value":"0123"})"sv ) ==
+                       Test::MaxSizeOptStringField{ .value = "0123" } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxSizeReqStringField >( long_string ) );
+                CHECK( spb::json::deserialize< Test::MaxSizeReqStringField >(
+                           R"({"value":"0123"})"sv ) ==
+                       Test::MaxSizeReqStringField{ .value = "0123" } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxSizeOptBytesField >( long_bytes ) );
+                CHECK( spb::json::deserialize< Test::MaxSizeOptBytesField >(
+                           R"({"value":"MDEyMw=="})"sv ) ==
+                       Test::MaxSizeOptBytesField{ .value = to_bytes( "0123" ) } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxSizeReqBytesField >( long_bytes ) );
+                CHECK( spb::json::deserialize< Test::MaxSizeReqBytesField >(
+                           R"({"value":"MDEyMw=="})"sv ) ==
+                       Test::MaxSizeReqBytesField{ .value = to_bytes( "0123" ) } );
+
+                CHECK_THROWS( ( void ) spb::json::deserialize< Test::MaxSizeOptStringComment >(
+                    long_string ) );
+                CHECK( spb::json::deserialize< Test::MaxSizeOptStringComment >(
+                           R"({"value":"0123"})"sv ) ==
+                       Test::MaxSizeOptStringComment{ .value = "0123" } );
+
+                CHECK_THROWS( ( void ) spb::json::deserialize< Test::MaxSizeReqStringComment >(
+                    long_string ) );
+                CHECK( spb::json::deserialize< Test::MaxSizeReqStringComment >(
+                           R"({"value":"0123"})"sv ) ==
+                       Test::MaxSizeReqStringComment{ .value = "0123" } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxSizeOptBytesComment >( long_bytes ) );
+                CHECK( spb::json::deserialize< Test::MaxSizeOptBytesComment >(
+                           R"({"value":"MDEyMw=="})"sv ) ==
+                       Test::MaxSizeOptBytesComment{ .value = to_bytes( "0123" ) } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxSizeReqBytesComment >( long_bytes ) );
+                CHECK( spb::json::deserialize< Test::MaxSizeReqBytesComment >(
+                           R"({"value":"MDEyMw=="})"sv ) ==
+                       Test::MaxSizeReqBytesComment{ .value = to_bytes( "0123" ) } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxSizeOptStringMsg >( long_string ) );
+                CHECK( spb::json::deserialize< Test::MaxSizeOptStringMsg >(
+                           R"({"value":"0123"})"sv ) ==
+                       Test::MaxSizeOptStringMsg{ .value = "0123" } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxSizeReqStringMsg >( long_string ) );
+                CHECK( spb::json::deserialize< Test::MaxSizeReqStringMsg >(
+                           R"({"value":"0123"})"sv ) ==
+                       Test::MaxSizeReqStringMsg{ .value = "0123" } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxSizeOptBytesMsg >( long_bytes ) );
+                CHECK( spb::json::deserialize< Test::MaxSizeOptBytesMsg >(
+                           R"({"value":"MDEyMw=="})"sv ) ==
+                       Test::MaxSizeOptBytesMsg{ .value = to_bytes( "0123" ) } );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::deserialize< Test::MaxSizeReqBytesMsg >( long_bytes ) );
+                CHECK( spb::json::deserialize< Test::MaxSizeReqBytesMsg >(
+                           R"({"value":"MDEyMw=="})"sv ) ==
+                       Test::MaxSizeReqBytesMsg{ .value = to_bytes( "0123" ) } );
+
+                CHECK_THROWS( ( void ) spb::json::deserialize< Test::MaxSizeOptStringMsgComment >(
+                    long_string ) );
+                CHECK( spb::json::deserialize< Test::MaxSizeOptStringMsgComment >(
+                           R"({"value":"0123"})"sv ) ==
+                       Test::MaxSizeOptStringMsgComment{ .value = "0123" } );
+
+                CHECK_THROWS( ( void ) spb::json::deserialize< Test::MaxSizeReqStringMsgComment >(
+                    long_string ) );
+                CHECK( spb::json::deserialize< Test::MaxSizeReqStringMsgComment >(
+                           R"({"value":"0123"})"sv ) ==
+                       Test::MaxSizeReqStringMsgComment{ .value = "0123" } );
+
+                CHECK_THROWS( ( void ) spb::json::deserialize< Test::MaxSizeOptBytesMsgComment >(
+                    long_bytes ) );
+                CHECK( spb::json::deserialize< Test::MaxSizeOptBytesMsgComment >(
+                           R"({"value":"MDEyMw=="})"sv ) ==
+                       Test::MaxSizeOptBytesMsgComment{ .value = to_bytes( "0123" ) } );
+
+                CHECK_THROWS( ( void ) spb::json::deserialize< Test::MaxSizeReqBytesMsgComment >(
+                    long_bytes ) );
+                CHECK( spb::json::deserialize< Test::MaxSizeReqBytesMsgComment >(
+                           R"({"value":"MDEyMw=="})"sv ) ==
+                       Test::MaxSizeReqBytesMsgComment{ .value = to_bytes( "0123" ) } );
+            }
+        }
         SUBCASE( "ignore" )
         {
             SUBCASE( "empty" )
             {
-                CHECK( spb::json::deserialize< Test::Name >( R"({})"sv ) == Test::Name{ } );
+                CHECK( spb::json::deserialize< Test::Name >( R"({})"sv ) == Test::Name{} );
                 CHECK(
                     spb::json::deserialize< Test::Name >(
                         R"({                                                                                                                                                                                                                                                                                                                                                                                                                })"sv ) ==
-                    Test::Name{ } );
+                    Test::Name{} );
                 CHECK_THROWS( ( void ) spb::json::deserialize< Test::Name >( ""sv ) );
                 CHECK_THROWS( ( void ) spb::json::deserialize< Test::Name >( R"(})"sv ) );
                 CHECK_THROWS( ( void ) spb::json::deserialize< Test::Name >( R"({)"sv ) );
@@ -126,34 +398,34 @@ TEST_CASE( "json" )
             SUBCASE( "string" )
             {
                 CHECK( spb::json::deserialize< Test::Name >( R"({"string":"string"})"sv ) ==
-                       Test::Name{ } );
+                       Test::Name{} );
                 CHECK( spb::json::deserialize< Test::Name >( R"({"bkfvdzz":"string"})"sv ) ==
                        Test::Name{ .bkfvdzz = "string" } );
                 CHECK(
                     spb::json::deserialize< Test::Name >(
                         R"({"string                                                                                                                                                                                                                                                                                                                                                                                                                ":"string                                                                                                                                                                                                                                                                                                                                                                                                                "})"sv ) ==
-                    Test::Name{ } );
+                    Test::Name{} );
             }
             SUBCASE( "int" )
             {
                 CHECK( spb::json::deserialize< Test::Name >( R"({"integer":42})"sv ) ==
-                       Test::Name{ } );
+                       Test::Name{} );
                 CHECK( spb::json::deserialize< Test::Name >( R"({"bkfvdzz1":42})"sv ) ==
-                       Test::Name{ } );
+                       Test::Name{} );
             }
             SUBCASE( "float" )
             {
                 CHECK( spb::json::deserialize< Test::Name >( R"({"fl":42.0, "fl2":0})"sv ) ==
-                       Test::Name{ } );
+                       Test::Name{} );
             }
             SUBCASE( "repeated" )
             {
                 CHECK( spb::json::deserialize< Test::Name >( R"({"repeated":[42,"hello"]})"sv ) ==
-                       Test::Name{ } );
+                       Test::Name{} );
                 CHECK( spb::json::deserialize< Test::Name >( R"({"repeated":[]})"sv ) ==
-                       Test::Name{ } );
+                       Test::Name{} );
                 CHECK( spb::json::deserialize< Test::Name >( R"({"name1":[]})"sv ) ==
-                       Test::Name{ } );
+                       Test::Name{} );
                 CHECK_THROWS(
                     ( void ) spb::json::deserialize< Test::Name >( R"({"repeated":[})"sv ) );
                 CHECK_THROWS(
@@ -166,7 +438,7 @@ TEST_CASE( "json" )
             SUBCASE( "bool" )
             {
                 CHECK( spb::json::deserialize< Test::Name >(
-                           R"({"value":true, "value2":false})"sv ) == Test::Name{ } );
+                           R"({"value":true, "value2":false})"sv ) == Test::Name{} );
                 CHECK_THROWS( ( void ) spb::json::deserialize< Test::Name >(
                     R"({"value":tru, "value2":false})"sv ) );
                 CHECK_THROWS( ( void ) spb::json::deserialize< Test::Name >(
@@ -175,16 +447,16 @@ TEST_CASE( "json" )
             SUBCASE( "null" )
             {
                 CHECK( spb::json::deserialize< Test::Name >( R"({"value":null})"sv ) ==
-                       Test::Name{ } );
+                       Test::Name{} );
                 CHECK_THROWS(
                     ( void ) spb::json::deserialize< Test::Name >( R"({"value":nul})"sv ) );
             }
             SUBCASE( "object" )
             {
                 CHECK( spb::json::deserialize< Test::Name >( R"({"value":{}})"sv ) ==
-                       Test::Name{ } );
+                       Test::Name{} );
                 CHECK( spb::json::deserialize< Test::Name >(
-                           R"({"value":{"key":"value", "key2":[42]}})"sv ) == Test::Name{ } );
+                           R"({"value":{"key":"value", "key2":[42]}})"sv ) == Test::Name{} );
                 CHECK_THROWS( ( void ) spb::json::deserialize< Test::Name >( R"({"value"})"sv ) );
                 CHECK_THROWS( ( void ) spb::json::deserialize< Test::Name >(
                     R"({"value":{"key":"value", "key2":[42]})"sv ) );
@@ -254,9 +526,9 @@ TEST_CASE( "json" )
                 CHECK( spb::json::deserialize< std::vector< bool > >( R"([true,false])"sv ) ==
                        std::vector< bool >{ true, false } );
                 CHECK( spb::json::deserialize< std::vector< bool > >( R"([])"sv ) ==
-                       std::vector< bool >{ } );
+                       std::vector< bool >{} );
                 CHECK( spb::json::deserialize< std::vector< bool > >( R"(null)"sv ) ==
-                       std::vector< bool >{ } );
+                       std::vector< bool >{} );
                 CHECK_THROWS( ( void ) spb::json::deserialize< std::vector< bool > >( R"()"sv ) );
                 CHECK_THROWS(
                     ( void ) spb::json::deserialize< std::vector< bool > >( R"(true)"sv ) );
@@ -321,9 +593,9 @@ TEST_CASE( "json" )
             SUBCASE( "repeated" )
             {
                 CHECK( spb::json::deserialize< std::vector< float > >( "[]"sv ) ==
-                       std::vector< float >{ } );
+                       std::vector< float >{} );
                 CHECK( spb::json::deserialize< std::vector< float > >( "null"sv ) ==
-                       std::vector< float >{ } );
+                       std::vector< float >{} );
                 CHECK( spb::json::deserialize< std::vector< float > >( "[42]"sv ) ==
                        std::vector< float >{ 42 } );
                 CHECK( spb::json::deserialize< std::vector< float > >( "[42,3.14]"sv ) ==
@@ -445,9 +717,9 @@ TEST_CASE( "json" )
                 spb::json::deserialize< std::vector< std::string > >( R"(["hello","world"])"sv ) ==
                 std::vector< std::string >{ "hello", "world" } );
             CHECK( spb::json::deserialize< std::vector< std::string > >( R"([])"sv ) ==
-                   std::vector< std::string >{ } );
+                   std::vector< std::string >{} );
             CHECK( spb::json::deserialize< std::vector< std::string > >( R"(null)"sv ) ==
-                   std::vector< std::string >{ } );
+                   std::vector< std::string >{} );
             CHECK_THROWS(
                 ( void ) spb::json::deserialize< std::vector< std::string > >( R"()"sv ) );
             CHECK_THROWS(
@@ -472,9 +744,9 @@ TEST_CASE( "json" )
             CHECK( spb::json::deserialize< std::vector< std::byte > >( R"("aGVsbG8=")"sv ) ==
                    to_bytes( "hello" ) );
             CHECK( spb::json::deserialize< std::vector< std::byte > >( R"(null)"sv ) ==
-                   std::vector< std::byte >{ } );
+                   std::vector< std::byte >{} );
             CHECK( spb::json::deserialize< std::vector< std::byte > >( R"("")"sv ) ==
-                   std::vector< std::byte >{ } );
+                   std::vector< std::byte >{} );
             CHECK_THROWS(
                 ( void ) spb::json::deserialize< std::vector< std::byte > >( R"(true)"sv ) );
             CHECK_THROWS(
@@ -493,9 +765,9 @@ TEST_CASE( "json" )
                        std::vector< std::vector< std::byte > >{
                            to_bytes( "\x00\x01\x02\x03\x04"sv ), to_bytes( "hello" ) } );
                 CHECK( spb::json::deserialize< std::vector< std::vector< std::byte > > >(
-                           R"([])"sv ) == std::vector< std::vector< std::byte > >{ } );
+                           R"([])"sv ) == std::vector< std::vector< std::byte > >{} );
                 CHECK( spb::json::deserialize< std::vector< std::vector< std::byte > > >(
-                           R"(null)"sv ) == std::vector< std::vector< std::byte > >{ } );
+                           R"(null)"sv ) == std::vector< std::vector< std::byte > >{} );
                 CHECK( spb::json::deserialize< std::vector< std::vector< std::byte > > >(
                            R"([""])"sv ) ==
                        std::vector< std::vector< std::byte > >{ std::vector< std::byte >{} } );
@@ -514,7 +786,7 @@ TEST_CASE( "json" )
                                                  std::byte( 'l' ), std::byte( 'l' ),
                                                  std::byte( 'o' ) } );
                 CHECK( spb::json::deserialize< std::optional< std::vector< std::byte > > >(
-                           R"("")"sv ) == std::vector< std::byte >{ } );
+                           R"("")"sv ) == std::vector< std::byte >{} );
                 CHECK_THROWS(
                     ( void ) spb::json::deserialize< std::optional< std::vector< std::byte > > >(
                         R"(true)"sv ) );
@@ -539,9 +811,9 @@ TEST_CASE( "json" )
                            R"({"1":2,"2":3})"sv ) ==
                        std::map< int32_t, int32_t >{ { 1, 2 }, { 2, 3 } } );
                 CHECK( spb::json::deserialize< std::map< int32_t, int32_t > >( R"({})"sv ) ==
-                       std::map< int32_t, int32_t >{ } );
+                       std::map< int32_t, int32_t >{} );
                 CHECK( spb::json::deserialize< std::map< int32_t, int32_t > >( R"(null)"sv ) ==
-                       std::map< int32_t, int32_t >{ } );
+                       std::map< int32_t, int32_t >{} );
                 CHECK_THROWS(
                     ( void ) spb::json::deserialize< std::map< int32_t, int32_t > >( R"()"sv ) );
                 CHECK_THROWS( ( void ) spb::json::deserialize< std::map< int32_t, int32_t > >(
@@ -557,9 +829,9 @@ TEST_CASE( "json" )
                            R"({"hello":"world"})"sv ) ==
                        std::map< std::string, std::string >{ { "hello", "world" } } );
                 CHECK( spb::json::deserialize< std::map< std::string, std::string > >(
-                           R"({})"sv ) == std::map< std::string, std::string >{ } );
+                           R"({})"sv ) == std::map< std::string, std::string >{} );
                 CHECK( spb::json::deserialize< std::map< std::string, std::string > >(
-                           R"(null)"sv ) == std::map< std::string, std::string >{ } );
+                           R"(null)"sv ) == std::map< std::string, std::string >{} );
                 CHECK_THROWS(
                     ( void ) spb::json::deserialize< std::map< std::string, std::string > >(
                         R"()"sv ) );
@@ -576,9 +848,9 @@ TEST_CASE( "json" )
                            R"({"1":"hello"})"sv ) ==
                        std::map< int32_t, std::string >{ { 1, "hello" } } );
                 CHECK( spb::json::deserialize< std::map< int32_t, std::string > >( R"({})"sv ) ==
-                       std::map< int32_t, std::string >{ } );
+                       std::map< int32_t, std::string >{} );
                 CHECK( spb::json::deserialize< std::map< int32_t, std::string > >( R"(null)"sv ) ==
-                       std::map< int32_t, std::string >{ } );
+                       std::map< int32_t, std::string >{} );
                 CHECK_THROWS( ( void ) spb::json::deserialize< std::map< int32_t, std::string > >(
                     R"()"sv ) );
                 CHECK_THROWS( ( void ) spb::json::deserialize< std::map< int32_t, std::string > >(
@@ -592,9 +864,9 @@ TEST_CASE( "json" )
                            R"({"hello":2})"sv ) ==
                        std::map< std::string, int32_t >{ { "hello", 2 } } );
                 CHECK( spb::json::deserialize< std::map< std::string, int32_t > >( R"({})"sv ) ==
-                       std::map< std::string, int32_t >{ } );
+                       std::map< std::string, int32_t >{} );
                 CHECK( spb::json::deserialize< std::map< std::string, int32_t > >( R"(null)"sv ) ==
-                       std::map< std::string, int32_t >{ } );
+                       std::map< std::string, int32_t >{} );
                 CHECK_THROWS( ( void ) spb::json::deserialize< std::map< std::string, int32_t > >(
                     R"()"sv ) );
                 CHECK_THROWS( ( void ) spb::json::deserialize< std::map< std::string, int32_t > >(
@@ -690,6 +962,216 @@ TEST_CASE( "json" )
     }
     SUBCASE( "serialize" )
     {
+        SUBCASE( "options" )
+        {
+            SUBCASE( "max_count" )
+            {
+                const auto person = Test::TestPerson{ .value = "3" };
+
+                CHECK_THROWS( ( void ) spb::json::serialize< std::string >(
+                    Test::MaxCountFieldInt{ .value = { 0, 1, 2, 3, 4 } } ) );
+                CHECK( spb::json::serialize< std::string >( Test::MaxCountFieldInt{
+                           .value = { 0, 1, 2, 3 } } ) == R"({"value":[0,1,2,3]})" );
+
+                CHECK_THROWS( ( void ) spb::json::serialize< std::string >(
+                    Test::MaxCountFieldIntPacked{ .value = { 0, 1, 2, 3, 4 } } ) );
+                CHECK( spb::json::serialize< std::string >( Test::MaxCountFieldIntPacked{
+                           .value = { 0, 1, 2, 3 } } ) == R"({"value":[0,1,2,3]})" );
+
+                CHECK_THROWS( ( void ) spb::json::serialize< std::string >(
+                    Test::MaxCountMsgCommentInt{ .value = { 0, 1, 2, 3, 4 } } ) );
+                CHECK( spb::json::serialize< std::string >( Test::MaxCountMsgCommentInt{
+                           .value = { 0, 1, 2, 3 } } ) == R"({"value":[0,1,2,3]})" );
+
+                CHECK_THROWS( ( void ) spb::json::serialize< std::string >(
+                    Test::MaxCountFieldCommentIntPacked{ .value = { 0, 1, 2, 3, 4 } } ) );
+                CHECK( spb::json::serialize< std::string >( Test::MaxCountFieldCommentIntPacked{
+                           .value = { 0, 1, 2, 3 } } ) == R"({"value":[0,1,2,3]})" );
+
+                CHECK_THROWS( ( void ) spb::json::serialize< std::string >(
+                    Test::MaxCountMsgIntPacked{ .value = { 0, 1, 2, 3, 4 } } ) );
+                CHECK( spb::json::serialize< std::string >( Test::MaxCountMsgIntPacked{
+                           .value = { 0, 1, 2, 3 } } ) == R"({"value":[0,1,2,3]})" );
+
+                CHECK_THROWS( ( void ) spb::json::serialize< std::string >(
+                    Test::MaxCountFieldString{ .value = { "0", "1", "2", "3", "4" } } ) );
+                CHECK( spb::json::serialize< std::string >(
+                           Test::MaxCountFieldString{ .value = { "0", "1", "2", "3" } } ) ==
+                       R"({"value":["0","1","2","3"]})" );
+
+                CHECK_THROWS( ( void ) spb::json::serialize< std::string >(
+                    Test::MaxCountMsgCommentString{ .value = { "0", "1", "2", "3", "4" } } ) );
+                CHECK( spb::json::serialize< std::string >(
+                           Test::MaxCountMsgCommentString{ .value = { "0", "1", "2", "3" } } ) ==
+                       R"({"value":["0","1","2","3"]})" );
+
+                CHECK_THROWS( ( void ) spb::json::serialize< std::string >(
+                    Test::MaxCountMsgString{ .value = { "0", "1", "2", "3", "4" } } ) );
+                CHECK( spb::json::serialize< std::string >(
+                           Test::MaxCountMsgString{ .value = { "0", "1", "2", "3" } } ) ==
+                       R"({"value":["0","1","2","3"]})" );
+
+                CHECK_THROWS( ( void ) spb::json::serialize< std::string >(
+                    Test::MaxCountFieldCommentString{ .value = { "0", "1", "2", "3", "4" } } ) );
+                CHECK( spb::json::serialize< std::string >(
+                           Test::MaxCountFieldCommentString{ .value = { "0", "1", "2", "3" } } ) ==
+                       R"({"value":["0","1","2","3"]})" );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::serialize< std::string >( Test::MaxCountFieldBytes{
+                        .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ),
+                                   to_bytes( "3" ), to_bytes( "4" ) } } ) );
+                CHECK( spb::json::serialize< std::string >( Test::MaxCountFieldBytes{
+                           .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ),
+                                      to_bytes( "3" ) },
+                       } ) == R"({"value":["MA==","MQ==","Mg==","Mw=="]})" );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::serialize< std::string >( Test::MaxCountMsgCommentBytes{
+                        .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ),
+                                   to_bytes( "3" ), to_bytes( "4" ) } } ) );
+                CHECK( spb::json::serialize< std::string >( Test::MaxCountMsgCommentBytes{
+                           .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ),
+                                      to_bytes( "3" ) },
+                       } ) == R"({"value":["MA==","MQ==","Mg==","Mw=="]})" );
+
+                CHECK_THROWS( ( void ) spb::json::serialize< std::string >( Test::MaxCountMsgbytes{
+                    .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ), to_bytes( "3" ),
+                               to_bytes( "4" ) } } ) );
+                CHECK( spb::json::serialize< std::string >( Test::MaxCountMsgbytes{
+                           .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ),
+                                      to_bytes( "3" ) },
+                       } ) == R"({"value":["MA==","MQ==","Mg==","Mw=="]})" );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::serialize< std::string >( Test::MaxCountFieldCommentBytes{
+                        .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ),
+                                   to_bytes( "3" ), to_bytes( "4" ) } } ) );
+                CHECK( spb::json::serialize< std::string >( Test::MaxCountFieldCommentBytes{
+                           .value = { to_bytes( "0" ), to_bytes( "1" ), to_bytes( "2" ),
+                                      to_bytes( "3" ) },
+                       } ) == R"({"value":["MA==","MQ==","Mg==","Mw=="]})" );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::serialize< std::string >( Test::MaxCountFieldPerson{
+                        .value = { person, person, person, person, person } } ) );
+                CHECK( spb::json::serialize< std::string >( Test::MaxCountFieldPerson{
+                           .value = { person, person, person, person },
+                       } ) ==
+                       R"({"value":[{"value":"3"},{"value":"3"},{"value":"3"},{"value":"3"}]})" );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::serialize< std::string >( Test::MaxCountFieldCommentPerson{
+                        .value = { person, person, person, person, person } } ) );
+                CHECK( spb::json::serialize< std::string >( Test::MaxCountFieldCommentPerson{
+                           .value = { person, person, person, person },
+                       } ) ==
+                       R"({"value":[{"value":"3"},{"value":"3"},{"value":"3"},{"value":"3"}]})" );
+
+                CHECK_THROWS( ( void ) spb::json::serialize< std::string >( Test::MaxCountMsgPerson{
+                    .value = { person, person, person, person, person } } ) );
+                CHECK( spb::json::serialize< std::string >( Test::MaxCountMsgPerson{
+                           .value = { person, person, person, person },
+                       } ) ==
+                       R"({"value":[{"value":"3"},{"value":"3"},{"value":"3"},{"value":"3"}]})" );
+
+                CHECK_THROWS(
+                    ( void ) spb::json::serialize< std::string >( Test::MaxCountMsgCommentPerson{
+                        .value = { person, person, person, person, person } } ) );
+                CHECK( spb::json::serialize< std::string >( Test::MaxCountMsgCommentPerson{
+                           .value = { person, person, person, person },
+                       } ) ==
+                       R"({"value":[{"value":"3"},{"value":"3"},{"value":"3"},{"value":"3"}]})" );
+            }
+            SUBCASE( "max_size" )
+            {
+                const auto long_string = spb::json::serialize< std::string >(
+                    Test::MaxSizeOptString{ .value = "01234" } );
+
+                const auto long_bytes = spb::json::serialize< std::string >(
+                    Test::MaxSizeOptBytes{ .value = to_bytes( "01234" ) } );
+
+                CHECK_THROWS( ( void ) spb::json::serialize< std::string >(
+                    Test::MaxSizeOptStringField{ .value = "01234" } ) );
+                CHECK( spb::json::serialize< std::string >( Test::MaxSizeOptStringField{
+                           .value = "0123" } ) == R"({"value":"0123"})" );
+
+                CHECK_THROWS( ( void ) spb::json::serialize< std::string >(
+                    Test::MaxSizeReqStringField{ .value = "01234" } ) );
+                CHECK( spb::json::serialize< std::string >( Test::MaxSizeReqStringField{
+                           .value = "0123" } ) == R"({"value":"0123"})" );
+
+                CHECK_THROWS( ( void ) spb::json::serialize< std::string >(
+                    Test::MaxSizeOptBytesField{ .value = to_bytes( "01234" ) } ) );
+                CHECK( spb::json::serialize< std::string >( Test::MaxSizeOptBytesField{
+                           .value = to_bytes( "0123" ) } ) == R"({"value":"MDEyMw=="})" );
+
+                CHECK_THROWS( ( void ) spb::json::serialize< std::string >(
+                    Test::MaxSizeReqBytesField{ .value = to_bytes( "01234" ) } ) );
+                CHECK( spb::json::serialize< std::string >( Test::MaxSizeReqBytesField{
+                           .value = to_bytes( "0123" ) } ) == R"({"value":"MDEyMw=="})" );
+
+                CHECK_THROWS( ( void ) spb::json::serialize< std::string >(
+                    Test::MaxSizeOptStringComment{ .value = "01234" } ) );
+                CHECK( spb::json::serialize< std::string >( Test::MaxSizeOptStringComment{
+                           .value = "0123" } ) == R"({"value":"0123"})" );
+
+                CHECK_THROWS( ( void ) spb::json::serialize< std::string >(
+                    Test::MaxSizeReqStringComment{ .value = "01234" } ) );
+                CHECK( spb::json::serialize< std::string >( Test::MaxSizeReqStringComment{
+                           .value = "0123" } ) == R"({"value":"0123"})" );
+
+                CHECK_THROWS( ( void ) spb::json::serialize< std::string >(
+                    Test::MaxSizeOptBytesComment{ .value = to_bytes( "01234" ) } ) );
+                CHECK( spb::json::serialize< std::string >( Test::MaxSizeOptBytesComment{
+                           .value = to_bytes( "0123" ) } ) == R"({"value":"MDEyMw=="})" );
+
+                CHECK_THROWS( ( void ) spb::json::serialize< std::string >(
+                    Test::MaxSizeReqBytesComment{ .value = to_bytes( "01234" ) } ) );
+                CHECK( spb::json::serialize< std::string >( Test::MaxSizeReqBytesComment{
+                           .value = to_bytes( "0123" ) } ) == R"({"value":"MDEyMw=="})" );
+
+                CHECK_THROWS( ( void ) spb::json::serialize< std::string >(
+                    Test::MaxSizeOptStringMsg{ .value = "01234" } ) );
+                CHECK( spb::json::serialize< std::string >( Test::MaxSizeOptStringMsg{
+                           .value = "0123" } ) == R"({"value":"0123"})" );
+
+                CHECK_THROWS( ( void ) spb::json::serialize< std::string >(
+                    Test::MaxSizeReqStringMsg{ .value = "01234" } ) );
+                CHECK( spb::json::serialize< std::string >( Test::MaxSizeReqStringMsg{
+                           .value = "0123" } ) == R"({"value":"0123"})" );
+
+                CHECK_THROWS( ( void ) spb::json::serialize< std::string >(
+                    Test::MaxSizeOptBytesMsg{ .value = to_bytes( "01234" ) } ) );
+                CHECK( spb::json::serialize< std::string >( Test::MaxSizeOptBytesMsg{
+                           .value = to_bytes( "0123" ) } ) == R"({"value":"MDEyMw=="})" );
+
+                CHECK_THROWS( ( void ) spb::json::serialize< std::string >(
+                    Test::MaxSizeReqBytesMsg{ .value = to_bytes( "01234" ) } ) );
+                CHECK( spb::json::serialize< std::string >( Test::MaxSizeReqBytesMsg{
+                           .value = to_bytes( "0123" ) } ) == R"({"value":"MDEyMw=="})" );
+
+                CHECK_THROWS( ( void ) spb::json::serialize< std::string >(
+                    Test::MaxSizeOptStringMsgComment{ .value = "01234" } ) );
+                CHECK( spb::json::serialize< std::string >( Test::MaxSizeOptStringMsgComment{
+                           .value = "0123" } ) == R"({"value":"0123"})" );
+
+                CHECK_THROWS( ( void ) spb::json::serialize< std::string >(
+                    Test::MaxSizeReqStringMsgComment{ .value = "01234" } ) );
+                CHECK( spb::json::serialize< std::string >( Test::MaxSizeReqStringMsgComment{
+                           .value = "0123" } ) == R"({"value":"0123"})" );
+
+                CHECK_THROWS( ( void ) spb::json::serialize< std::string >(
+                    Test::MaxSizeOptBytesMsgComment{ .value = to_bytes( "01234" ) } ) );
+                CHECK( spb::json::serialize< std::string >( Test::MaxSizeOptBytesMsgComment{
+                           .value = to_bytes( "0123" ) } ) == R"({"value":"MDEyMw=="})" );
+
+                CHECK_THROWS( ( void ) spb::json::serialize< std::string >(
+                    Test::MaxSizeReqBytesMsgComment{ .value = to_bytes( "01234" ) } ) );
+                CHECK( spb::json::serialize< std::string >( Test::MaxSizeReqBytesMsgComment{
+                           .value = to_bytes( "0123" ) } ) == R"({"value":"MDEyMw=="})" );
+            }
+        }
         SUBCASE( "string" )
         {
             CHECK( spb::json::serialize< std::string, std::string >( "john" ) == R"("john")" );
@@ -719,7 +1201,7 @@ TEST_CASE( "json" )
             {
                 CHECK( spb::json::serialize< std::string, std::vector< std::string > >(
                            { "hello", "world" } ) == R"(["hello","world"])" );
-                CHECK( spb::json::serialize< std::string, std::vector< std::string > >( { } ) ==
+                CHECK( spb::json::serialize< std::string, std::vector< std::string > >( {} ) ==
                        "" );
             }
         }
@@ -740,7 +1222,7 @@ TEST_CASE( "json" )
             {
                 CHECK( spb::json::serialize< std::string, std::vector< bool > >(
                            { true, false } ) == R"([true,false])" );
-                CHECK( spb::json::serialize< std::string, std::vector< bool > >( { } ) == "" );
+                CHECK( spb::json::serialize< std::string, std::vector< bool > >( {} ) == "" );
             }
         }
         SUBCASE( "int" )
@@ -758,7 +1240,7 @@ TEST_CASE( "json" )
                        R"([42])" );
                 CHECK( spb::json::serialize< std::string, std::vector< int > >( { 42, 3 } ) ==
                        R"([42,3])" );
-                CHECK( spb::json::serialize< std::string, std::vector< int > >( { } ) == "" );
+                CHECK( spb::json::serialize< std::string, std::vector< int > >( {} ) == "" );
             }
         }
         SUBCASE( "double" )
@@ -777,7 +1259,7 @@ TEST_CASE( "json" )
                        R"([42.3])" );
                 CHECK( spb::json::serialize< std::string, std::vector< double > >(
                            { 42.3, 3.0 } ) == R"([42.3,3])" );
-                CHECK( spb::json::serialize< std::string, std::vector< double > >( { } ) == "" );
+                CHECK( spb::json::serialize< std::string, std::vector< double > >( {} ) == "" );
             }
         }
         SUBCASE( "bytes" )
@@ -788,7 +1270,7 @@ TEST_CASE( "json" )
                        to_bytes( "\x00\x01\x02\x03\x04"sv ) ) == R"("AAECAwQ=")" );
             CHECK( spb::json::serialize< std::string, std::vector< std::byte > >(
                        to_bytes( "hello"sv ) ) == R"("aGVsbG8=")" );
-            CHECK( spb::json::serialize< std::string, std::vector< std::byte > >( { } ) == "" );
+            CHECK( spb::json::serialize< std::string, std::vector< std::byte > >( {} ) == "" );
 
             SUBCASE( "repeated" )
             {
@@ -800,7 +1282,7 @@ TEST_CASE( "json" )
                                to_bytes( "\x00\x01\x02\x03\x04"sv ), to_bytes( "hello"sv ) } ) ==
                        R"(["AAECAwQ=","aGVsbG8="])" );
                 CHECK( spb::json::serialize< std::string, std::vector< std::vector< std::byte > > >(
-                           std::vector< std::vector< std::byte > >{ } ) == "" );
+                           std::vector< std::vector< std::byte > >{} ) == "" );
             }
             SUBCASE( "optional" )
             {
@@ -816,7 +1298,7 @@ TEST_CASE( "json" )
                         std::vector< std::byte >{ to_bytes( "hello"sv ) } ) == R"("aGVsbG8=")" );
                 CHECK(
                     spb::json::serialize< std::string, std::optional< std::vector< std::byte > > >(
-                        std::vector< std::byte >{ } ) == "" );
+                        std::vector< std::byte >{} ) == "" );
             }
             SUBCASE( "fixed" )
             {
@@ -832,7 +1314,7 @@ TEST_CASE( "json" )
                         std::vector< std::byte >{ to_bytes( "hello"sv ) } ) == R"("aGVsbG8=")" );
                 CHECK(
                     spb::json::serialize< std::string, std::optional< std::vector< std::byte > > >(
-                        std::vector< std::byte >{ } ) == "" );
+                        std::vector< std::byte >{} ) == "" );
             }
         }
         SUBCASE( "variant" )
@@ -870,25 +1352,25 @@ TEST_CASE( "json" )
                        R"({"1":2})" );
                 CHECK( spb::json::serialize( std::map< int32_t, int32_t >{ { 1, 2 }, { 2, 3 } } ) ==
                        R"({"1":2,"2":3})" );
-                CHECK( spb::json::serialize( std::map< int32_t, int32_t >{ } ) == "" );
+                CHECK( spb::json::serialize( std::map< int32_t, int32_t >{} ) == "" );
             }
             SUBCASE( "string/string" )
             {
                 CHECK( spb::json::serialize( std::map< std::string, std::string >{
                            { "hello", "world" } } ) == R"({"hello":"world"})" );
-                CHECK( spb::json::serialize( std::map< std::string, std::string >{ } ) == "" );
+                CHECK( spb::json::serialize( std::map< std::string, std::string >{} ) == "" );
             }
             SUBCASE( "int32/string" )
             {
                 CHECK( spb::json::serialize( std::map< int32_t, std::string >{ { 1, "hello" } } ) ==
                        ( R"({"1":"hello"})" ) );
-                CHECK( spb::json::serialize( std::map< int32_t, std::string >{ } ) == "" );
+                CHECK( spb::json::serialize( std::map< int32_t, std::string >{} ) == "" );
             }
             SUBCASE( "string/int32" )
             {
                 CHECK( spb::json::serialize( std::map< std::string, int32_t >{ { "hello", 2 } } ) ==
                        R"({"hello":2})" );
-                CHECK( spb::json::serialize( std::map< std::string, int32_t >{ } ) == "" );
+                CHECK( spb::json::serialize( std::map< std::string, int32_t >{} ) == "" );
             }
             SUBCASE( "string/name" )
             {
@@ -916,8 +1398,8 @@ TEST_CASE( "json" )
         }
         SUBCASE( "name" )
         {
-            CHECK( spb::json::serialize( Test::Name{ } ) == R"({})" );
-            CHECK( spb::json::serialize_size( Test::Name{ } ) == 2 );
+            CHECK( spb::json::serialize( Test::Name{} ) == R"({})" );
+            CHECK( spb::json::serialize_size( Test::Name{} ) == 2 );
         }
     }
 }

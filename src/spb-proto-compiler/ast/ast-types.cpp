@@ -11,7 +11,6 @@
 #include "ast/proto-oneof.h"
 
 #include "../dumper/header.h"
-#include "../parser/options.h"
 #include "proto-field.h"
 #include "proto-file.h"
 #include "proto-message.h"
@@ -54,7 +53,7 @@ using scalar_encoder = spb::pb::detail::scalar_encoder;
     {
         const auto dot_index = type_name.find( '.' );
         if( dot_index == type_name.npos )
-            return { };
+            return {};
 
         type_name.remove_prefix( dot_index + 1 );
     }
@@ -183,18 +182,17 @@ using scalar_encoder = spb::pb::detail::scalar_encoder;
 {
     const auto type = get_scalar_proto_type( field.type_name.proto_name );
     if( type == proto_field::Type::NONE )
-        return { };
+        return {};
 
-    if( const auto p_name = field.options.find( option_field_type );
-        p_name != field.options.end( ) )
+    if( const auto name = field.attributes.type; !name.empty( ) )
     {
-        const auto field_type = get_scalar_bit_type( remove_bitfield( p_name->second ) );
+        const auto field_type = get_scalar_bit_type( remove_bitfield( name ) );
         if( !convertible_types( type, field_type ) )
         {
-            throw_parse_error( file, p_name->second,
+            throw_parse_error( file, name,
                                std::string( "incompatible int type: " ) +
                                    std::string( field.type_name.proto_name ) + " and " +
-                                   std::string( p_name->second ) );
+                                   std::string( name ) );
         }
         return { type, field_type };
     }
@@ -207,7 +205,7 @@ using scalar_encoder = spb::pb::detail::scalar_encoder;
     -> std::pair< proto_field::Type, proto_field::BitType >
 {
     if( type_part != 0 )
-        return { };
+        return {};
 
     return get_field_type( file, field );
 }
@@ -288,7 +286,7 @@ using scalar_encoder = spb::pb::detail::scalar_encoder;
     if( type_part > 0 )
         return proto_field::Type::NONE;
 
-    for( const auto & import : self.file.file_imports )
+    for( const auto & import : self.file.imports )
     {
         if( const auto type = resolve_from_import( import, field ); type )
             return type;
@@ -370,18 +368,9 @@ void resolve_types( const search_ctx & parent, proto_message & message )
 auto is_packed_array( const proto_file & file, const proto_field & field ) -> bool
 {
     if( field.label != proto_field::Label::REPEATED )
-        return { };
+        return {};
 
-    if( file.syntax.version < 3 )
-    {
-        const auto p_packed = field.options.find( "packed" );
-        return p_packed != field.options.end( ) && p_packed->second == "true";
-    }
-    else
-    {
-        const auto p_packed = field.options.find( "packed" );
-        return p_packed == field.options.end( ) || p_packed->second != "false";
-    }
+    return field.attributes.packed.value_or( file.syntax.version >= 3 );
 }
 
 auto is_scalar( const proto_field::Type & type ) -> bool

@@ -15,6 +15,7 @@
 #include "../to_from_chars.h"
 #include "../utf8.h"
 #include "base64.h"
+#include "field.hpp"
 #include <algorithm>
 #include <cctype>
 #include <cstddef>
@@ -152,7 +153,7 @@ public:
     {
     }
 
-    void deserialize( auto & value );
+    void deserialize( auto & value, const field_attributes & = {} );
     template < size_t ordinal, typename T >
     void deserialize_variant( T & variant );
     template < typename T >
@@ -242,7 +243,8 @@ public:
     void skip_value( );
 };
 
-static inline void deserialize( istream & stream, spb::detail::proto_enum auto & value )
+static inline void deserialize( istream & stream, spb::detail::proto_enum auto & value,
+                                const field_attributes & = {} )
 {
     deserialize_value( stream, value );
 }
@@ -299,14 +301,14 @@ static inline auto deserialize_string_view( istream & stream, size_t min_size, s
                 return view.substr( 1, length - 2 );
             }
 
-            return { };
+            return {};
         }
         //- handle \\"
         last = current != escape || last != escape ? current : ' ';
     }
 
     ignore_string( stream );
-    return { };
+    return {};
 }
 
 static inline auto unicode_from_hex( istream & stream ) -> uint16_t
@@ -320,7 +322,7 @@ static inline auto unicode_from_hex( istream & stream ) -> uint16_t
     auto value = uint16_t( 0 );
     auto result =
         spb_std_emu::from_chars( unicode_view.data( ), unicode_view.data( ) + esc_size, value, 16 );
-    if( result.ec != std::errc{ } || result.ptr != unicode_view.data( ) + esc_size )
+    if( result.ec != std::errc{} || result.ptr != unicode_view.data( ) + esc_size )
     {
         throw std::runtime_error( "invalid escape sequence" );
     }
@@ -385,7 +387,8 @@ static inline auto unescape( istream & stream, char utf8[ 4 ] ) -> uint32_t
     }
 }
 
-static inline void deserialize( istream & stream, spb::detail::proto_field_string auto & value )
+static inline void deserialize( istream & stream, spb::detail::proto_field_string auto & value,
+                                const field_attributes & field = {} )
 {
     if( stream.current_char( ) != '"' )
     {
@@ -401,6 +404,9 @@ static inline void deserialize( istream & stream, spb::detail::proto_field_strin
     auto index           = size_t( 0 );
     auto append_to_value = [ & ]( const char * str, size_t size )
     {
+        if( field.max_size && ( value.size( ) + size > field.max_size ) )
+            throw std::length_error( "string is too large" );
+
         if constexpr( spb::detail::proto_field_string_resizable< decltype( value ) > )
         {
             value.append( str, size );
@@ -452,7 +458,8 @@ static inline void deserialize( istream & stream, spb::detail::proto_field_strin
 }
 
 static inline void deserialize( istream & stream,
-                                spb::detail::proto_field_int_or_float auto & value )
+                                spb::detail::proto_field_int_or_float auto & value,
+                                const field_attributes & = {} )
 {
     if( stream.current_char( ) == '"' ) [[unlikely]]
     {
@@ -460,7 +467,7 @@ static inline void deserialize( istream & stream,
         //- number can be a string
         auto view   = deserialize_string_view( stream, 1, UINT32_MAX );
         auto result = spb_std_emu::from_chars( view.data( ), view.data( ) + view.size( ), value );
-        if( result.ec != std::errc{ } )
+        if( result.ec != std::errc{} )
         {
             throw std::runtime_error( "invalid number" );
         }
@@ -468,14 +475,14 @@ static inline void deserialize( istream & stream,
     }
     auto view   = stream.view( UINT32_MAX );
     auto result = spb_std_emu::from_chars( view.data( ), view.data( ) + view.size( ), value );
-    if( result.ec != std::errc{ } )
+    if( result.ec != std::errc{} )
     {
         throw std::runtime_error( "invalid number" );
     }
     stream.skip( result.ptr - view.data( ) );
 }
 
-static inline void deserialize( istream & stream, bool & value )
+static inline void deserialize( istream & stream, bool & value, const field_attributes & = {} )
 {
     if( stream.consume( "true"sv ) )
     {
@@ -491,15 +498,17 @@ static inline void deserialize( istream & stream, bool & value )
     }
 }
 
-static inline void deserialize( istream & stream, auto & value );
+static inline void deserialize( istream & stream, auto & value, const field_attributes & = {} );
 
 template < typename keyT, typename valueT >
-static inline void deserialize( istream & stream, std::map< keyT, valueT > & value );
+static inline void deserialize( istream & stream, std::map< keyT, valueT > & value,
+                                const field_attributes & = {} );
 
-static inline void deserialize( istream & stream, spb::detail::proto_label_optional auto & value );
+static inline void deserialize( istream & stream, spb::detail::proto_label_optional auto & value,
+                                const field_attributes & = {} );
 
 template < spb::detail::proto_label_repeated C >
-static inline void deserialize( istream & stream, C & value )
+static inline void deserialize( istream & stream, C & value, const field_attributes & field = {} )
 {
     if( stream.consume( "null"sv ) )
     {
@@ -519,6 +528,9 @@ static inline void deserialize( istream & stream, C & value )
 
     do
     {
+        if( field.max_count && value.size( ) >= field.max_count )
+            throw std::length_error( "repeated is too large" );
+
         if constexpr( std::is_same_v< typename C::value_type, bool > )
         {
             auto b = false;
@@ -538,11 +550,11 @@ static inline void deserialize( istream & stream, C & value )
 }
 
 template < spb::detail::proto_label_repeated_fixed_size C >
-static inline void deserialize( istream & stream, C & value )
+static inline void deserialize( istream & stream, C & value, const field_attributes & = {} )
 {
     if( stream.consume( "null"sv ) )
     {
-        typename C::value_type tmp = { };
+        typename C::value_type tmp = {};
         for( size_t i = 0; i < value.size( ); i++ )
         {
             value[ i ] = tmp;
@@ -573,7 +585,8 @@ static inline void deserialize( istream & stream, C & value )
     }
 }
 
-static inline void deserialize( istream & stream, spb::detail::proto_field_bytes auto & value )
+static inline void deserialize( istream & stream, spb::detail::proto_field_bytes auto & value,
+                                const field_attributes & field = {} )
 {
     if( stream.consume( "null"sv ) )
     {
@@ -581,7 +594,7 @@ static inline void deserialize( istream & stream, spb::detail::proto_field_bytes
         return;
     }
 
-    base64_decode_string( value, stream );
+    base64_decode_string( value, stream, field.max_size );
 }
 
 template < typename T >
@@ -606,7 +619,8 @@ void deserialize_map_key( istream & stream, T & map_key )
 }
 
 template < typename keyT, typename valueT >
-static inline void deserialize( istream & stream, std::map< keyT, valueT > & value )
+static inline void deserialize( istream & stream, std::map< keyT, valueT > & value,
+                                const field_attributes & )
 {
     if( stream.consume( "null"sv ) )
     {
@@ -642,7 +656,8 @@ static inline void deserialize( istream & stream, std::map< keyT, valueT > & val
     }
 }
 
-static inline void deserialize( istream & stream, spb::detail::proto_label_optional auto & p_value )
+static inline void deserialize( istream & stream, spb::detail::proto_label_optional auto & p_value,
+                                const field_attributes & field )
 {
     if( stream.consume( "null"sv ) )
     {
@@ -652,18 +667,19 @@ static inline void deserialize( istream & stream, spb::detail::proto_label_optio
 
     if( p_value.has_value( ) )
     {
-        deserialize( stream, *p_value );
+        deserialize( stream, *p_value, field );
     }
     else
     {
-        deserialize(
-            stream,
-            p_value.emplace( typename std::decay_t< decltype( p_value ) >::value_type( ) ) );
+        deserialize( stream,
+                     p_value.emplace( typename std::decay_t< decltype( p_value ) >::value_type( ) ),
+                     field );
     }
 }
 
 template < typename T >
-static inline void deserialize( istream & stream, std::unique_ptr< T > & value )
+static inline void deserialize( istream & stream, std::unique_ptr< T > & value,
+                                const field_attributes & field = {} )
 {
     if( stream.consume( "null"sv ) )
     {
@@ -673,12 +689,12 @@ static inline void deserialize( istream & stream, std::unique_ptr< T > & value )
 
     if( value )
     {
-        deserialize( stream, *value );
+        deserialize( stream, *value, field );
     }
     else
     {
         value = std::make_unique< T >( );
-        deserialize( stream, *value );
+        deserialize( stream, *value, field );
     }
 }
 
@@ -737,13 +753,13 @@ static inline void ignore_array( istream & stream )
 
 static inline void ignore_number( istream & stream )
 {
-    auto value = double{ };
+    auto value = double{};
     deserialize( stream, value );
 }
 
 static inline void ignore_bool( istream & stream )
 {
-    auto value = bool{ };
+    auto value = bool{};
     deserialize( stream, value );
 }
 
@@ -790,7 +806,7 @@ static inline void deserialize_variant( istream & stream, T & variant )
     deserialize( stream, variant.template emplace< ordinal >( ) );
 }
 
-static inline void deserialize( istream & stream, auto & value )
+static inline void deserialize( istream & stream, auto & value, const field_attributes & )
 {
     if( !stream.consume( '{' ) )
     {
@@ -833,9 +849,9 @@ inline auto istream::deserialize_key( size_t min_size, size_t max_size ) -> std:
     return m_current_key;
 }
 
-inline void istream::deserialize( auto & value )
+inline void istream::deserialize( auto & value, const field_attributes & field )
 {
-    return detail::deserialize( *this, value );
+    return detail::deserialize( *this, value, field );
 }
 
 template < size_t ordinal, typename T >
@@ -862,7 +878,7 @@ inline auto istream::deserialize_string_or_int( size_t min_size, size_t max_size
 
 inline auto istream::deserialize_int( ) -> int32_t
 {
-    auto result = int32_t{ };
+    auto result = int32_t{};
     detail::deserialize( *this, result );
     return result;
 }

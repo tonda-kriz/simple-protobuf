@@ -14,6 +14,7 @@
 
 #include "../to_from_chars.h"
 #include "base64.h"
+#include "field.hpp"
 #include "spb/json/deserialize.hpp"
 #include "spb/utf8.h"
 #include <algorithm>
@@ -69,7 +70,7 @@ public:
     {
         if( codepoint <= 0xffff )
         {
-            char buffer[ 8 ] = { };
+            char buffer[ 8 ] = {};
             auto size        = snprintf( buffer, sizeof( buffer ), "\\u%04" PRIx32, codepoint );
             return write( std::string_view( buffer, size ) );
         }
@@ -79,7 +80,7 @@ public:
 
             auto high         = static_cast< uint16_t >( ( codepoint >> 10 ) + 0xD800 );
             auto low          = static_cast< uint16_t >( ( codepoint & 0x3FF ) + 0xDC00 );
-            char buffer[ 16 ] = { };
+            char buffer[ 16 ] = {};
             auto size =
                 snprintf( buffer, sizeof( buffer ), "\\u%04" PRIx16 "\\u%04" PRIx16, high, low );
             return write( std::string_view( buffer, size ) );
@@ -167,7 +168,7 @@ public:
         }
     }
 
-    void serialize( std::string_view key, const auto & value );
+    void serialize( const auto & value, const field_attributes & field = {} );
     void serialize( std::string_view value );
 
     [[nodiscard]] auto size( ) const noexcept -> size_t
@@ -206,24 +207,28 @@ static inline void serialize_key( ostream & stream, std::string_view key )
     }
 }
 
-static inline void serialize( ostream & stream, std::string_view key, const bool & value );
-static inline void serialize( ostream & stream, std::string_view key,
-                              const spb::detail::proto_field_int_or_float auto & value );
-static inline void serialize( ostream & stream, std::string_view key,
-                              const spb::detail::proto_message auto & value );
-static inline void serialize( ostream & stream, std::string_view key,
-                              const spb::detail::proto_enum auto & value );
-static inline void serialize( ostream & stream, std::string_view key,
-                              const spb::detail::proto_field_string auto & value );
-static inline void serialize( ostream & stream, std::string_view key,
-                              const spb::detail::proto_field_bytes auto & value );
-static inline void serialize( ostream & stream, std::string_view key,
-                              const spb::detail::proto_label_repeated auto & value );
-static inline void serialize( ostream & stream, std::string_view key,
-                              const spb::detail::proto_label_repeated_fixed_size auto & value );
+static inline void serialize( ostream & stream, const bool & value,
+                              const field_attributes & field );
+static inline void serialize( ostream & stream,
+                              const spb::detail::proto_field_int_or_float auto & value,
+                              const field_attributes & field );
+static inline void serialize( ostream & stream, const spb::detail::proto_message auto & value,
+                              const field_attributes & field );
+static inline void serialize( ostream & stream, const spb::detail::proto_enum auto & value,
+                              const field_attributes & field );
+static inline void serialize( ostream & stream, const spb::detail::proto_field_string auto & value,
+                              const field_attributes & field );
+static inline void serialize( ostream & stream, const spb::detail::proto_field_bytes auto & value,
+                              const field_attributes & field );
+static inline void serialize( ostream & stream,
+                              const spb::detail::proto_label_repeated auto & value,
+                              const field_attributes & field );
+static inline void serialize( ostream & stream,
+                              const spb::detail::proto_label_repeated_fixed_size auto & value,
+                              const field_attributes & field );
 template < typename keyT, typename valueT >
-static inline void serialize( ostream & stream, std::string_view key,
-                              const std::map< keyT, valueT > & map );
+static inline void serialize( ostream & stream, const std::map< keyT, valueT > & map,
+                              const field_attributes & field );
 
 static inline void serialize( ostream & stream, bool value );
 static inline void serialize( ostream & stream, spb::detail::proto_field_int_or_float auto value );
@@ -256,49 +261,58 @@ static inline void serialize( ostream & stream, spb::detail::proto_field_int_or_
         std::string_view( buffer.data( ), static_cast< size_t >( result.ptr - buffer.data( ) ) ) );
 }
 
-static inline void serialize( ostream & stream, std::string_view key, const bool & value )
+static inline void serialize( ostream & stream, const bool & value, const field_attributes & field )
 {
-    serialize_key( stream, key );
+    serialize_key( stream, field.name );
     serialize( stream, value );
 }
 
-static inline void serialize( ostream & stream, std::string_view key,
-                              const spb::detail::proto_field_int_or_float auto & value )
+static inline void serialize( ostream & stream,
+                              const spb::detail::proto_field_int_or_float auto & value,
+                              const field_attributes & field )
 {
-    serialize_key( stream, key );
+    serialize_key( stream, field.name );
     serialize( stream, value );
 }
 
-static inline void serialize( ostream & stream, std::string_view key,
-                              const spb::detail::proto_field_string auto & value )
-{
-    if( !value.empty( ) )
-    {
-        serialize_key( stream, key );
-        serialize( stream, value );
-    }
-}
-
-static inline void serialize( ostream & stream, std::string_view key,
-                              const spb::detail::proto_field_bytes auto & value )
-{
-    if( !value.empty( ) )
-    {
-        serialize_key( stream, key );
-        stream.write( '"' );
-        base64_encode( stream, value );
-        stream.write( '"' );
-    }
-}
-static inline void serialize( ostream & stream, std::string_view key,
-                              const spb::detail::proto_label_repeated auto & value )
+static inline void serialize( ostream & stream, const spb::detail::proto_field_string auto & value,
+                              const field_attributes & field )
 {
     if( value.empty( ) )
-    {
         return;
-    }
 
-    serialize_key( stream, key );
+    if( field.max_size && value.size( ) > field.max_size )
+        throw std::length_error( "string is too large" );
+
+    serialize_key( stream, field.name );
+    serialize( stream, value );
+}
+
+static inline void serialize( ostream & stream, const spb::detail::proto_field_bytes auto & value,
+                              const field_attributes & field )
+{
+    if( value.empty( ) )
+        return;
+
+    if( field.max_size && value.size( ) > field.max_size )
+        throw std::length_error( "bytes is too large" );
+
+    serialize_key( stream, field.name );
+    stream.write( '"' );
+    base64_encode( stream, value );
+    stream.write( '"' );
+}
+static inline void serialize( ostream & stream,
+                              const spb::detail::proto_label_repeated auto & value,
+                              const field_attributes & field )
+{
+    if( value.empty( ) )
+        return;
+
+    if( field.max_count && value.size( ) > field.max_count )
+        throw std::length_error( "repeated is too large" );
+
+    serialize_key( stream, field.name );
     stream.write( '[' );
     stream.put_comma = false;
     for( const auto & v : value )
@@ -306,21 +320,22 @@ static inline void serialize( ostream & stream, std::string_view key,
         if constexpr( std::is_same_v< typename std::decay_t< decltype( value ) >::value_type,
                                       bool > )
         {
-            serialize( stream, { }, bool( v ) );
+            serialize( stream, bool( v ), {} );
         }
         else
         {
-            serialize( stream, { }, v );
+            serialize( stream, v, {} );
         }
     }
     stream.write( ']' );
     stream.put_comma = true;
 }
 
-static inline void serialize( ostream & stream, std::string_view key,
-                              const spb::detail::proto_label_repeated_fixed_size auto & value )
+static inline void serialize( ostream & stream,
+                              const spb::detail::proto_label_repeated_fixed_size auto & value,
+                              const field_attributes & field )
 {
-    serialize_key( stream, key );
+    serialize_key( stream, field.name );
     stream.write( '[' );
     stream.put_comma = false;
     for( size_t i = 0; i < value.size( ); i++ )
@@ -328,28 +343,28 @@ static inline void serialize( ostream & stream, std::string_view key,
         if constexpr( std::is_same_v< typename std::decay_t< decltype( value ) >::value_type,
                                       bool > )
         {
-            serialize( stream, { }, bool( value[ i ] ) );
+            serialize( stream, bool( value[ i ] ) );
         }
         else
         {
-            serialize( stream, { }, value[ i ] );
+            serialize( stream, value[ i ], {} );
         }
     }
     stream.write( ']' );
     stream.put_comma = true;
 }
 
-static constexpr std::string_view no_name = { };
+static constexpr field_attributes no_name = {};
 
 template < typename keyT, typename valueT >
-static inline void serialize( ostream & stream, std::string_view key,
-                              const std::map< keyT, valueT > & map )
+static inline void serialize( ostream & stream, const std::map< keyT, valueT > & map,
+                              const field_attributes & field )
 {
     if( map.empty( ) )
     {
         return;
     }
-    serialize_key( stream, key );
+    serialize_key( stream, field.name );
     stream.write( '{' );
     stream.put_comma = false;
     for( auto & [ map_key, map_value ] : map )
@@ -371,36 +386,37 @@ static inline void serialize( ostream & stream, std::string_view key,
             stream.write( R"(":)"sv );
         }
         stream.put_comma = false;
-        serialize( stream, no_name, map_value );
+        serialize( stream, map_value, no_name );
         stream.put_comma = true;
     }
     stream.write( '}' );
     stream.put_comma = true;
 }
 
-static inline void serialize( ostream & stream, std::string_view key,
-                              const spb::detail::proto_label_optional auto & p_value )
+static inline void serialize( ostream & stream,
+                              const spb::detail::proto_label_optional auto & p_value,
+                              const field_attributes & field )
 {
     if( p_value.has_value( ) )
     {
-        return serialize( stream, key, *p_value );
+        return serialize( stream, *p_value, field );
     }
 }
 
 template < typename T >
-static inline void serialize( ostream & stream, std::string_view key,
-                              const std::unique_ptr< T > & p_value )
+static inline void serialize( ostream & stream, const std::unique_ptr< T > & p_value,
+                              const field_attributes & field )
 {
     if( p_value )
     {
-        return serialize( stream, key, *p_value );
+        return serialize( stream, *p_value, field );
     }
 }
 
-static inline void serialize( ostream & stream, std::string_view key,
-                              const spb::detail::proto_message auto & value )
+static inline void serialize( ostream & stream, const spb::detail::proto_message auto & value,
+                              const field_attributes & field )
 {
-    serialize_key( stream, key );
+    serialize_key( stream, field.name );
     stream.write( '{' );
     stream.put_comma = false;
 
@@ -412,10 +428,10 @@ static inline void serialize( ostream & stream, std::string_view key,
     stream.put_comma = true;
 }
 
-static inline void serialize( ostream & stream, std::string_view key,
-                              const spb::detail::proto_enum auto & value )
+static inline void serialize( ostream & stream, const spb::detail::proto_enum auto & value,
+                              const field_attributes & field )
 {
-    serialize_key( stream, key );
+    serialize_key( stream, field.name );
 
     //
     //- serialize_value is generated by the spb-protoc
@@ -426,13 +442,13 @@ static inline void serialize( ostream & stream, std::string_view key,
 static inline auto serialize( const auto & value, spb::io::writer on_write ) -> size_t
 {
     auto stream = ostream( on_write );
-    serialize( stream, no_name, value );
+    serialize( stream, value, no_name );
     return stream.size( );
 }
 
-void ostream::serialize( std::string_view key, const auto & value )
+void ostream::serialize( const auto & value, const field_attributes & field )
 {
-    detail::serialize( *this, key, value );
+    detail::serialize( *this, value, field );
 }
 
 inline void ostream::serialize( std::string_view value )

@@ -15,6 +15,10 @@
 
 namespace spb::pb::detail
 {
+enum class tag_type : uint32_t
+{
+    invalid = 0
+};
 
 //- https://protobuf.dev/programming-guides/encoding/
 enum class wire_type : uint8_t
@@ -46,6 +50,17 @@ enum class scalar_encoder : uint8_t
     i64 = 0x04,
     //- packed array
     packed = 0x08
+};
+
+struct field_attributes
+{
+    union
+    {
+        uint32_t number;
+        wire_type type;
+    };
+    size_t max_count = 0;
+    size_t max_size  = 0;
 };
 
 static constexpr scalar_encoder operator&( scalar_encoder lhs, scalar_encoder rhs ) noexcept

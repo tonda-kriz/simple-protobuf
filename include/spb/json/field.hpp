@@ -1,6 +1,6 @@
 /***************************************************************************\
-* Name        : ast render                                                  *
-* Description : resolve types in ast tree                                   *
+* Name        : serialize library for protobuf                              *
+* Description : field attributes                                            *
 * Author      : antonin.kriz@gmail.com                                      *
 * ------------------------------------------------------------------------- *
 * This is free software; you can redistribute it and/or modify it under the *
@@ -8,14 +8,17 @@
 * "LICENSE" at the root of this distribution.                               *
 \***************************************************************************/
 
-#include "ast.h"
-#include "ast-messages-order.h"
-#include "ast-options.h"
-#include "ast-types.h"
+#pragma once
 
-void resolve_messages( proto_file & file )
+#include <cstddef>
+#include <string_view>
+
+namespace spb::json::detail
 {
-    resolve_options( file );
-    resolve_types( file );
-    resolve_messages_order( file );
-}
+struct field_attributes
+{
+    std::string_view name;
+    size_t max_count = 0;
+    size_t max_size  = 0;
+};
+}// namespace spb::json::detail

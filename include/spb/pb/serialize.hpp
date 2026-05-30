@@ -58,10 +58,10 @@ public:
         return bytes_written;
     }
 
-    void serialize( uint32_t field_number, const auto & value );
+    void serialize( const field_attributes & field, const auto & value );
 
     template < scalar_encoder encoder >
-    void serialize_as( uint32_t field_number, const auto & value );
+    void serialize_as( const field_attributes & field, const auto & value );
 };
 
 static inline auto serialize_size( const auto & value ) -> size_t;
@@ -95,30 +95,32 @@ static inline void serialize_tag( ostream & stream, uint32_t field_number, wire_
     serialize_varint( stream, tag );
 }
 
-static inline void serialize( ostream & stream, uint32_t field_number,
+static inline void serialize( ostream & stream, const field_attributes & field,
                               const spb::detail::proto_message auto & value );
-static inline void serialize( ostream & stream, uint32_t field_number,
+static inline void serialize( ostream & stream, const field_attributes & field,
                               const spb::detail::proto_field_string auto & value );
-static inline void serialize( ostream & stream, uint32_t field_number,
+static inline void serialize( ostream & stream, const field_attributes & field,
                               const spb::detail::proto_field_bytes auto & value );
-static inline void serialize( ostream & stream, uint32_t field_number,
+static inline void serialize( ostream & stream, const field_attributes & field,
                               const spb::detail::proto_label_repeated auto & value );
 
 template < scalar_encoder encoder, spb::detail::proto_label_repeated C >
-static inline void serialize_as( ostream & stream, uint32_t field_number, const C & value );
+static inline void serialize_as( ostream & stream, const field_attributes & field,
+                                 const C & value );
 
 template < scalar_encoder encoder, spb::detail::proto_label_repeated_fixed_size C >
-static inline void serialize_as( ostream & stream, uint32_t field_number, const C & value );
+static inline void serialize_as( ostream & stream, const field_attributes & field,
+                                 const C & value );
 
 template < scalar_encoder encoder, typename keyT, typename valueT >
-static inline void serialize_as( ostream & stream, uint32_t field_number,
+static inline void serialize_as( ostream & stream, const field_attributes & field,
                                  const std::map< keyT, valueT > & value );
 
 template < scalar_encoder encoder >
-static inline void serialize_as( ostream & stream, uint32_t field_number,
+static inline void serialize_as( ostream & stream, const field_attributes & field,
                                  spb::detail::proto_field_number auto value )
 {
-    serialize_tag( stream, field_number, wire_type_from_scalar_encoder( encoder ) );
+    serialize_tag( stream, field.number, wire_type_from_scalar_encoder( encoder ) );
     serialize_as< encoder >( stream, value );
 }
 
@@ -188,27 +190,33 @@ static inline void serialize_as( ostream & stream,
     }
 }
 
-static inline void serialize( ostream & stream, uint32_t field_number,
+static inline void serialize( ostream & stream, const field_attributes & field,
                               const spb::detail::proto_field_string auto & value )
 {
-    if( !value.empty( ) )
-    {
-        spb::detail::utf8::validate( std::string_view( value.data( ), value.size( ) ) );
-        serialize_tag( stream, field_number, wire_type::length_delimited );
-        serialize_varint( stream, value.size( ) );
-        stream.write( value.data( ), value.size( ) );
-    }
+    if( value.empty( ) )
+        return;
+
+    if( field.max_size && value.size( ) > field.max_size )
+        throw std::length_error( "string is too large" );
+
+    spb::detail::utf8::validate( std::string_view( value.data( ), value.size( ) ) );
+    serialize_tag( stream, field.number, wire_type::length_delimited );
+    serialize_varint( stream, value.size( ) );
+    stream.write( value.data( ), value.size( ) );
 }
 
-static inline void serialize( ostream & stream, uint32_t field_number,
+static inline void serialize( ostream & stream, const field_attributes & field,
                               const spb::detail::proto_field_bytes auto & value )
 {
-    if( !value.empty( ) )
-    {
-        serialize_tag( stream, field_number, wire_type::length_delimited );
-        serialize_varint( stream, value.size( ) );
-        stream.write( value.data( ), value.size( ) );
-    }
+    if( value.empty( ) )
+        return;
+
+    if( field.max_size && value.size( ) > field.max_size )
+        throw std::length_error( "bytes is too large" );
+
+    serialize_tag( stream, field.number, wire_type::length_delimited );
+    serialize_varint( stream, value.size( ) );
+    stream.write( value.data( ), value.size( ) );
 }
 
 template < scalar_encoder encoder, typename keyT, typename valueT >
@@ -221,32 +229,32 @@ static inline void serialize_as( ostream & stream, const std::map< keyT, valueT 
     {
         if constexpr( std::is_integral_v< keyT > )
         {
-            serialize_as< key_encoder >( stream, 1, k );
+            serialize_as< key_encoder >( stream, field_attributes{ .number = 1 }, k );
         }
         else
         {
-            serialize( stream, 1, k );
+            serialize( stream, field_attributes{ .number = 1 }, k );
         }
         if constexpr( spb::detail::proto_field_number< valueT > )
         {
-            serialize_as< value_encoder >( stream, 2, v );
+            serialize_as< value_encoder >( stream, field_attributes{ .number = 2 }, v );
         }
         else
         {
-            serialize( stream, 2, v );
+            serialize( stream, field_attributes{ .number = 2 }, v );
         }
     }
 }
 
 template < scalar_encoder encoder, typename keyT, typename valueT >
-static inline void serialize_as( ostream & stream, uint32_t field_number,
+static inline void serialize_as( ostream & stream, const field_attributes & field,
                                  const std::map< keyT, valueT > & value )
 {
     auto size_stream = ostream( );
     serialize_as< encoder >( size_stream, value );
     const auto size = size_stream.size( );
 
-    serialize_tag( stream, field_number, wire_type::length_delimited );
+    serialize_tag( stream, field.number, wire_type::length_delimited );
     serialize_varint( stream, size );
     serialize_as< encoder >( stream, value );
 }
@@ -284,8 +292,11 @@ static inline void serialize_packed_as( ostream & stream, const C & container )
 }
 
 template < scalar_encoder encoder, spb::detail::proto_label_repeated C >
-static inline void serialize_as( ostream & stream, uint32_t field_number, const C & value )
+static inline void serialize_as( ostream & stream, const field_attributes & field, const C & value )
 {
+    if( field.max_count && value.size( ) > field.max_count )
+        throw std::length_error( "repeated is too large" );
+
     if constexpr( scalar_encoder_is_packed( encoder ) )
     {
         if( value.empty( ) )
@@ -297,7 +308,7 @@ static inline void serialize_as( ostream & stream, uint32_t field_number, const 
         serialize_packed_as< encoder >( size_stream, value );
         const auto size = size_stream.size( );
 
-        serialize_tag( stream, field_number, wire_type::length_delimited );
+        serialize_tag( stream, field.number, wire_type::length_delimited );
         serialize_varint( stream, size );
         serialize_packed_as< encoder >( stream, value );
     }
@@ -307,18 +318,18 @@ static inline void serialize_as( ostream & stream, uint32_t field_number, const 
         {
             if constexpr( std::is_same_v< typename C::value_type, bool > )
             {
-                serialize_as< encoder >( stream, field_number, bool( v ) );
+                serialize_as< encoder >( stream, field, bool( v ) );
             }
             else
             {
-                serialize_as< encoder >( stream, field_number, v );
+                serialize_as< encoder >( stream, field, v );
             }
         }
     }
 }
 
 template < scalar_encoder encoder, spb::detail::proto_label_repeated_fixed_size C >
-static inline void serialize_as( ostream & stream, uint32_t field_number, const C & value )
+static inline void serialize_as( ostream & stream, const field_attributes & field, const C & value )
 {
     static_assert( scalar_encoder_is_packed( encoder ),
                    "repeated field with fixed size has to have attribute 'packed'" );
@@ -327,62 +338,66 @@ static inline void serialize_as( ostream & stream, uint32_t field_number, const 
     serialize_packed_as< encoder >( size_stream, value );
     const auto size = size_stream.size( );
 
-    serialize_tag( stream, field_number, wire_type::length_delimited );
+    serialize_tag( stream, field.number, wire_type::length_delimited );
     serialize_varint( stream, size );
     serialize_packed_as< encoder >( stream, value );
 }
 
-static inline void serialize( ostream & stream, uint32_t field_number,
+static inline void serialize( ostream & stream, const field_attributes & field,
                               const spb::detail::proto_label_repeated auto & value )
 {
+    if( field.max_count && value.size( ) > field.max_count )
+        throw std::length_error( "repeated is too large" );
+
     for( const auto & v : value )
     {
         if constexpr( std::is_same_v< typename std::decay_t< decltype( value ) >::value_type,
                                       bool > )
         {
-            serialize_as< scalar_encoder::varint >( stream, field_number, bool( v ) );
+            serialize_as< scalar_encoder::varint >( stream, field, bool( v ) );
         }
         else
         {
-            serialize( stream, field_number, v );
+            serialize( stream, field, v );
         }
     }
 }
 
-static inline void serialize( ostream & stream, uint32_t field_number,
+static inline void serialize( ostream & stream, const field_attributes & field,
                               const spb::detail::proto_label_optional auto & p_value )
 {
     if( p_value.has_value( ) )
     {
-        return serialize( stream, field_number, *p_value );
+        return serialize( stream, field, *p_value );
     }
 }
 
-template < scalar_encoder encoder, spb::detail::proto_label_optional C >
-static inline void serialize_as( ostream & stream, uint32_t field_number, const C & p_value )
+template < scalar_encoder encoder >
+static inline void serialize_as( ostream & stream, const field_attributes & field,
+                                 const spb::detail::proto_label_optional auto & p_value )
 {
     if( p_value.has_value( ) )
     {
-        return serialize_as< encoder >( stream, field_number, *p_value );
+        return serialize_as< encoder >( stream, field, *p_value );
     }
 }
 
 template < typename T >
-static inline void serialize( ostream & stream, uint32_t field_number,
+static inline void serialize( ostream & stream, const field_attributes & field,
                               const std::unique_ptr< T > & p_value )
 {
     if( p_value )
     {
-        return serialize( stream, field_number, *p_value );
+        return serialize( stream, field, *p_value );
     }
 }
 
-static inline void serialize( ostream & stream, uint32_t field_number,
+static inline void serialize( ostream & stream, const field_attributes & field,
                               const spb::detail::proto_message auto & value )
 {
     if( const auto size = serialize_size( value ); size > 0 )
     {
-        serialize_tag( stream, field_number, wire_type::length_delimited );
+        serialize_tag( stream, field.number, wire_type::length_delimited );
         serialize_varint( stream, size );
         //
         //- serialize is generated by the spb-protoc
@@ -406,15 +421,15 @@ static inline auto serialize_size( const auto & value ) -> size_t
     return stream.size( );
 }
 
-void ostream::serialize( uint32_t field_number, const auto & value )
+void ostream::serialize( const field_attributes & field, const auto & value )
 {
-    detail::serialize( *this, field_number, value );
+    detail::serialize( *this, field, value );
 }
 
 template < scalar_encoder encoder >
-void ostream::serialize_as( uint32_t field_number, const auto & value )
+void ostream::serialize_as( const field_attributes & field, const auto & value )
 {
-    detail::serialize_as< encoder >( *this, field_number, value );
+    detail::serialize_as< encoder >( *this, field, value );
 }
 
 }// namespace spb::pb::detail

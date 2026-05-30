@@ -12,6 +12,7 @@
 #pragma once
 
 #include "proto-comment.h"
+#include "proto-option.h"
 #include <cstdint>
 #include <string>
 #include <string_view>
@@ -21,7 +22,6 @@
 
 using proto_reserved_range = std::vector< std::pair< int32_t, int32_t > >;
 using proto_reserved_name  = std::unordered_set< std::string_view >;
-using proto_options        = std::unordered_map< std::string_view, std::string_view >;
 
 struct proto_reserved
 {
@@ -34,7 +34,7 @@ struct cpp_ident
     //- points to .proto file
     std::string_view proto_name{};
 
-    //- cpp compatible identifier in case that `proto_name` can't be used in cpp directly
+    //- cpp compatible name in case that `proto_name` can't be used in cpp directly
     //- ('private' -> 'private_')
     std::string cpp_name{};
 
@@ -57,6 +57,7 @@ struct proto_base
 
     proto_options options;
     proto_comment comment;
+    proto_attributes attributes;
 };
 
 using proto_bases = std::vector< proto_base >;
