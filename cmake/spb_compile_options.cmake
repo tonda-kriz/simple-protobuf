@@ -27,7 +27,7 @@ endif()
 
 if(NOT CMAKE_BUILD_TYPE MATCHES Debug)
   include(CheckIPOSupported)
-  check_ipo_supported(RESULT IPO_ENABLED)
+  check_ipo_supported(RESULT IPO_ENABLED LANGUAGES CXX)
 endif()
 
 function(spb_enable_warnings TARGET)
@@ -55,7 +55,7 @@ function(spb_set_compile_options TARGET)
   target_compile_features(${TARGET} PRIVATE cxx_std_20)
   spb_enable_warnings(${TARGET})
 
-  set_target_properties(${TARGET} PROPERTIES INTERPROCEDURAL_OPTIMIZATION IPO_ENABLED)
+  set_target_properties(${TARGET} PROPERTIES INTERPROCEDURAL_OPTIMIZATION ${IPO_ENABLED})
 
   if(SPB_PROTO_USE_ADDRESS_SANITIZER)
     target_compile_options(${TARGET} PRIVATE -fsanitize=address)

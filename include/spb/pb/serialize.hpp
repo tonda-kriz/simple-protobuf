@@ -66,16 +66,15 @@ using namespace std::literals;
 
 static inline void serialize_varint(ostream &stream, uint64_t value)
 {
-    size_t i = 0;
+    uint8_t i = 0;
     uint8_t buffer[10];
 
-    do
+    while (value >= 0x80)
     {
-        uint8_t byte = value & 0x7F;
+        buffer[i++] = (uint8_t)((value & 0x7F) | 0x80);
         value >>= 7;
-        byte |= value > 0 ? 0x80U : 0;
-        buffer[i++] = byte;
-    } while (value > 0);
+    }
+    buffer[i++] = (uint8_t)(value);
 
     return stream.write(buffer, i);
 }

@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.12)
 project(spb-proto VERSION 1.0.0 LANGUAGES CXX)
 
 option(SPB_PROTO_BUILD_TESTS "Build tests" OFF)
+option(SPB_PROTO_BUILD_BENCHMARKS "Build benchmarks" OFF)
 option(SPB_PROTO_BUILD_COMPATIBILITY_TESTS "Build gpb compatibility tests" OFF)
 option(SPB_PROTO_BUILD_COMPILER_TESTS "Build sprotoc tests" OFF)
 option(SPB_PROTO_BUILD_ETL_TESTS "Build etl compatibility tests" OFF)
@@ -28,6 +29,10 @@ add_subdirectory(src)
 
 if(SPB_PROTO_BUILD_EXAMPLES)
     add_subdirectory(example)
+endif()
+
+if(SPB_PROTO_BUILD_BENCHMARKS)
+    add_subdirectory(benchmark)
 endif()
 
 if(SPB_PROTO_BUILD_TESTS)
