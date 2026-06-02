@@ -13,6 +13,6 @@
 #include <string_view>
 
 constexpr std::string_view file_pb_header_template = R"(
-void serialize(ostream &, const $ &);
+void serialize_value(ostream &, const $ &);
 void deserialize_value(istream &, $ &, tag_type);
 )";

@@ -202,11 +202,11 @@ void dump_cpp_serialize_value(std::ostream &stream, const proto_file &file, cons
 {
     if (message.fields.empty() && message.maps.empty() && message.oneofs.empty())
     {
-        stream << "void serialize( ostream & , const " << full_name << " & )\n{\n}\n\n";
+        stream << "void serialize_value( ostream & , const " << full_name << " & )\n{\n}\n\n";
         return;
     }
 
-    stream << "void serialize( ostream & stream, const " << full_name << " & value )\n{\n";
+    stream << "void serialize_value( ostream & stream, const " << full_name << " & value )\n{\n";
 
     for (const auto &field : message.fields)
     {

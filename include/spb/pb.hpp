@@ -54,7 +54,7 @@ static inline auto serialize(const auto &message, spb::io::writer on_write,
     if (options.delimited)
         detail::serialize_varint(stream, detail::serialize_size(message));
 
-    serialize(stream, message);
+    serialize_value(stream, message);
     return stream.size();
 }
 
