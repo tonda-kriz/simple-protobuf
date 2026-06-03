@@ -6,7 +6,7 @@
 int main()
 {
     std::vector<std::byte> buffer;
-    buffer.reserve(256);
+    buffer.reserve(1024);
     const auto book = benchmark::AddressBook{
         .people = {
             {.name = "john",
@@ -34,6 +34,22 @@ int main()
         [&]
         {
             const auto book = spb::pb::deserialize<benchmark::AddressBook>(buffer);
+            ankerl::nanobench::doNotOptimizeAway(book);
+        });
+
+    ankerl::nanobench::Bench().minEpochIterations(100000).run("json-serialize",
+                                                              [&]
+                                                              {
+                                                                  auto size =
+                                                                      spb::json::serialize(book, buffer);
+                                                                  ankerl::nanobench::doNotOptimizeAway(size);
+                                                              });
+
+    ankerl::nanobench::Bench().minEpochIterations(100000).run(
+        "json-deserialize",
+        [&]
+        {
+            const auto book = spb::json::deserialize<benchmark::AddressBook>(buffer);
             ankerl::nanobench::doNotOptimizeAway(book);
         });
 }
