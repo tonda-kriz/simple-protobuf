@@ -90,18 +90,6 @@ inline void serialize_tag(ostream &stream, uint32_t field_number, wire_type type
     serialize_varint(stream, tag);
 }
 
-inline void check_max_count(const field_attributes &field, size_t max_count)
-{
-    if (max_count > field.max_count) [[unlikely]]
-        throw std::length_error("field is too large");
-}
-
-inline void check_max_size(const field_attributes &field, size_t max_size)
-{
-    if (max_size > field.max_size) [[unlikely]]
-        throw std::length_error("field is too large");
-}
-
 inline void serialize(ostream &stream, const field_attributes &field,
                       const spb::detail::proto_message auto &value);
 inline void serialize(ostream &stream, const field_attributes &field,

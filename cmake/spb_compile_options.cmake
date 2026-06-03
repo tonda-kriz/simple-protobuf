@@ -28,6 +28,8 @@ endif()
 if(NOT CMAKE_BUILD_TYPE MATCHES Debug)
   include(CheckIPOSupported)
   check_ipo_supported(RESULT IPO_ENABLED LANGUAGES CXX)
+else()
+  set(IPO_ENABLED FALSE)
 endif()
 
 function(spb_enable_warnings TARGET)

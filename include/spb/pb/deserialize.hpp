@@ -118,25 +118,25 @@ struct istream
     return uint32_t(tag) >> 3;
 }
 
-static inline void check_tag(tag_type tag)
+inline void check_tag(tag_type tag)
 {
     if (field_from_tag(tag) == 0) [[unlikely]]
         throw std::runtime_error("invalid field id");
 }
 
-static inline void check_wire_type(wire_type type1, wire_type type2)
+inline void check_wire_type(wire_type type1, wire_type type2)
 {
     if (type1 != type2) [[unlikely]]
         throw std::runtime_error("invalid wire type");
 }
 
-static inline void check_if_empty(istream &stream)
+inline void check_if_empty(istream &stream)
 {
     if (!stream.empty()) [[unlikely]]
         throw std::runtime_error("unexpected data in stream");
 }
 
-[[nodiscard]] static inline auto read_tag_or_eof(istream &stream) -> tag_type
+[[nodiscard]] inline auto read_tag_or_eof(istream &stream) -> tag_type
 {
     auto byte_or_eof = stream.read_byte_or_eof();
     if (byte_or_eof < 0)
@@ -160,7 +160,7 @@ static inline void check_if_empty(istream &stream)
     return result;
 }
 
-template <typename T> [[nodiscard]] static inline auto read_varint(istream &stream) -> T
+template <typename T> [[nodiscard]] inline auto read_varint(istream &stream) -> T
 {
     if constexpr (std::is_same_v<T, bool>)
     {
@@ -195,12 +195,12 @@ template <typename T> [[nodiscard]] static inline auto read_varint(istream &stre
                 auto result = T(value);
                 if constexpr (std::is_signed_v<T>)
                 {
-                    if (result == std::make_signed_t<T>(value))
+                    if (result == std::make_signed_t<T>(value)) [[likely]]
                         return result;
                 }
                 else
                 {
-                    if (result == value)
+                    if (result == value) [[likely]]
                         return result;
                 }
 
@@ -211,39 +211,38 @@ template <typename T> [[nodiscard]] static inline auto read_varint(istream &stre
     }
 }
 
-static inline void deserialize(istream &stream, spb::detail::proto_message auto &value,
-                               const field_attributes &field);
+inline void deserialize(istream &stream, spb::detail::proto_message auto &value,
+                        const field_attributes &field);
 
 template <scalar_encoder encoder>
-static inline void deserialize_as(istream &stream, spb::detail::proto_field_int_or_float auto &value,
-                                  const field_attributes &field);
-static inline void deserialize(istream &stream, spb::detail::proto_field_bytes auto &value,
-                               const field_attributes &field);
-static inline void deserialize(istream &stream, spb::detail::proto_label_repeated auto &value,
-                               const field_attributes &field);
-static inline void deserialize(istream &stream, spb::detail::proto_field_string auto &value,
-                               const field_attributes &field);
+inline void deserialize_as(istream &stream, spb::detail::proto_field_int_or_float auto &value,
+                           const field_attributes &field);
+inline void deserialize(istream &stream, spb::detail::proto_field_bytes auto &value,
+                        const field_attributes &field);
+inline void deserialize(istream &stream, spb::detail::proto_label_repeated auto &value,
+                        const field_attributes &field);
+inline void deserialize(istream &stream, spb::detail::proto_field_string auto &value,
+                        const field_attributes &field);
 
 template <scalar_encoder encoder, spb::detail::proto_label_repeated C>
-static inline void deserialize_as(istream &stream, C &value, const field_attributes &field);
+inline void deserialize_as(istream &stream, C &value, const field_attributes &field);
 
 template <scalar_encoder encoder, spb::detail::proto_label_repeated_fixed_size C>
-static inline void deserialize_as(istream &stream, C &value, const field_attributes &field);
+inline void deserialize_as(istream &stream, C &value, const field_attributes &field);
 
 template <scalar_encoder encoder, typename keyT, typename valueT>
-static inline void deserialize_as(istream &stream, std::map<keyT, valueT> &value,
-                                  const field_attributes &field);
+inline void deserialize_as(istream &stream, std::map<keyT, valueT> &value, const field_attributes &field);
 
-static inline void deserialize(istream &stream, spb::detail::proto_label_optional auto &p_value,
-                               const field_attributes &field);
+inline void deserialize(istream &stream, spb::detail::proto_label_optional auto &p_value,
+                        const field_attributes &field);
 
 template <scalar_encoder encoder, spb::detail::proto_label_optional C>
-static inline void deserialize_as(istream &stream, C &p_value, const field_attributes &field);
+inline void deserialize_as(istream &stream, C &p_value, const field_attributes &field);
 
 template <typename T>
-static inline void deserialize(istream &stream, std::unique_ptr<T> &value, const field_attributes &field);
+inline void deserialize(istream &stream, std::unique_ptr<T> &value, const field_attributes &field);
 
-template <typename T, typename signedT, typename unsignedT> static auto create_tmp_var()
+template <typename T, typename signedT, typename unsignedT> auto create_tmp_var()
 {
     if constexpr (std::is_signed<T>::value)
     {
@@ -256,7 +255,7 @@ template <typename T, typename signedT, typename unsignedT> static auto create_t
 }
 
 template <scalar_encoder encoder, typename T>
-static inline auto deserialize_bitfield_as(istream &stream, uint32_t bits, const field_attributes &field) -> T
+inline auto deserialize_bitfield_as(istream &stream, uint32_t bits, const field_attributes &field) -> T
 {
     auto value = T();
     if constexpr (scalar_encoder_type1(encoder) == scalar_encoder::svarint)
@@ -311,8 +310,8 @@ static inline auto deserialize_bitfield_as(istream &stream, uint32_t bits, const
 }
 
 template <scalar_encoder encoder>
-static inline void deserialize_as(istream &stream, spb::detail::proto_enum auto &value,
-                                  const field_attributes &field)
+inline void deserialize_as(istream &stream, spb::detail::proto_enum auto &value,
+                           const field_attributes &field)
 {
     using T = std::remove_cvref_t<decltype(value)>;
     using int_type = std::underlying_type_t<T>;
@@ -326,8 +325,8 @@ static inline void deserialize_as(istream &stream, spb::detail::proto_enum auto 
 }
 
 template <scalar_encoder encoder>
-static inline void deserialize_as(istream &stream, spb::detail::proto_field_int_or_float auto &value,
-                                  const field_attributes &field)
+inline void deserialize_as(istream &stream, spb::detail::proto_field_int_or_float auto &value,
+                           const field_attributes &field)
 {
     using T = std::remove_cvref_t<decltype(value)>;
 
@@ -366,7 +365,7 @@ static inline void deserialize_as(istream &stream, spb::detail::proto_field_int_
             {
                 auto tmp = int32_t(0);
                 stream.read_exact(&tmp, sizeof(tmp));
-                if (tmp > std::numeric_limits<T>::max() || tmp < std::numeric_limits<T>::min())
+                if (tmp > std::numeric_limits<T>::max() || tmp < std::numeric_limits<T>::min()) [[unlikely]]
                     throw std::runtime_error("int overflow");
 
                 value = T(tmp);
@@ -375,7 +374,7 @@ static inline void deserialize_as(istream &stream, spb::detail::proto_field_int_
             {
                 auto tmp = uint32_t(0);
                 stream.read_exact(&tmp, sizeof(tmp));
-                if (tmp > std::numeric_limits<T>::max())
+                if (tmp > std::numeric_limits<T>::max()) [[unlikely]]
                     throw std::runtime_error("int overflow");
 
                 value = T(tmp);
@@ -399,7 +398,7 @@ static inline void deserialize_as(istream &stream, spb::detail::proto_field_int_
             {
                 auto tmp = int64_t(0);
                 stream.read_exact(&tmp, sizeof(tmp));
-                if (tmp > std::numeric_limits<T>::max() || tmp < std::numeric_limits<T>::min())
+                if (tmp > std::numeric_limits<T>::max() || tmp < std::numeric_limits<T>::min()) [[unlikely]]
                     throw std::runtime_error("int overflow");
 
                 value = T(tmp);
@@ -408,7 +407,7 @@ static inline void deserialize_as(istream &stream, spb::detail::proto_field_int_
             {
                 auto tmp = uint64_t(0);
                 stream.read_exact(&tmp, sizeof(tmp));
-                if (tmp > std::numeric_limits<T>::max())
+                if (tmp > std::numeric_limits<T>::max()) [[unlikely]]
                     throw std::runtime_error("int overflow");
 
                 value = T(tmp);
@@ -417,26 +416,26 @@ static inline void deserialize_as(istream &stream, spb::detail::proto_field_int_
     }
 }
 
-static inline void deserialize(istream &stream, spb::detail::proto_label_optional auto &p_value,
-                               const field_attributes &field)
+inline void deserialize(istream &stream, spb::detail::proto_label_optional auto &p_value,
+                        const field_attributes &field)
 {
     auto &value = p_value.emplace(typename std::decay_t<decltype(p_value)>::value_type());
     deserialize(stream, value, field);
 }
 
 template <scalar_encoder encoder, spb::detail::proto_label_optional C>
-static inline void deserialize_as(istream &stream, C &p_value, const field_attributes &field)
+inline void deserialize_as(istream &stream, C &p_value, const field_attributes &field)
 {
     auto &value = p_value.emplace(typename C::value_type());
     deserialize_as<encoder>(stream, value, field);
 }
 
-static inline void deserialize(istream &stream, spb::detail::proto_field_string auto &value,
-                               const field_attributes &field)
+inline void deserialize(istream &stream, spb::detail::proto_field_string auto &value,
+                        const field_attributes &field)
 {
     check_wire_type(field.type, wire_type::length_delimited);
-    if (field.max_size && stream.size() > field.max_size)
-        throw std::length_error("string is too large");
+    if (field.max_size) [[unlikely]]
+        check_max_size(field, stream.size());
 
     if constexpr (spb::detail::proto_field_string_resizable<decltype(value)>)
     {
@@ -452,18 +451,18 @@ static inline void deserialize(istream &stream, spb::detail::proto_field_string 
 }
 
 template <typename T>
-static inline void deserialize(istream &stream, std::unique_ptr<T> &value, const field_attributes &field)
+inline void deserialize(istream &stream, std::unique_ptr<T> &value, const field_attributes &field)
 {
     value = std::make_unique<T>();
     deserialize(stream, *value, field);
 }
 
-static inline void deserialize(istream &stream, spb::detail::proto_field_bytes auto &value,
-                               const field_attributes &field)
+inline void deserialize(istream &stream, spb::detail::proto_field_bytes auto &value,
+                        const field_attributes &field)
 {
     check_wire_type(field.type, wire_type::length_delimited);
-    if (field.max_size && stream.size() > field.max_size)
-        throw std::length_error("bytes is too large");
+    if (field.max_size) [[unlikely]]
+        check_max_size(field, stream.size());
 
     if constexpr (spb::detail::proto_field_bytes_resizable<decltype(value)>)
     {
@@ -477,22 +476,22 @@ static inline void deserialize(istream &stream, spb::detail::proto_field_bytes a
     stream.read_exact(value.data(), stream.size());
 }
 
-static inline void deserialize(istream &stream, spb::detail::proto_label_repeated auto &value,
-                               const field_attributes &field)
+inline void deserialize(istream &stream, spb::detail::proto_label_repeated auto &value,
+                        const field_attributes &field)
 {
-    if (field.max_count && value.size() >= field.max_count) [[unlikely]]
-        throw std::length_error("repeated is too large");
+    if (field.max_count) [[unlikely]]
+        check_max_count(field, value.size() + 1);
 
     deserialize(stream, value.emplace_back(), field);
 }
 
 template <scalar_encoder encoder, spb::detail::proto_label_repeated C>
-static inline void deserialize_packed_as(istream &stream, C &value, const field_attributes &field)
+inline void deserialize_packed_as(istream &stream, C &value, const field_attributes &field)
 {
     while (!stream.empty())
     {
-        if (field.max_count && value.size() >= field.max_count) [[unlikely]]
-            throw std::length_error("repeated is too large");
+        if (field.max_count) [[unlikely]]
+            check_max_count(field, value.size() + 1);
 
         if constexpr (std::is_same_v<typename C::value_type, bool>)
         {
@@ -506,7 +505,7 @@ static inline void deserialize_packed_as(istream &stream, C &value, const field_
 }
 
 template <scalar_encoder encoder, spb::detail::proto_label_repeated_fixed_size C>
-static inline void deserialize_packed_as(istream &stream, C &value, const field_attributes &field)
+inline void deserialize_packed_as(istream &stream, C &value, const field_attributes &field)
 {
     for (size_t i = 0; i < value.size(); i++)
     {
@@ -525,7 +524,7 @@ static inline void deserialize_packed_as(istream &stream, C &value, const field_
 }
 
 template <scalar_encoder encoder, spb::detail::proto_label_repeated_fixed_size C>
-static inline void deserialize_as(istream &stream, C &value, const field_attributes &field)
+inline void deserialize_as(istream &stream, C &value, const field_attributes &field)
 {
     static_assert(scalar_encoder_is_packed(encoder),
                   "repeated field with fixed size has to have attribute 'packed'");
@@ -535,7 +534,7 @@ static inline void deserialize_as(istream &stream, C &value, const field_attribu
 }
 
 template <scalar_encoder encoder, spb::detail::proto_label_repeated C>
-static inline void deserialize_as(istream &stream, C &value, const field_attributes &field)
+inline void deserialize_as(istream &stream, C &value, const field_attributes &field)
 {
     if constexpr (scalar_encoder_is_packed(encoder))
     {
@@ -543,8 +542,8 @@ static inline void deserialize_as(istream &stream, C &value, const field_attribu
     }
     else
     {
-        if (field.max_count && value.size() >= field.max_count) [[unlikely]]
-            throw std::length_error("repeated is too large");
+        if (field.max_count) [[unlikely]]
+            check_max_count(field, value.size() + 1);
 
         if constexpr (std::is_same_v<typename C::value_type, bool>)
         {
@@ -558,8 +557,7 @@ static inline void deserialize_as(istream &stream, C &value, const field_attribu
 }
 
 template <scalar_encoder encoder, typename keyT, typename valueT>
-static inline void deserialize_as(istream &stream, std::map<keyT, valueT> &value,
-                                  const field_attributes &field)
+inline void deserialize_as(istream &stream, std::map<keyT, valueT> &value, const field_attributes &field)
 {
     const auto key_encoder = scalar_encoder_type1(encoder);
     const auto value_encoder = scalar_encoder_type2(encoder);
@@ -627,7 +625,7 @@ static inline void deserialize_as(istream &stream, std::map<keyT, valueT> &value
             throw std::runtime_error("invalid field");
         }
     }
-    if (key_defined && value_defined)
+    if (key_defined && value_defined) [[likely]]
     {
         value.insert(std::move(pair));
     }
@@ -638,18 +636,18 @@ static inline void deserialize_as(istream &stream, std::map<keyT, valueT> &value
 }
 
 template <size_t ordinal, typename T>
-static inline void deserialize_variant(istream &stream, T &variant, const field_attributes &field)
+inline void deserialize_variant(istream &stream, T &variant, const field_attributes &field)
 {
     deserialize(stream, variant.template emplace<ordinal>(), field);
 }
 
 template <size_t ordinal, scalar_encoder encoder, typename T>
-static inline void deserialize_variant_as(istream &stream, T &variant, const field_attributes &field)
+inline void deserialize_variant_as(istream &stream, T &variant, const field_attributes &field)
 {
     deserialize_as<encoder>(stream, variant.template emplace<ordinal>(), field);
 }
 
-static inline void deserialize_main(istream &stream, spb::detail::proto_message auto &value)
+inline void deserialize_main(istream &stream, spb::detail::proto_message auto &value)
 {
     for (;;)
     {
@@ -673,8 +671,8 @@ static inline void deserialize_main(istream &stream, spb::detail::proto_message 
     }
 }
 
-static inline void deserialize(istream &stream, spb::detail::proto_message auto &value,
-                               const field_attributes &field)
+inline void deserialize(istream &stream, spb::detail::proto_message auto &value,
+                        const field_attributes &field)
 {
     check_wire_type(field.type, wire_type::length_delimited);
 
@@ -755,7 +753,7 @@ inline auto istream::deserialize_bitfield_as(uint32_t bits, const field_attribut
     return detail::deserialize_bitfield_as<encoder, T>(*this, bits, field);
 }
 
-static inline void deserialize(auto &value, spb::io::reader on_read)
+inline void deserialize(auto &value, spb::io::reader on_read)
 {
     using T = std::remove_cvref_t<decltype(value)>;
     static_assert(spb::detail::proto_message<T>);

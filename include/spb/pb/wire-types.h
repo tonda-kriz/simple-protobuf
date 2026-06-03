@@ -11,6 +11,7 @@
 #pragma once
 
 #include <cstdint>
+#include <stdexcept>
 #include <type_traits>
 
 namespace spb::pb::detail
@@ -63,41 +64,40 @@ struct field_attributes
     size_t max_size = 0;
 };
 
-static constexpr scalar_encoder operator&(scalar_encoder lhs, scalar_encoder rhs) noexcept
+constexpr scalar_encoder operator&(scalar_encoder lhs, scalar_encoder rhs) noexcept
 {
     return scalar_encoder(std::underlying_type_t<scalar_encoder>(lhs) &
                           std::underlying_type_t<scalar_encoder>(rhs));
 }
 
-static constexpr scalar_encoder operator|(scalar_encoder lhs, scalar_encoder rhs) noexcept
+constexpr scalar_encoder operator|(scalar_encoder lhs, scalar_encoder rhs) noexcept
 {
     return scalar_encoder(std::underlying_type_t<scalar_encoder>(lhs) |
                           std::underlying_type_t<scalar_encoder>(rhs));
 }
 
-static constexpr auto scalar_encoder_combine(scalar_encoder type1, scalar_encoder type2) noexcept
-    -> scalar_encoder
+constexpr auto scalar_encoder_combine(scalar_encoder type1, scalar_encoder type2) noexcept -> scalar_encoder
 {
     return scalar_encoder((std::underlying_type_t<scalar_encoder>(type1) & 0x0f) |
                           ((std::underlying_type_t<scalar_encoder>(type2) & 0x0f) << 4));
 }
 
-static constexpr auto scalar_encoder_is_packed(scalar_encoder a) noexcept -> bool
+constexpr auto scalar_encoder_is_packed(scalar_encoder a) noexcept -> bool
 {
     return (a & scalar_encoder::packed) == scalar_encoder::packed;
 }
 
-static constexpr auto scalar_encoder_type1(scalar_encoder a) noexcept -> scalar_encoder
+constexpr auto scalar_encoder_type1(scalar_encoder a) noexcept -> scalar_encoder
 {
     return scalar_encoder(static_cast<std::underlying_type_t<scalar_encoder>>(a) & 0x07);
 }
 
-static constexpr auto scalar_encoder_type2(scalar_encoder a) noexcept -> scalar_encoder
+constexpr auto scalar_encoder_type2(scalar_encoder a) noexcept -> scalar_encoder
 {
     return scalar_encoder((static_cast<std::underlying_type_t<scalar_encoder>>(a) >> 4) & 0x07);
 }
 
-static constexpr auto wire_type_from_scalar_encoder(scalar_encoder a) noexcept -> wire_type
+constexpr auto wire_type_from_scalar_encoder(scalar_encoder a) noexcept -> wire_type
 {
     switch (scalar_encoder_type1(a))
     {
@@ -108,6 +108,18 @@ static constexpr auto wire_type_from_scalar_encoder(scalar_encoder a) noexcept -
     default:
         return wire_type::varint;
     }
+}
+
+inline void check_max_count(const field_attributes &field, size_t max_count)
+{
+    if (max_count > field.max_count) [[unlikely]]
+        throw std::length_error("field is too large");
+}
+
+inline void check_max_size(const field_attributes &field, size_t max_size)
+{
+    if (max_size > field.max_size) [[unlikely]]
+        throw std::length_error("field is too large");
 }
 
 } // namespace spb::pb::detail
