@@ -41,7 +41,7 @@ struct ostream
     {
     }
 
-    void write(const void *p_data, size_t size) noexcept
+    void write(const void *p_data, size_t size)
     {
         if (on_write)
             on_write(p_data, size);
