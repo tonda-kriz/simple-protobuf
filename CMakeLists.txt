@@ -13,6 +13,10 @@ option(SPB_PROTO_USE_COVERAGE "Enable code coverage" OFF)
 option(SPB_PROTO_USE_ADDRESS_SANITIZER "Enable address sanitizer" OFF)
 option(SPB_PROTO_USE_UB_SANITIZER "Enable undefined behavior sanitizer" OFF)
 
+if(SPB_PROTO_BUILD_COMPATIBILITY_TESTS OR SPB_PROTO_BUILD_BENCHMARKS)
+    include(${CMAKE_CURRENT_LIST_DIR}/cmake/fetch-gpb.cmake)
+endif()
+
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/spb_protobuf.cmake)
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/spb_compile_options.cmake)
 
