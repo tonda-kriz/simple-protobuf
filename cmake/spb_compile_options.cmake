@@ -43,7 +43,7 @@ function(spb_enable_warnings TARGET)
     endif()        
     target_compile_definitions(${TARGET} PRIVATE _CRT_SECURE_NO_WARNINGS)
   else()
-   target_compile_options(${TARGET} PRIVATE -Wall -Wextra -Wpedantic -Werror -Wno-missing-field-initializers)
+   target_compile_options(${TARGET} PRIVATE -Wall -Wextra -Werror -Wno-missing-field-initializers)
   endif()
 endfunction(spb_enable_warnings)
 
