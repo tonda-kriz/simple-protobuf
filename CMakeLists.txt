@@ -14,7 +14,7 @@ option(SPB_PROTO_USE_ADDRESS_SANITIZER "Enable address sanitizer" OFF)
 option(SPB_PROTO_USE_UB_SANITIZER "Enable undefined behavior sanitizer" OFF)
 
 if(SPB_PROTO_BUILD_COMPATIBILITY_TESTS OR SPB_PROTO_BUILD_BENCHMARKS)
-    include(${CMAKE_CURRENT_LIST_DIR}/cmake/fetch-gpb.cmake)
+  include(${CMAKE_CURRENT_LIST_DIR}/cmake/fetch-gpb.cmake)
 endif()
 
 include(${CMAKE_CURRENT_LIST_DIR}/cmake/spb_protobuf.cmake)
@@ -32,14 +32,14 @@ add_library(spb::proto ALIAS spb-proto)
 add_subdirectory(src)
 
 if(SPB_PROTO_BUILD_EXAMPLES)
-    add_subdirectory(example)
+  add_subdirectory(example)
 endif()
 
 if(SPB_PROTO_BUILD_BENCHMARKS)
-    add_subdirectory(benchmark)
+  add_subdirectory(benchmark)
 endif()
 
 if(SPB_PROTO_BUILD_TESTS)
-    enable_testing()
-    add_subdirectory(test)
+  enable_testing()
+  add_subdirectory(test)
 endif()

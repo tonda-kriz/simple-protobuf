@@ -14,7 +14,7 @@
 #include "ast/proto-field.h"
 #include "ast/proto-file.h"
 #include "template-h.h"
-#include <iterator>
+#include <spb/io/function_ref.hpp>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -24,9 +24,12 @@ using namespace std::literals;
 
 namespace
 {
+using func_dumper = spb::detail::function_ref<void(std::ostream &, const proto_file &, const proto_message &,
+                                                   std::string_view)>;
+
 void dump_prototypes(std::ostream &stream, std::string_view type)
 {
-    stream << replace(file_pb_header_template, "$", type);
+    stream << replace(file_pb_header_prototypes, "$", type);
 }
 
 void dump_prototypes(std::ostream &stream, const proto_message &message, std::string_view parent)
@@ -63,8 +66,11 @@ void dump_prototypes(std::ostream &stream, const proto_file &file)
 void dump_cpp_includes(std::ostream &stream, std::string_view header_file_path)
 {
     stream << "#include \"" << header_file_path << "\"\n"
+           << "#include <spb/pb/wire-types.h>\n"
            << "#include <spb/pb.hpp>\n"
-              "#include <type_traits>\n\n";
+           << "#include <spb/pb/deserialize.hpp>\n"
+           << "#include <spb/pb/serialize.hpp>\n"
+           << "#include <type_traits>\n\n";
 }
 
 void dump_cpp_close_namespace(std::ostream &stream, std::string_view name)
@@ -93,51 +99,25 @@ auto encoder_type_str(const proto_file &file, const proto_field &field) -> std::
     case proto_field::Type::UINT32:
     case proto_field::Type::INT64:
     case proto_field::Type::UINT64:
-        return is_packed_array(file, field) ? "scalar_encoder::varint | scalar_encoder::packed"
+        return is_packed_array(file, field) ? "make_packed(scalar_encoder::varint)"
                                             : "scalar_encoder::varint";
 
     case proto_field::Type::SINT32:
     case proto_field::Type::SINT64:
-        return is_packed_array(file, field) ? "scalar_encoder::svarint | scalar_encoder::packed"
+        return is_packed_array(file, field) ? "make_packed(scalar_encoder::svarint)"
                                             : "scalar_encoder::svarint";
 
     case proto_field::Type::FLOAT:
     case proto_field::Type::FIXED32:
     case proto_field::Type::SFIXED32:
-        return is_packed_array(file, field) ? "scalar_encoder::i32 | scalar_encoder::packed"
-                                            : "scalar_encoder::i32";
+        return is_packed_array(file, field) ? "make_packed(scalar_encoder::i32)" : "scalar_encoder::i32";
 
     case proto_field::Type::DOUBLE:
     case proto_field::Type::FIXED64:
     case proto_field::Type::SFIXED64:
-        return is_packed_array(file, field) ? "scalar_encoder::i64 | scalar_encoder::packed"
-                                            : "scalar_encoder::i64";
+        return is_packed_array(file, field) ? "make_packed(scalar_encoder::i64)" : "scalar_encoder::i64";
     }
     return {};
-}
-
-auto encoder_type(const proto_file &file, const proto_field &field) -> std::string
-{
-    const auto encoder = encoder_type_str(file, field);
-    if (encoder.empty())
-        return {};
-
-    return "_as<" + encoder + ">";
-}
-
-auto map_encoder_type(const proto_file &file, const proto_field &key, const proto_field &value) -> std::string
-{
-    const auto key_encoder = encoder_type_str(file, key);
-    const auto value_encoder = encoder_type_str(file, value);
-
-    return "_as< scalar_encoder_combine( " + (key_encoder.empty() ? std::string("{}") : key_encoder) + ", " +
-           (value_encoder.empty() ? std::string("{}") : value_encoder) + " ) >";
-}
-
-auto bitfield_encoder_type(const proto_file &file, const proto_field &field) -> std::string
-{
-    const auto encoder = encoder_type_str(file, field);
-    return "_as< " + encoder + ", decltype( value." + std::string(field.name.get_name()) + ") >";
 }
 
 auto field_max_size(const proto_file &file, const proto_message &message, const proto_field &field) -> size_t
@@ -152,61 +132,112 @@ auto field_max_count(const proto_file &file, const proto_message &message, const
         message.attributes.max_count.value_or(file.attributes.max_count.value_or(0)));
 }
 
-void dump_field_attributes_from_tag(std::ostream &stream, const proto_file &file,
-                                    const proto_message &message, const proto_field &field)
+void dump_serialize_mode(std::ostream &stream, const proto_file &file, const proto_message &message,
+                         const proto_field &field)
 {
-    stream << "field_attributes{.type = type";
-    if (const auto max_count = field_max_count(file, message, field); max_count)
-        stream << ", .max_count = " << max_count;
-    if (const auto max_size = field_max_size(file, message, field); max_size)
-        stream << ", .max_size = " << max_size;
+    const auto encoder = encoder_type_str(file, field);
+    const auto max_count = field_max_count(file, message, field);
+    const auto max_size = field_max_size(file, message, field);
+
+    stream << "serialize_mode";
+
+    if (!max_count && !max_size && encoder.empty())
+    {
+        stream << "{}";
+        return;
+    }
+
+    auto next = "{";
+
+    if (!encoder.empty())
+    {
+        stream << next << ".encoder = " << encoder;
+        next = ", ";
+    }
+    if (max_count)
+    {
+        stream << next << ".max_count = " << max_count;
+        next = ", ";
+    }
+    if (max_size)
+        stream << next << ".max_size = " << max_size;
     stream << "}";
 }
 
-void dump_field_attributes(std::ostream &stream, const proto_file &file, const proto_message &message,
-                           const proto_field &field)
+void dump_serialize_mode(std::ostream &stream, const proto_file &file, const proto_message &,
+                         const proto_map &map)
 {
-    stream << "field_attributes{.number = " << field.number;
-    if (const auto max_count = field_max_count(file, message, field); max_count)
-        stream << ", .max_count = " << max_count;
-    if (const auto max_size = field_max_size(file, message, field); max_size)
-        stream << ", .max_size = " << max_size;
+    const auto key_encoder = encoder_type_str(file, map.key);
+    const auto value_encoder = encoder_type_str(file, map.value);
+
+    stream << "serialize_mode";
+
+    if (key_encoder.empty() && value_encoder.empty())
+    {
+        stream << "{}";
+        return;
+    }
+
+    auto next = "{";
+    if (!key_encoder.empty())
+    {
+        stream << next << ".encoder = " << key_encoder;
+        next = ", ";
+    }
+    if (!value_encoder.empty())
+    {
+        stream << next << ".encoder2 = " << value_encoder;
+    }
     stream << "}";
 }
 
 void dump_cpp_serialize_field(std::ostream &stream, const proto_file &file, const proto_message &message,
                               const proto_field &field)
 {
-    stream << "\tstream.serialize" << encoder_type(file, field) << "( ";
-    dump_field_attributes(stream, file, message, field);
-    stream << ", value." << field.name.get_name() << " );\n";
+    stream << "\tserialize<";
+    dump_serialize_mode(stream, file, message, field);
+    stream << ">(stream, " << field.number << ", value." << field.name.get_name() << ");\n";
 }
 
-void dump_cpp_serialize_value(std::ostream &stream, const proto_file &file, const proto_message &message,
+void dump_cpp_serialize_field(std::ostream &stream, const proto_file &file, const proto_message &message,
+                              const proto_map &field)
+{
+    stream << "\tserialize<";
+    dump_serialize_mode(stream, file, message, field);
+    stream << ">(stream, " << field.number << ", value." << field.name.get_name() << ");\n";
+}
+
+void dump_cpp_serialize_field(std::ostream &stream, const proto_file &file, const proto_message &message,
                               const proto_oneof &oneof)
 {
     stream << "\t{\n\t\tconst auto index = value." << oneof.name.get_name() << ".index( );\n";
-    stream << "\t\tswitch( index )\n\t\t{\n";
+    stream << "\t\tswitch (index)\n\t\t{\n";
     for (size_t i = 0; i < oneof.fields.size(); ++i)
     {
-        stream << "\t\t\tcase " << i << ":\n\t\t\t\treturn stream.serialize"
-               << encoder_type(file, oneof.fields[i]) << "( ";
-        dump_field_attributes(stream, file, message, oneof.fields[i]);
-        stream << ", std::get< " << i << " >( value." << oneof.name.get_name() << ") );\n";
+        stream << "\t\t\tcase " << i << ":\n\t\t\t\treturn serialize<";
+        dump_serialize_mode(stream, file, message, oneof.fields[i]);
+        stream << ">(stream, " << oneof.fields[i].number << ", std::get<" << i << ">(value."
+               << oneof.name.get_name() << "));\n";
     }
     stream << "\t\t}\n\t}\n\n";
 }
 
-void dump_cpp_serialize_value(std::ostream &stream, const proto_file &file, const proto_message &message,
+void dump_cpp_serialize_value(std::ostream &stream, const proto_file &, const proto_message &,
                               std::string_view full_name)
+{
+    stream << replace(pb_serialize_value_template, "$", full_name);
+}
+
+void dump_cpp_serialize_value_gen(std::ostream &stream, const proto_file &file, const proto_message &message,
+                                  std::string_view full_name)
 {
     if (message.fields.empty() && message.maps.empty() && message.oneofs.empty())
     {
-        stream << "void serialize_value( ostream & , const " << full_name << " & )\n{\n}\n\n";
+        stream << "static void serialize_value_gen(auto &, const " << full_name << " &)\n{\n}\n\n";
         return;
     }
 
-    stream << "void serialize_value( ostream & stream, const " << full_name << " & value )\n{\n";
+    stream << "static void serialize_value_gen(auto &stream, const " << full_name << " &value)\n{\n";
 
     for (const auto &field : message.fields)
     {
@@ -214,133 +245,116 @@ void dump_cpp_serialize_value(std::ostream &stream, const proto_file &file, cons
     }
     for (const auto &map : message.maps)
     {
-        stream << "\tstream.serialize" << map_encoder_type(file, map.key, map.value)
-               << "( {.number = " << map.number << "}, value." << map.name.get_name() << " );\n";
+        dump_cpp_serialize_field(stream, file, message, map);
     }
     for (const auto &oneof : message.oneofs)
     {
-        dump_cpp_serialize_value(stream, file, message, oneof);
+        dump_cpp_serialize_field(stream, file, message, oneof);
     }
-    stream << "}\n";
+    stream << "}\n\n";
 }
 
-void dump_cpp_deserialize_value(std::ostream &stream, const proto_file &file, const proto_message &message,
-                                std::string_view full_name)
+void dump_cpp_deserialize_value_gen(std::ostream &stream, const proto_file &file,
+                                    const proto_message &message, std::string_view full_name)
 {
     if (message.fields.empty() && message.maps.empty() && message.oneofs.empty())
     {
-        stream << "void deserialize_value( istream & stream, " << full_name << " &, tag_type tag )\n{\n";
-        stream << "\tstream.skip( wire_type_from_tag( tag ) );\n}\n\n";
+        stream << "static void deserialize_value_gen(auto &stream, " << full_name << " &, tag_type tag)\n{\n";
+        stream << "\tskip(stream, wire_type_from_tag(tag));\n}\n\n";
         return;
     }
 
-    stream << "void deserialize_value( istream & stream, " << full_name << " & value, tag_type tag )\n{\n"
-           << "\tconst auto type = wire_type_from_tag( tag );\n";
+    stream << "static void deserialize_value_gen(auto &stream, " << full_name << " &value, tag_type tag)\n{\n"
+           << "\tconst auto type = wire_type_from_tag(tag);\n";
 
-    stream << "\tswitch( field_from_tag( tag ) )\n\t{\n";
+    stream << "\tswitch(field_from_tag(tag))\n\t{\n";
 
     for (const auto &field : message.fields)
     {
-
         stream << "\t\tcase " << field.number << ":\n\t\t\t";
         if (!field.bit_field.empty())
         {
-            stream << "value." << field.name.get_name() << " = stream.deserialize_bitfield"
-                   << bitfield_encoder_type(file, field) << "( " << field.bit_field << ", ";
-            dump_field_attributes_from_tag(stream, file, message, field);
-            stream << " );\n";
+            stream << "value." << field.name.get_name() << " = deserialize_bitfield<";
+            dump_serialize_mode(stream, file, message, field);
+            stream << ", decltype( value." + std::string(field.name.get_name()) << ")>(stream, "
+                   << field.bit_field << ", type);\n";
             stream << "\t\t\treturn;\n";
         }
         else
         {
-            stream << "return stream.deserialize" << encoder_type(file, field) << "( value."
-                   << field.name.get_name() << ", ";
-            dump_field_attributes_from_tag(stream, file, message, field);
-            stream << " );\n";
+            stream << "return deserialize<";
+            dump_serialize_mode(stream, file, message, field);
+            stream << ">(stream, value." << field.name.get_name() << ", type);\n";
         }
     }
     for (const auto &map : message.maps)
     {
         stream << "\t\tcase " << map.number << ":\n\t\t\treturn ";
-        stream << "\tstream.deserialize" << map_encoder_type(file, map.key, map.value) << "( value."
-               << map.name.get_name() << ", ";
-        dump_field_attributes_from_tag(stream, file, message, map.value);
-        stream << " );\n";
+        stream << "\tdeserialize<";
+        dump_serialize_mode(stream, file, message, map);
+        stream << ">(stream, value." << map.name.get_name() << ", type);\n";
     }
     for (const auto &oneof : message.oneofs)
     {
         for (size_t i = 0; i < oneof.fields.size(); ++i)
         {
             stream << "\t\tcase " << oneof.fields[i].number << ":\n\t\t\treturn ";
-            auto type = encoder_type(file, oneof.fields[i]);
-            if (type.empty())
-            {
-                stream << "\tstream.deserialize_variant< " << i << ">( value." << oneof.name.get_name()
-                       << ", ";
-                dump_field_attributes_from_tag(stream, file, message, oneof.fields[i]);
-                stream << " );\n";
-            }
-            else
-            {
-                type.erase(0, 4);
-                stream << "\tstream.deserialize_variant_as< " << i << ", " << type << "( value."
-                       << oneof.name.get_name() << ", ";
-                dump_field_attributes_from_tag(stream, file, message, oneof.fields[i]);
-                stream << " );\n";
-            }
+            stream << "\tdeserialize_variant<";
+            dump_serialize_mode(stream, file, message, oneof.fields[i]);
+            stream << ", " << i << ">(stream, value." << oneof.name.get_name() << ", type);\n";
         }
     }
 
-    stream << "\t\tdefault:\n\t\t\treturn stream.skip( type );\t\n}\n}\n\n";
+    stream << "\t\tdefault:\n\t\t\treturn skip(stream, type);\t\n\t}\n}\n\n";
 }
 
 void dump_cpp_messages(std::ostream &stream, const proto_file &file, const proto_messages &messages,
-                       std::string_view parent);
+                       std::string_view parent, const func_dumper &dump_cpp);
 
 void dump_cpp_message(std::ostream &stream, const proto_file &file, const proto_message &message,
-                      std::string_view parent)
+                      std::string_view parent, const func_dumper &dump_cpp)
 {
     const auto full_name = std::string(parent) + "::" + std::string(message.name.get_name());
 
-    dump_cpp_open_namespace(stream, "detail");
-    dump_cpp_serialize_value(stream, file, message, full_name);
-    dump_cpp_deserialize_value(stream, file, message, full_name);
-    dump_cpp_close_namespace(stream, "detail");
-
-    dump_cpp_messages(stream, file, message.messages, full_name);
+    dump_cpp(stream, file, message, full_name);
+    dump_cpp_messages(stream, file, message.messages, full_name, dump_cpp);
 }
 
 void dump_cpp_messages(std::ostream &stream, const proto_file &file, const proto_messages &messages,
-                       std::string_view parent)
+                       std::string_view parent, const func_dumper &dump_cpp)
 {
     for (const auto &message : messages)
     {
-        dump_cpp_message(stream, file, message, parent);
+        dump_cpp_message(stream, file, message, parent, dump_cpp);
     }
 }
 
-void dump_cpp(std::ostream &stream, const proto_file &file)
+void dump_cpp(std::ostream &stream, const proto_file &file, func_dumper dump_cpp)
 {
     const auto str_namespace = file.package.name.get_name().empty()
                                    ? std::string()
                                    : "::" + std::string(file.package.name.get_name());
-    dump_cpp_messages(stream, file, file.package.messages, str_namespace);
+    dump_cpp_messages(stream, file, file.package.messages, str_namespace, dump_cpp);
 }
 
 } // namespace
 
 void dump_pb_header(const proto_file &file, std::ostream &stream)
 {
-    dump_cpp_open_namespace(stream, "spb::pb::detail");
-    stream << "struct ostream;\nstruct istream;\n";
+    dump_cpp_open_namespace(stream, "spb::pb");
+    stream << file_pb_header_template;
+    dump_cpp_open_namespace(stream, "detail");
     dump_prototypes(stream, file);
-    dump_cpp_close_namespace(stream, "spb::pb::detail");
+    dump_cpp_close_namespace(stream, "detail");
+    dump_cpp_close_namespace(stream, "spb::pb");
 }
 
 void dump_pb_cpp(const proto_file &file, const std::filesystem::path &header_file, std::ostream &stream)
 {
     dump_cpp_includes(stream, header_file.string());
-    dump_cpp_open_namespace(stream, "spb::pb");
-    dump_cpp(stream, file);
-    dump_cpp_close_namespace(stream, "spb::pb");
+    dump_cpp_open_namespace(stream, "spb::pb::detail");
+    dump_cpp(stream, file, dump_cpp_serialize_value_gen);
+    dump_cpp(stream, file, dump_cpp_deserialize_value_gen);
+    dump_cpp(stream, file, dump_cpp_serialize_value);
+    dump_cpp_close_namespace(stream, "spb::pb::detail");
 }
