@@ -18,8 +18,8 @@ void dump_cpp_header(const proto_file &file, std::ostream &stream)
     try
     {
         dump_cpp_definitions(file, stream);
-        dump_json_header(file, stream);
         dump_pb_header(file, stream);
+        dump_json_header(file, stream);
     }
     catch (const std::exception &e)
     {
@@ -31,8 +31,8 @@ void dump_cpp(const proto_file &file, const std::filesystem::path &header_file, 
 {
     try
     {
-        dump_json_cpp(file, header_file, file_stream);
         dump_pb_cpp(file, header_file, file_stream);
+        dump_json_cpp(file, header_file, file_stream);
     }
     catch (const std::exception &e)
     {

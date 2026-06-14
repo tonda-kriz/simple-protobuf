@@ -1,4 +1,5 @@
 #include "spb/concepts.h"
+#include "spb/pb/serialize.hpp"
 #include "spb/pb/wire-types.h"
 #include <array>
 #include <cstdint>
@@ -142,21 +143,14 @@ auto to_bytes(std::string_view str) -> std::vector<std::byte>
     return {span.data(), span.data() + span.size()};
 }
 
-template <spb::pb::detail::scalar_encoder encoder, typename T>
-auto pb_serialize_as(const T &value) -> std::string
+template <spb::pb::detail::serialize_mode mode> auto pb_serialize(const auto &value) -> std::string
 {
-    auto size_stream = spb::pb::detail::ostream(nullptr);
-    spb::pb::detail::serialize_as<encoder>(size_stream, spb::pb::detail::field_attributes{.number = 1},
-                                           value);
-    const auto size = size_stream.size();
+    auto size_stream = spb::pb::detail::ostream_size();
+    spb::pb::detail::serialize<mode>(size_stream, 1, value);
+    const auto size = size_stream.size;
     auto result = std::string(size, '\0');
-    auto writer = [ptr = result.data()](const void *data, size_t size) mutable
-    {
-        memcpy(ptr, data, size);
-        ptr += size;
-    };
-    auto stream = spb::pb::detail::ostream(writer);
-    spb::pb::detail::serialize_as<encoder>(stream, spb::pb::detail::field_attributes{.number = 1}, value);
+    auto stream = spb::pb::detail::ostream_buffer(result.data());
+    spb::pb::detail::serialize<mode>(stream, 1, value);
     return result;
 }
 
@@ -1742,39 +1736,32 @@ TEST_CASE("protobuf")
     }
     SUBCASE("map")
     {
+        constexpr auto mode = spb::pb::detail::serialize_mode{.encoder = scalar_encoder::varint,
+                                                              .encoder2 = scalar_encoder::varint};
         SUBCASE("int32/int32")
         {
-            CHECK(pb_serialize_as<scalar_encoder_combine(scalar_encoder::varint, scalar_encoder::varint)>(
-                      std::map<int32_t, int32_t>{{1, 2}}) == "\x0a\x04\x08\x01\x10\x02");
-            CHECK(pb_serialize_as<scalar_encoder_combine(spb::pb::detail::scalar_encoder::varint,
-                                                         spb::pb::detail::scalar_encoder::varint)>(
-                      std::map<int32_t, int32_t>{{1, 2}, {2, 3}}) ==
+            CHECK(pb_serialize<mode>(std::map<int32_t, int32_t>{{1, 2}}) == "\x0a\x04\x08\x01\x10\x02");
+            CHECK(pb_serialize<mode>(std::map<int32_t, int32_t>{{1, 2}, {2, 3}}) ==
                   "\x0a\x08\x08\x01\x10\x02\x08\x02\x10\x03");
         }
         SUBCASE("string/string")
         {
-            CHECK(pb_serialize_as<scalar_encoder_combine(spb::pb::detail::scalar_encoder::varint,
-                                                         spb::pb::detail::scalar_encoder::varint)>(
-                      std::map<std::string, std::string>{{"hello", "world"}}) ==
+            CHECK(pb_serialize<mode>(std::map<std::string, std::string>{{"hello", "world"}}) ==
                   "\x0a\x0e\x0a\x05hello\x12\x05world");
         }
         SUBCASE("int32/string")
         {
-            CHECK(pb_serialize_as<scalar_encoder_combine(spb::pb::detail::scalar_encoder::varint,
-                                                         spb::pb::detail::scalar_encoder::varint)>(
-                      std::map<int32_t, std::string>{{1, "hello"}}) == "\x0a\x09\x08\x01\x12\x05hello");
+            CHECK(pb_serialize<mode>(std::map<int32_t, std::string>{{1, "hello"}}) ==
+                  "\x0a\x09\x08\x01\x12\x05hello");
         }
         SUBCASE("string/int32")
         {
-            CHECK(pb_serialize_as<scalar_encoder_combine(spb::pb::detail::scalar_encoder::varint,
-                                                         spb::pb::detail::scalar_encoder::varint)>(
-                      std::map<std::string, int32_t>{{"hello", 2}}) == "\x0a\x09\x0a\x05hello\x10\x02");
+            CHECK(pb_serialize<mode>(std::map<std::string, int32_t>{{"hello", 2}}) ==
+                  "\x0a\x09\x0a\x05hello\x10\x02");
         }
         SUBCASE("string/name")
         {
-            CHECK(pb_serialize_as<scalar_encoder_combine(spb::pb::detail::scalar_encoder::varint,
-                                                         spb::pb::detail::scalar_encoder::varint)>(
-                      std::map<std::string, Test::Name>{{"hello", {.name = "john"}}}) ==
+            CHECK(pb_serialize<mode>(std::map<std::string, Test::Name>{{"hello", {.name = "john"}}}) ==
                   "\x0a\x0f\x0a\x05hello\x12\x06\x0A\x04john");
         }
     }
