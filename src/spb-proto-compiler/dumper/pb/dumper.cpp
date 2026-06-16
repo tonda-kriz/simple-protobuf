@@ -15,8 +15,6 @@
 #include "ast/proto-file.h"
 #include "template-h.h"
 #include <spb/io/function_ref.hpp>
-#include <sstream>
-#include <stdexcept>
 #include <string>
 #include <string_view>
 

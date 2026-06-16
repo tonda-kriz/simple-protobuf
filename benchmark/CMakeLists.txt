@@ -1,40 +1,62 @@
-add_library(spb-common STATIC spb-common.cpp proto/addressbook.proto)
+add_library(spb-common STATIC spb/common.cpp proto/addressbook.proto)
 spb_protobuf_generate(TARGET spb-common)
 spb_set_compile_options(spb-common)
 
-add_executable(spb-benchmark spb-benchmark.cpp)
+add_executable(spb-benchmark spb/benchmark.cpp)
 target_link_libraries(spb-benchmark PUBLIC spb-common)
 spb_set_compile_options(spb-benchmark)
 
-add_executable(spb-pb-serialize spb-pb-serialize.cpp)
+add_executable(spb-pb-serialize spb/pb-serialize.cpp)
 target_link_libraries(spb-pb-serialize PUBLIC spb-common)
 spb_set_compile_options(spb-pb-serialize)
 
-add_executable(spb-pb-deserialize spb-pb-deserialize.cpp)
+add_executable(spb-pb-deserialize spb/pb-deserialize.cpp)
 target_link_libraries(spb-pb-deserialize PUBLIC spb-common)
 spb_set_compile_options(spb-pb-deserialize)
 
-add_executable(spb-json-serialize spb-json-serialize.cpp)
+add_executable(spb-json-serialize spb/json-serialize.cpp)
 target_link_libraries(spb-json-serialize PUBLIC spb-common)
 spb_set_compile_options(spb-json-serialize)
 
-add_executable(spb-json-deserialize spb-json-deserialize.cpp)
+add_executable(spb-json-deserialize spb/json-deserialize.cpp)
 target_link_libraries(spb-json-deserialize PUBLIC spb-common)
 spb_set_compile_options(spb-json-deserialize)
 
-PROTOBUF_GENERATE_CPP(PROTO_BOOK_SRC PROTO_BOOK_HDR ${CMAKE_CURRENT_LIST_DIR}/proto/gpb-addressbook.proto)
-add_library(gpb-common STATIC gpb-common.cpp ${PROTO_BOOK_SRC})
+add_executable(spb-utf8 spb/utf8.cpp)
+target_link_libraries(spb-utf8 PUBLIC spb::proto)
+spb_set_compile_options(spb-utf8)
+
+PROTOBUF_GENERATE_CPP(PROTO_BOOK_SRC PROTO_BOOK_HDR ${CMAKE_CURRENT_LIST_DIR}/proto/addressbook.proto)
+add_library(gpb-common STATIC gpb/common.cpp ${PROTO_BOOK_SRC})
 target_link_libraries(gpb-common PUBLIC protobuf::libprotobuf)
 spb_set_compile_options(gpb-common)
 
-add_executable(gpb-benchmark gpb-benchmark.cpp)
+PROTOBUF_GENERATE_CPP(PROTO_BOOK_LITE_SRC PROTO_BOOK_LITE_HDR ${CMAKE_CURRENT_LIST_DIR}/proto/addressbook-lite.proto)
+add_library(gpb-common-lite STATIC gpb/common.cpp ${PROTO_BOOK_LITE_SRC})
+target_compile_definitions(gpb-common-lite PUBLIC GPB_LITE=1)
+target_link_libraries(gpb-common-lite PUBLIC protobuf::libprotobuf-lite)
+spb_set_compile_options(gpb-common-lite)
+
+add_executable(gpb-benchmark gpb/benchmark.cpp)
 spb_set_compile_options(gpb-benchmark)
 target_link_libraries(gpb-benchmark PUBLIC gpb-common)
 
-add_executable(gpb-pb-serialize gpb-pb-serialize.cpp)
+add_executable(gpb-benchmark-lite gpb/benchmark.cpp)
+spb_set_compile_options(gpb-benchmark-lite)
+target_link_libraries(gpb-benchmark-lite PUBLIC gpb-common-lite)
+
+add_executable(gpb-pb-serialize gpb/pb-serialize.cpp)
 spb_set_compile_options(gpb-pb-serialize)
 target_link_libraries(gpb-pb-serialize PUBLIC gpb-common)
 
-add_executable(gpb-pb-deserialize gpb-pb-deserialize.cpp)
+add_executable(gpb-pb-serialize-lite gpb/pb-serialize.cpp)
+spb_set_compile_options(gpb-pb-serialize-lite)
+target_link_libraries(gpb-pb-serialize-lite PUBLIC gpb-common-lite)
+
+add_executable(gpb-pb-deserialize gpb/pb-deserialize.cpp)
 spb_set_compile_options(gpb-pb-deserialize)
 target_link_libraries(gpb-pb-deserialize PUBLIC gpb-common)
+
+add_executable(gpb-pb-deserialize-lite gpb/pb-deserialize.cpp)
+spb_set_compile_options(gpb-pb-deserialize-lite)
+target_link_libraries(gpb-pb-deserialize-lite PUBLIC gpb-common-lite)

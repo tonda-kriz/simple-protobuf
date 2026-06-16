@@ -175,16 +175,9 @@ struct ostream
         {
         case '\\':
         case '\"':
-        case '\b':
-        case '\f':
-        case '\n':
-        case '\r':
-        case '\t':
-        case '<':
-        case '>':
             return true;
         default:
-            return (c <= 0x1f) | (c >= 0x7f);
+            return (c <= 0x1f) | (c >= 0x80);
         }
     }
 

@@ -1,5 +1,7 @@
 syntax = "proto3";
 
+option optimize_for = LITE_RUNTIME;
+
 message Person {
   string name = 1;
   int32 id = 2;

@@ -1,6 +1,6 @@
-#include "gpb-common.h"
+#include "common.h"
 
-void init_message(gpb::benchmark::AddressBook &book)
+void init_message(AddressBook &book)
 {
     {
         auto *person = book.add_people();
@@ -10,12 +10,12 @@ void init_message(gpb::benchmark::AddressBook &book)
         {
             auto *phone = person->add_phones();
             phone->set_number("777888999");
-            phone->set_type(gpb::benchmark::Person_PhoneType::Person_PhoneType_PHONE_TYPE_MOBILE);
+            phone->set_type(Person_PhoneType::Person_PhoneType_PHONE_TYPE_MOBILE);
         }
         {
             auto *phone = person->add_phones();
             phone->set_number("456895251");
-            phone->set_type(gpb::benchmark::Person_PhoneType::Person_PhoneType_PHONE_TYPE_HOME);
+            phone->set_type(Person_PhoneType::Person_PhoneType_PHONE_TYPE_HOME);
         }
     }
     {
@@ -26,12 +26,12 @@ void init_message(gpb::benchmark::AddressBook &book)
         {
             auto *phone = person->add_phones();
             phone->set_number("5689571");
-            phone->set_type(gpb::benchmark::Person_PhoneType::Person_PhoneType_PHONE_TYPE_MOBILE);
+            phone->set_type(Person_PhoneType::Person_PhoneType_PHONE_TYPE_MOBILE);
         }
         {
             auto *phone = person->add_phones();
             phone->set_number("6589652");
-            phone->set_type(gpb::benchmark::Person_PhoneType::Person_PhoneType_PHONE_TYPE_HOME);
+            phone->set_type(Person_PhoneType::Person_PhoneType_PHONE_TYPE_HOME);
         }
     }
 }

@@ -11,6 +11,7 @@
 #pragma once
 
 #include "../concepts.h"
+#include "../utf8.h"
 #include "wire-types.h"
 #include <cstddef>
 #include <cstdint>
@@ -268,6 +269,9 @@ void serialize(auto &stream, uint32_t field, const spb::detail::proto_field_stri
 
     if constexpr (!stream_type::size_only && mode.max_size)
         check_size(value.size(), mode.max_size);
+
+    if constexpr (!stream_type::size_only)
+        spb::detail::utf8::validate(std::string_view(value.data(), value.size()));
 
     serialize_tag(stream, field, wire_type::length_delimited);
     serialize_varint(stream, value.size());

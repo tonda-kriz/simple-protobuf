@@ -1,15 +1,17 @@
 #define ANKERL_NANOBENCH_IMPLEMENT
+#include "../nanobench.h"
+#include "common.h"
+#ifndef GPB_LITE
 #include "google/protobuf/util/json_util.h"
-#include "gpb-common.h"
-#include "nanobench.h"
-#include <vector>
+#endif
+#include <string>
 
 int main()
 {
     std::string buffer;
     buffer.reserve(1024);
 
-    gpb::benchmark::AddressBook book;
+    AddressBook book;
     init_message(book);
 
     ankerl::nanobench::Bench().minEpochIterations(100000).run("gpb-serialize",
@@ -23,7 +25,7 @@ int main()
     ankerl::nanobench::Bench().minEpochIterations(100000).run("gpb-init-serialize",
                                                               [&buffer]
                                                               {
-                                                                  gpb::benchmark::AddressBook book;
+                                                                  AddressBook book;
                                                                   init_message(book);
                                                                   const auto res =
                                                                       book.SerializeToString(&buffer);
@@ -33,12 +35,12 @@ int main()
     ankerl::nanobench::Bench().minEpochIterations(100000).run("gpb-deserialize",
                                                               [&buffer]
                                                               {
-                                                                  gpb::benchmark::AddressBook book;
+                                                                  AddressBook book;
                                                                   const auto res =
                                                                       book.ParseFromString(buffer);
                                                                   ankerl::nanobench::doNotOptimizeAway(res);
                                                               });
-
+#ifndef GPB_LITE
     ankerl::nanobench::Bench().minEpochIterations(10000).run(
         "json-serialize",
         [&]
@@ -52,7 +54,7 @@ int main()
         "json-init-serialize",
         [&buffer]
         {
-            gpb::benchmark::AddressBook book;
+            AddressBook book;
             init_message(book);
             buffer.clear();
             const auto res = google::protobuf::util::MessageToJsonString(book, &buffer);
@@ -63,8 +65,9 @@ int main()
         "json-deserialize",
         [&]
         {
-            gpb::benchmark::AddressBook book;
+            AddressBook book;
             const auto res = google::protobuf::util::JsonStringToMessage(buffer, &book);
             ankerl::nanobench::doNotOptimizeAway(book);
         });
+#endif
 }

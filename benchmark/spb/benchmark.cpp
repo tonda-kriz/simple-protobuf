@@ -1,6 +1,6 @@
 #define ANKERL_NANOBENCH_IMPLEMENT
-#include "nanobench.h"
-#include "spb-common.h"
+#include "../nanobench.h"
+#include "common.h"
 #include <string>
 
 int main()
@@ -31,7 +31,7 @@ int main()
         "pb-deserialize",
         [&]
         {
-            const auto book = spb::pb::deserialize<spb::benchmark::AddressBook>(buffer);
+            const auto book = spb::pb::deserialize<AddressBook>(buffer);
             ankerl::nanobench::doNotOptimizeAway(book);
         });
 
@@ -56,7 +56,7 @@ int main()
         "json-deserialize",
         [&]
         {
-            const auto book = spb::json::deserialize<spb::benchmark::AddressBook>(buffer);
+            const auto book = spb::json::deserialize<AddressBook>(buffer);
             ankerl::nanobench::doNotOptimizeAway(book);
         });
 }

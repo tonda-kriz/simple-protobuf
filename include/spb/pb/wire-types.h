@@ -12,7 +12,6 @@
 
 #include <cstdint>
 #include <stdexcept>
-#include <type_traits>
 
 namespace spb::pb::detail
 {

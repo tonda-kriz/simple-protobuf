@@ -1,10 +1,10 @@
-#include "gpb-common.h"
+#include "common.h"
 #include <string>
 
 int main()
 {
     std::string buffer(127, 'g');
-    gpb::benchmark::AddressBook addressbook;
+    AddressBook addressbook;
     const auto res = addressbook.ParseFromString(buffer);
     return res ? 0 : 1;
 }

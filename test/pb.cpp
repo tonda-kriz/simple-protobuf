@@ -2,9 +2,7 @@
 #include "spb/pb/serialize.hpp"
 #include "spb/pb/wire-types.h"
 #include <array>
-#include <cstdint>
 #include <name.pb.h>
-#include <optional>
 #include <person.pb.h>
 #include <proto/array.pb.h>
 #include <proto/enum.pb.h>
