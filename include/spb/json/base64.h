@@ -18,8 +18,7 @@
 
 namespace spb::json::detail
 {
-template <typename ostream>
-static inline void base64_encode(ostream &output, std::span<const std::byte> input)
+template <typename ostream> void base64_encode(ostream &output, std::span<const std::byte> input)
 {
     static constexpr char encode_table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
@@ -62,8 +61,8 @@ static inline void base64_encode(ostream &output, std::span<const std::byte> inp
 }
 
 template <typename istream>
-static inline void base64_decode_string(spb::detail::proto_field_bytes auto &output, istream &stream,
-                                        size_t max_output_size = 0)
+void base64_decode_string(spb::detail::proto_field_bytes auto &output, istream &stream,
+                          size_t max_output_size = 0)
 {
     static constexpr uint8_t decode_table[256] = {
         128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128, 128,

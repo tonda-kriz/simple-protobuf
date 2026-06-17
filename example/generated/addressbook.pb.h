@@ -6,6 +6,7 @@
 #include <optional>
 #include <spb/json.hpp>
 #include <spb/pb.hpp>
+#include <string>
 #include <vector>
 
 namespace tutorial
@@ -35,36 +36,147 @@ struct AddressBook
 };
 } // namespace tutorial
 
+namespace spb::pb
+{
+
+/**
+ * @brief serialize message via writer
+ *
+ * @param[in] message to be serialized
+ * @param[in] on_write function for handling the writes
+ * @param[in] options
+ * @return serialized size in bytes
+ * @throws exceptions only from `on_write`
+ */
+auto serialize(const auto &message, spb::io::writer on_write, const serialize_options &options) -> size_t;
+
+/**
+ * @brief return protobuf serialized size in bytes
+ *
+ * @param[in] message to be serialized
+ * @param[in] options
+ * @return serialized size in bytes
+ */
+auto serialize_size(const auto &message, const serialize_options &options) -> size_t;
+
+/**
+ * @brief serialize message into a buffer
+ *        Warning: User is responsible for allocating buffers size (use `auto buffer_size =
+ * serialize_size(message)`)
+ *
+ * @param[in] message to be serialized
+ * @param[in] options
+ * @return serialized size in bytes
+ */
+auto serialize(const auto &message, void *buffer, const serialize_options &options) -> size_t;
+
+/**
+ * @brief serialize message into protobuf
+ *
+ * @param[in] message to be serialized
+ * @param[in] options
+ * @param[out] result serialized message
+ * @return serialized size in bytes
+ * @throws std::runtime_error on error
+ * @example `auto serialized = std::vector<std::byte>();`
+ *          `spb::pb::serialize(message, serialized);`
+ */
+template <spb::resizable_container Container>
+auto serialize(const auto &message, Container &result, const serialize_options &options) -> size_t;
+
+/**
+ * @brief serialize message into protobuf
+ *
+ * @param[in] message to be serialized
+ * @param[in] options
+ * @return serialized message
+ * @throws std::runtime_error on error
+ * @example `auto serialized_message = spb::pb::serialize(message);`
+ */
+template <spb::resizable_container Container>
+auto serialize(const auto &message, const serialize_options &options) -> Container;
+
+/**
+ * @brief deserialize message from protobuf
+ *
+ * @param[in] reader function for handling reads
+ * @param[in] options
+ * @param[out] message deserialized message
+ * @throws std::runtime_error on error
+ */
+void deserialize(auto &message, spb::io::reader reader, const deserialize_options &options);
+
+/**
+ * @brief deserialize message from protobuf
+ *
+ * @param[in] protobuf string with protobuf
+ * @param[in] options
+ * @param[out] message deserialized message
+ * @throws std::runtime_error on error
+ * @example `auto serialized = std::string( ... );`
+ *          `auto message = Message();`
+ *          `spb::pb::deserialize(message, serialized);`
+ */
+template <typename Message, spb::size_container Container>
+void deserialize(Message &message, const Container &protobuf, const deserialize_options &options);
+
+/**
+ * @brief deserialize message from protobuf
+ *
+ * @param[in] protobuf serialized protobuf
+ * @param[in] options
+ * @return deserialized message
+ * @throws std::runtime_error on error
+ * @example `auto serialized = std::string( ... );`
+ *          `auto message = spb::pb::deserialize<Message>(serialized);`
+ */
+template <typename Message, spb::size_container Container>
+auto deserialize(const Container &protobuf, const deserialize_options &options) -> Message;
+
+/**
+ * @brief deserialize message from reader
+ *
+ * @param[in] reader function for handling reads
+ * @param[in] options
+ * @return deserialized message
+ * @throws std::runtime_error on error
+ */
+template <typename Message>
+auto deserialize(spb::io::reader reader, const deserialize_options &options) -> Message;
+
+namespace detail
+{
+void serialize_value(ostream_size &, const ::tutorial::Person &message);
+void serialize_value(ostream_writer &, const ::tutorial::Person &message);
+void serialize_value(ostream_buffer &, const ::tutorial::Person &message);
+void deserialize_value(istream_reader &, ::tutorial::Person &message, tag_type);
+void deserialize_value(istream_buffer &, ::tutorial::Person &message, tag_type);
+void serialize_value(ostream_size &, const ::tutorial::AddressBook &message);
+void serialize_value(ostream_writer &, const ::tutorial::AddressBook &message);
+void serialize_value(ostream_buffer &, const ::tutorial::AddressBook &message);
+void deserialize_value(istream_reader &, ::tutorial::AddressBook &message, tag_type);
+void deserialize_value(istream_buffer &, ::tutorial::AddressBook &message, tag_type);
+void serialize_value(ostream_size &, const ::tutorial::Person::PhoneNumber &message);
+void serialize_value(ostream_writer &, const ::tutorial::Person::PhoneNumber &message);
+void serialize_value(ostream_buffer &, const ::tutorial::Person::PhoneNumber &message);
+void deserialize_value(istream_reader &, ::tutorial::Person::PhoneNumber &message, tag_type);
+void deserialize_value(istream_buffer &, ::tutorial::Person::PhoneNumber &message, tag_type);
+} // namespace detail
+} // namespace spb::pb
 namespace spb::json::detail
 {
 struct ostream;
 struct istream;
 
-void serialize_value(ostream &stream, const ::tutorial::Person &value);
-void deserialize_value(istream &stream, ::tutorial::Person &value);
+void serialize_value(ostream &, const ::tutorial::Person &);
+void deserialize_value(istream &, ::tutorial::Person &);
 
-void serialize_value(ostream &stream, const ::tutorial::AddressBook &value);
-void deserialize_value(istream &stream, ::tutorial::AddressBook &value);
+void serialize_value(ostream &, const ::tutorial::AddressBook &);
+void deserialize_value(istream &, ::tutorial::AddressBook &);
 
-void serialize_value(ostream &stream, const ::tutorial::Person::PhoneNumber &value);
-void deserialize_value(istream &stream, ::tutorial::Person::PhoneNumber &value);
+void serialize_value(ostream &, const ::tutorial::Person::PhoneNumber &);
+void deserialize_value(istream &, ::tutorial::Person::PhoneNumber &);
 
-void serialize_value(ostream &stream, const ::tutorial::Person::PhoneType &value);
-void deserialize_value(istream &stream, ::tutorial::Person::PhoneType &value);
-
+void serialize_value(ostream &, const ::tutorial::Person::PhoneType &);
+void deserialize_value(istream &, ::tutorial::Person::PhoneType &);
 } // namespace spb::json::detail
-namespace spb::pb::detail
-{
-struct ostream;
-struct istream;
-
-void serialize(ostream &stream, const ::tutorial::Person &value);
-void deserialize_value(istream &stream, ::tutorial::Person &value, tag_type tag);
-
-void serialize(ostream &stream, const ::tutorial::AddressBook &value);
-void deserialize_value(istream &stream, ::tutorial::AddressBook &value, tag_type tag);
-
-void serialize(ostream &stream, const ::tutorial::Person::PhoneNumber &value);
-void deserialize_value(istream &stream, ::tutorial::Person::PhoneNumber &value, tag_type tag);
-
-} // namespace spb::pb::detail

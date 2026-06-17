@@ -11,7 +11,7 @@
 \***************************************************************************/
 #pragma once
 
-#include <climits>
+#include <cstddef>
 #include <cstdint>
 #include <stdexcept>
 #include <string_view>
@@ -24,7 +24,7 @@ namespace spb::detail::utf8
 
 constexpr uint8_t ok = 0;
 
-static auto inline decode_point(uint32_t *state, uint32_t *codep, uint8_t byte) -> uint32_t
+inline uint32_t decode_point(uint32_t *state, uint32_t *codep, uint8_t byte)
 {
     static const uint8_t utf8d[] = {
         0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,   0,
@@ -69,7 +69,7 @@ static auto inline decode_point(uint32_t *state, uint32_t *codep, uint8_t byte) 
  * @param utf8 output
  * @return size of output in bytes, 0 on error
  */
-static inline auto encode_point(uint32_t unicode, char utf8[4]) -> uint32_t
+inline uint32_t encode_point(uint32_t unicode, char utf8[4])
 {
     if (unicode <= 0x7F)
     {
@@ -103,20 +103,32 @@ static inline auto encode_point(uint32_t unicode, char utf8[4]) -> uint32_t
     return 0;
 }
 
-static inline auto is_valid(std::string_view str) -> bool
+inline bool is_valid(std::string_view str)
 {
-    uint32_t codepoint;
-    uint32_t state = ok;
+    constexpr size_t mask = (size_t)0x8080808080808080ULL;
 
-    for (uint8_t c : str)
+    const auto *start = str.data();
+    const auto *end = str.data() + str.size() - sizeof(size_t);
+
+    while (start <= end)
     {
-        decode_point(&state, &codepoint, c);
+        const size_t value = *(size_t *)start;
+        if ((value & mask) == 0) [[likely]]
+            start += sizeof(value);
+        else
+            break;
     }
 
+    end = str.data() + str.size();
+    uint32_t state = ok;
+    for (uint32_t codepoint; start < end; ++start)
+    {
+        decode_point(&state, &codepoint, *start);
+    }
     return state == ok;
 }
 
-static inline void validate(std::string_view value)
+inline void validate(std::string_view value)
 {
     if (!spb::detail::utf8::is_valid(std::string_view(value.data(), value.size()))) [[unlikely]]
         throw std::runtime_error("invalid utf8 string");

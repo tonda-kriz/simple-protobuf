@@ -124,6 +124,7 @@ void get_std_includes(cpp_includes &includes, const proto_file &file)
     includes.insert("<vector>");
     includes.insert("<optional>");
     includes.insert("<memory>");
+    includes.insert("<string>");
 
     if (contains_map(file.package.messages))
         includes.insert("<map>");

@@ -7,6 +7,7 @@
 #include <optional>
 #include <spb/json.hpp>
 #include <spb/pb.hpp>
+#include <string>
 #include <vector>
 
 namespace SPB::Options
@@ -137,130 +138,271 @@ struct Containers
 };
 } // namespace SPB::Options
 
+namespace spb::pb
+{
+
+/**
+ * @brief serialize message via writer
+ *
+ * @param[in] message to be serialized
+ * @param[in] on_write function for handling the writes
+ * @param[in] options
+ * @return serialized size in bytes
+ * @throws exceptions only from `on_write`
+ */
+auto serialize(const auto &message, spb::io::writer on_write, const serialize_options &options) -> size_t;
+
+/**
+ * @brief return protobuf serialized size in bytes
+ *
+ * @param[in] message to be serialized
+ * @param[in] options
+ * @return serialized size in bytes
+ */
+auto serialize_size(const auto &message, const serialize_options &options) -> size_t;
+
+/**
+ * @brief serialize message into a buffer
+ *        Warning: User is responsible for allocating buffers size (use `auto buffer_size =
+ * serialize_size(message)`)
+ *
+ * @param[in] message to be serialized
+ * @param[in] options
+ * @return serialized size in bytes
+ */
+auto serialize(const auto &message, void *buffer, const serialize_options &options) -> size_t;
+
+/**
+ * @brief serialize message into protobuf
+ *
+ * @param[in] message to be serialized
+ * @param[in] options
+ * @param[out] result serialized message
+ * @return serialized size in bytes
+ * @throws std::runtime_error on error
+ * @example `auto serialized = std::vector<std::byte>();`
+ *          `spb::pb::serialize(message, serialized);`
+ */
+template <spb::resizable_container Container>
+auto serialize(const auto &message, Container &result, const serialize_options &options) -> size_t;
+
+/**
+ * @brief serialize message into protobuf
+ *
+ * @param[in] message to be serialized
+ * @param[in] options
+ * @return serialized message
+ * @throws std::runtime_error on error
+ * @example `auto serialized_message = spb::pb::serialize(message);`
+ */
+template <spb::resizable_container Container>
+auto serialize(const auto &message, const serialize_options &options) -> Container;
+
+/**
+ * @brief deserialize message from protobuf
+ *
+ * @param[in] reader function for handling reads
+ * @param[in] options
+ * @param[out] message deserialized message
+ * @throws std::runtime_error on error
+ */
+void deserialize(auto &message, spb::io::reader reader, const deserialize_options &options);
+
+/**
+ * @brief deserialize message from protobuf
+ *
+ * @param[in] protobuf string with protobuf
+ * @param[in] options
+ * @param[out] message deserialized message
+ * @throws std::runtime_error on error
+ * @example `auto serialized = std::string( ... );`
+ *          `auto message = Message();`
+ *          `spb::pb::deserialize(message, serialized);`
+ */
+template <typename Message, spb::size_container Container>
+void deserialize(Message &message, const Container &protobuf, const deserialize_options &options);
+
+/**
+ * @brief deserialize message from protobuf
+ *
+ * @param[in] protobuf serialized protobuf
+ * @param[in] options
+ * @return deserialized message
+ * @throws std::runtime_error on error
+ * @example `auto serialized = std::string( ... );`
+ *          `auto message = spb::pb::deserialize<Message>(serialized);`
+ */
+template <typename Message, spb::size_container Container>
+auto deserialize(const Container &protobuf, const deserialize_options &options) -> Message;
+
+/**
+ * @brief deserialize message from reader
+ *
+ * @param[in] reader function for handling reads
+ * @param[in] options
+ * @return deserialized message
+ * @throws std::runtime_error on error
+ */
+template <typename Message>
+auto deserialize(spb::io::reader reader, const deserialize_options &options) -> Message;
+
+namespace detail
+{
+void serialize_value(ostream_size &, const ::SPB::Options::Integers &message);
+void serialize_value(ostream_writer &, const ::SPB::Options::Integers &message);
+void serialize_value(ostream_buffer &, const ::SPB::Options::Integers &message);
+void deserialize_value(istream_reader &, ::SPB::Options::Integers &message, tag_type);
+void deserialize_value(istream_buffer &, ::SPB::Options::Integers &message, tag_type);
+void serialize_value(ostream_size &, const ::SPB::Options::BitFields &message);
+void serialize_value(ostream_writer &, const ::SPB::Options::BitFields &message);
+void serialize_value(ostream_buffer &, const ::SPB::Options::BitFields &message);
+void deserialize_value(istream_reader &, ::SPB::Options::BitFields &message, tag_type);
+void deserialize_value(istream_buffer &, ::SPB::Options::BitFields &message, tag_type);
+void serialize_value(ostream_size &, const ::SPB::Options::MaximumCount &message);
+void serialize_value(ostream_writer &, const ::SPB::Options::MaximumCount &message);
+void serialize_value(ostream_buffer &, const ::SPB::Options::MaximumCount &message);
+void deserialize_value(istream_reader &, ::SPB::Options::MaximumCount &message, tag_type);
+void deserialize_value(istream_buffer &, ::SPB::Options::MaximumCount &message, tag_type);
+void serialize_value(ostream_size &, const ::SPB::Options::MaximumSize &message);
+void serialize_value(ostream_writer &, const ::SPB::Options::MaximumSize &message);
+void serialize_value(ostream_buffer &, const ::SPB::Options::MaximumSize &message);
+void deserialize_value(istream_reader &, ::SPB::Options::MaximumSize &message, tag_type);
+void deserialize_value(istream_buffer &, ::SPB::Options::MaximumSize &message, tag_type);
+void serialize_value(ostream_size &, const ::SPB::Options::Containers &message);
+void serialize_value(ostream_writer &, const ::SPB::Options::Containers &message);
+void serialize_value(ostream_buffer &, const ::SPB::Options::Containers &message);
+void deserialize_value(istream_reader &, ::SPB::Options::Containers &message, tag_type);
+void deserialize_value(istream_buffer &, ::SPB::Options::Containers &message, tag_type);
+void serialize_value(ostream_size &, const ::SPB::Options::MaximumCount::Person &message);
+void serialize_value(ostream_writer &, const ::SPB::Options::MaximumCount::Person &message);
+void serialize_value(ostream_buffer &, const ::SPB::Options::MaximumCount::Person &message);
+void deserialize_value(istream_reader &, ::SPB::Options::MaximumCount::Person &message, tag_type);
+void deserialize_value(istream_buffer &, ::SPB::Options::MaximumCount::Person &message, tag_type);
+void serialize_value(ostream_size &, const ::SPB::Options::Containers::Repeated &message);
+void serialize_value(ostream_writer &, const ::SPB::Options::Containers::Repeated &message);
+void serialize_value(ostream_buffer &, const ::SPB::Options::Containers::Repeated &message);
+void deserialize_value(istream_reader &, ::SPB::Options::Containers::Repeated &message, tag_type);
+void deserialize_value(istream_buffer &, ::SPB::Options::Containers::Repeated &message, tag_type);
+void serialize_value(ostream_size &, const ::SPB::Options::Containers::String &message);
+void serialize_value(ostream_writer &, const ::SPB::Options::Containers::String &message);
+void serialize_value(ostream_buffer &, const ::SPB::Options::Containers::String &message);
+void deserialize_value(istream_reader &, ::SPB::Options::Containers::String &message, tag_type);
+void deserialize_value(istream_buffer &, ::SPB::Options::Containers::String &message, tag_type);
+void serialize_value(ostream_size &, const ::SPB::Options::Containers::Bytes &message);
+void serialize_value(ostream_writer &, const ::SPB::Options::Containers::Bytes &message);
+void serialize_value(ostream_buffer &, const ::SPB::Options::Containers::Bytes &message);
+void deserialize_value(istream_reader &, ::SPB::Options::Containers::Bytes &message, tag_type);
+void deserialize_value(istream_buffer &, ::SPB::Options::Containers::Bytes &message, tag_type);
+void serialize_value(ostream_size &, const ::SPB::Options::Containers::Optional &message);
+void serialize_value(ostream_writer &, const ::SPB::Options::Containers::Optional &message);
+void serialize_value(ostream_buffer &, const ::SPB::Options::Containers::Optional &message);
+void deserialize_value(istream_reader &, ::SPB::Options::Containers::Optional &message, tag_type);
+void deserialize_value(istream_buffer &, ::SPB::Options::Containers::Optional &message, tag_type);
+void serialize_value(ostream_size &, const ::SPB::Options::Containers::String::SubStrings &message);
+void serialize_value(ostream_writer &, const ::SPB::Options::Containers::String::SubStrings &message);
+void serialize_value(ostream_buffer &, const ::SPB::Options::Containers::String::SubStrings &message);
+void deserialize_value(istream_reader &, ::SPB::Options::Containers::String::SubStrings &message, tag_type);
+void deserialize_value(istream_buffer &, ::SPB::Options::Containers::String::SubStrings &message, tag_type);
+void serialize_value(ostream_size &, const ::SPB::Options::Containers::Bytes::SubBytes &message);
+void serialize_value(ostream_writer &, const ::SPB::Options::Containers::Bytes::SubBytes &message);
+void serialize_value(ostream_buffer &, const ::SPB::Options::Containers::Bytes::SubBytes &message);
+void deserialize_value(istream_reader &, ::SPB::Options::Containers::Bytes::SubBytes &message, tag_type);
+void deserialize_value(istream_buffer &, ::SPB::Options::Containers::Bytes::SubBytes &message, tag_type);
+void serialize_value(ostream_size &, const ::SPB::Options::Containers::Optional::CyclicDependency &message);
+void serialize_value(ostream_writer &, const ::SPB::Options::Containers::Optional::CyclicDependency &message);
+void serialize_value(ostream_buffer &, const ::SPB::Options::Containers::Optional::CyclicDependency &message);
+void deserialize_value(istream_reader &, ::SPB::Options::Containers::Optional::CyclicDependency &message,
+                       tag_type);
+void deserialize_value(istream_buffer &, ::SPB::Options::Containers::Optional::CyclicDependency &message,
+                       tag_type);
+void serialize_value(ostream_size &,
+                     const ::SPB::Options::Containers::Optional::CyclicDependency::MessageA &message);
+void serialize_value(ostream_writer &,
+                     const ::SPB::Options::Containers::Optional::CyclicDependency::MessageA &message);
+void serialize_value(ostream_buffer &,
+                     const ::SPB::Options::Containers::Optional::CyclicDependency::MessageA &message);
+void deserialize_value(istream_reader &,
+                       ::SPB::Options::Containers::Optional::CyclicDependency::MessageA &message, tag_type);
+void deserialize_value(istream_buffer &,
+                       ::SPB::Options::Containers::Optional::CyclicDependency::MessageA &message, tag_type);
+void serialize_value(ostream_size &,
+                     const ::SPB::Options::Containers::Optional::CyclicDependency::MessageC &message);
+void serialize_value(ostream_writer &,
+                     const ::SPB::Options::Containers::Optional::CyclicDependency::MessageC &message);
+void serialize_value(ostream_buffer &,
+                     const ::SPB::Options::Containers::Optional::CyclicDependency::MessageC &message);
+void deserialize_value(istream_reader &,
+                       ::SPB::Options::Containers::Optional::CyclicDependency::MessageC &message, tag_type);
+void deserialize_value(istream_buffer &,
+                       ::SPB::Options::Containers::Optional::CyclicDependency::MessageC &message, tag_type);
+void serialize_value(ostream_size &,
+                     const ::SPB::Options::Containers::Optional::CyclicDependency::MessageB &message);
+void serialize_value(ostream_writer &,
+                     const ::SPB::Options::Containers::Optional::CyclicDependency::MessageB &message);
+void serialize_value(ostream_buffer &,
+                     const ::SPB::Options::Containers::Optional::CyclicDependency::MessageB &message);
+void deserialize_value(istream_reader &,
+                       ::SPB::Options::Containers::Optional::CyclicDependency::MessageB &message, tag_type);
+void deserialize_value(istream_buffer &,
+                       ::SPB::Options::Containers::Optional::CyclicDependency::MessageB &message, tag_type);
+} // namespace detail
+} // namespace spb::pb
 namespace spb::json::detail
 {
 struct ostream;
 struct istream;
 
-void serialize_value(ostream &stream, const ::SPB::Options::Integers &value);
-void deserialize_value(istream &stream, ::SPB::Options::Integers &value);
+void serialize_value(ostream &, const ::SPB::Options::Integers &);
+void deserialize_value(istream &, ::SPB::Options::Integers &);
 
-void serialize_value(ostream &stream, const ::SPB::Options::BitFields &value);
-void deserialize_value(istream &stream, ::SPB::Options::BitFields &value);
+void serialize_value(ostream &, const ::SPB::Options::BitFields &);
+void deserialize_value(istream &, ::SPB::Options::BitFields &);
 
-void serialize_value(ostream &stream, const ::SPB::Options::MaximumCount &value);
-void deserialize_value(istream &stream, ::SPB::Options::MaximumCount &value);
+void serialize_value(ostream &, const ::SPB::Options::MaximumCount &);
+void deserialize_value(istream &, ::SPB::Options::MaximumCount &);
 
-void serialize_value(ostream &stream, const ::SPB::Options::MaximumSize &value);
-void deserialize_value(istream &stream, ::SPB::Options::MaximumSize &value);
+void serialize_value(ostream &, const ::SPB::Options::MaximumSize &);
+void deserialize_value(istream &, ::SPB::Options::MaximumSize &);
 
-void serialize_value(ostream &stream, const ::SPB::Options::Containers &value);
-void deserialize_value(istream &stream, ::SPB::Options::Containers &value);
+void serialize_value(ostream &, const ::SPB::Options::Containers &);
+void deserialize_value(istream &, ::SPB::Options::Containers &);
 
-void serialize_value(ostream &stream, const ::SPB::Options::MaximumCount::Person &value);
-void deserialize_value(istream &stream, ::SPB::Options::MaximumCount::Person &value);
+void serialize_value(ostream &, const ::SPB::Options::MaximumCount::Person &);
+void deserialize_value(istream &, ::SPB::Options::MaximumCount::Person &);
 
-void serialize_value(ostream &stream, const ::SPB::Options::Containers::Repeated &value);
-void deserialize_value(istream &stream, ::SPB::Options::Containers::Repeated &value);
+void serialize_value(ostream &, const ::SPB::Options::Containers::Repeated &);
+void deserialize_value(istream &, ::SPB::Options::Containers::Repeated &);
 
-void serialize_value(ostream &stream, const ::SPB::Options::Containers::String &value);
-void deserialize_value(istream &stream, ::SPB::Options::Containers::String &value);
+void serialize_value(ostream &, const ::SPB::Options::Containers::String &);
+void deserialize_value(istream &, ::SPB::Options::Containers::String &);
 
-void serialize_value(ostream &stream, const ::SPB::Options::Containers::Bytes &value);
-void deserialize_value(istream &stream, ::SPB::Options::Containers::Bytes &value);
+void serialize_value(ostream &, const ::SPB::Options::Containers::Bytes &);
+void deserialize_value(istream &, ::SPB::Options::Containers::Bytes &);
 
-void serialize_value(ostream &stream, const ::SPB::Options::Containers::Optional &value);
-void deserialize_value(istream &stream, ::SPB::Options::Containers::Optional &value);
+void serialize_value(ostream &, const ::SPB::Options::Containers::Optional &);
+void deserialize_value(istream &, ::SPB::Options::Containers::Optional &);
 
-void serialize_value(ostream &stream, const ::SPB::Options::Containers::String::SubStrings &value);
-void deserialize_value(istream &stream, ::SPB::Options::Containers::String::SubStrings &value);
+void serialize_value(ostream &, const ::SPB::Options::Containers::String::SubStrings &);
+void deserialize_value(istream &, ::SPB::Options::Containers::String::SubStrings &);
 
-void serialize_value(ostream &stream, const ::SPB::Options::Containers::Bytes::SubBytes &value);
-void deserialize_value(istream &stream, ::SPB::Options::Containers::Bytes::SubBytes &value);
+void serialize_value(ostream &, const ::SPB::Options::Containers::Bytes::SubBytes &);
+void deserialize_value(istream &, ::SPB::Options::Containers::Bytes::SubBytes &);
 
-void serialize_value(ostream &stream, const ::SPB::Options::Containers::Optional::CyclicDependency &value);
-void deserialize_value(istream &stream, ::SPB::Options::Containers::Optional::CyclicDependency &value);
+void serialize_value(ostream &, const ::SPB::Options::Containers::Optional::CyclicDependency &);
+void deserialize_value(istream &, ::SPB::Options::Containers::Optional::CyclicDependency &);
 
-void serialize_value(ostream &stream,
-                     const ::SPB::Options::Containers::Optional::CyclicDependency::MessageA &value);
-void deserialize_value(istream &stream,
-                       ::SPB::Options::Containers::Optional::CyclicDependency::MessageA &value);
+void serialize_value(ostream &, const ::SPB::Options::Containers::Optional::CyclicDependency::MessageA &);
+void deserialize_value(istream &, ::SPB::Options::Containers::Optional::CyclicDependency::MessageA &);
 
-void serialize_value(ostream &stream,
-                     const ::SPB::Options::Containers::Optional::CyclicDependency::MessageC &value);
-void deserialize_value(istream &stream,
-                       ::SPB::Options::Containers::Optional::CyclicDependency::MessageC &value);
+void serialize_value(ostream &, const ::SPB::Options::Containers::Optional::CyclicDependency::MessageC &);
+void deserialize_value(istream &, ::SPB::Options::Containers::Optional::CyclicDependency::MessageC &);
 
-void serialize_value(ostream &stream,
-                     const ::SPB::Options::Containers::Optional::CyclicDependency::MessageB &value);
-void deserialize_value(istream &stream,
-                       ::SPB::Options::Containers::Optional::CyclicDependency::MessageB &value);
+void serialize_value(ostream &, const ::SPB::Options::Containers::Optional::CyclicDependency::MessageB &);
+void deserialize_value(istream &, ::SPB::Options::Containers::Optional::CyclicDependency::MessageB &);
 
-void serialize_value(ostream &stream, const ::SPB::Options::Enum8 &value);
-void deserialize_value(istream &stream, ::SPB::Options::Enum8 &value);
+void serialize_value(ostream &, const ::SPB::Options::Enum8 &);
+void deserialize_value(istream &, ::SPB::Options::Enum8 &);
 
-void serialize_value(ostream &stream, const ::SPB::Options::Enum16 &value);
-void deserialize_value(istream &stream, ::SPB::Options::Enum16 &value);
-
+void serialize_value(ostream &, const ::SPB::Options::Enum16 &);
+void deserialize_value(istream &, ::SPB::Options::Enum16 &);
 } // namespace spb::json::detail
-namespace spb::pb::detail
-{
-struct ostream;
-struct istream;
-
-void serialize(ostream &stream, const ::SPB::Options::Integers &value);
-void deserialize_value(istream &stream, ::SPB::Options::Integers &value, tag_type tag);
-
-void serialize(ostream &stream, const ::SPB::Options::BitFields &value);
-void deserialize_value(istream &stream, ::SPB::Options::BitFields &value, tag_type tag);
-
-void serialize(ostream &stream, const ::SPB::Options::MaximumCount &value);
-void deserialize_value(istream &stream, ::SPB::Options::MaximumCount &value, tag_type tag);
-
-void serialize(ostream &stream, const ::SPB::Options::MaximumSize &value);
-void deserialize_value(istream &stream, ::SPB::Options::MaximumSize &value, tag_type tag);
-
-void serialize(ostream &stream, const ::SPB::Options::Containers &value);
-void deserialize_value(istream &stream, ::SPB::Options::Containers &value, tag_type tag);
-
-void serialize(ostream &stream, const ::SPB::Options::MaximumCount::Person &value);
-void deserialize_value(istream &stream, ::SPB::Options::MaximumCount::Person &value, tag_type tag);
-
-void serialize(ostream &stream, const ::SPB::Options::Containers::Repeated &value);
-void deserialize_value(istream &stream, ::SPB::Options::Containers::Repeated &value, tag_type tag);
-
-void serialize(ostream &stream, const ::SPB::Options::Containers::String &value);
-void deserialize_value(istream &stream, ::SPB::Options::Containers::String &value, tag_type tag);
-
-void serialize(ostream &stream, const ::SPB::Options::Containers::Bytes &value);
-void deserialize_value(istream &stream, ::SPB::Options::Containers::Bytes &value, tag_type tag);
-
-void serialize(ostream &stream, const ::SPB::Options::Containers::Optional &value);
-void deserialize_value(istream &stream, ::SPB::Options::Containers::Optional &value, tag_type tag);
-
-void serialize(ostream &stream, const ::SPB::Options::Containers::String::SubStrings &value);
-void deserialize_value(istream &stream, ::SPB::Options::Containers::String::SubStrings &value, tag_type tag);
-
-void serialize(ostream &stream, const ::SPB::Options::Containers::Bytes::SubBytes &value);
-void deserialize_value(istream &stream, ::SPB::Options::Containers::Bytes::SubBytes &value, tag_type tag);
-
-void serialize(ostream &stream, const ::SPB::Options::Containers::Optional::CyclicDependency &value);
-void deserialize_value(istream &stream, ::SPB::Options::Containers::Optional::CyclicDependency &value,
-                       tag_type tag);
-
-void serialize(ostream &stream,
-               const ::SPB::Options::Containers::Optional::CyclicDependency::MessageA &value);
-void deserialize_value(istream &stream,
-                       ::SPB::Options::Containers::Optional::CyclicDependency::MessageA &value, tag_type tag);
-
-void serialize(ostream &stream,
-               const ::SPB::Options::Containers::Optional::CyclicDependency::MessageC &value);
-void deserialize_value(istream &stream,
-                       ::SPB::Options::Containers::Optional::CyclicDependency::MessageC &value, tag_type tag);
-
-void serialize(ostream &stream,
-               const ::SPB::Options::Containers::Optional::CyclicDependency::MessageB &value);
-void deserialize_value(istream &stream,
-                       ::SPB::Options::Containers::Optional::CyclicDependency::MessageB &value, tag_type tag);
-
-} // namespace spb::pb::detail

@@ -1,5 +1,5 @@
-//- this example is based on https://protobuf.dev/getting-started/cpptutorial/
-
+// this example is based on https://protobuf.dev/getting-started/cpptutorial/
+// Look also into example/proto/addressbook.proto and example/generated/addressbook.pb.h
 #include <filesystem>
 #include <iostream>
 #include <proto/addressbook.pb.h>
@@ -8,7 +8,6 @@
 
 namespace
 {
-
 auto load_file(const std::filesystem::path &file_path) -> std::string
 {
     if (!std::filesystem::exists(file_path))
