@@ -1,10 +1,10 @@
 # Options
 
+TLDR: See [example/spb_options.proto](../example/proto/spb_options.proto) and [generated/spb_options.pb.h](../example/generated/spb_options.pb.h).
+
 [options](../include/spb/proto/spb.proto) can be specified in a few different ways, and all are compatible with GPB.
 1. standard GPB [options](https://protobuf.dev/programming-guides/proto2/#options)
 2. in comments, so they are ignored by the GPB `protoc`. These options use C++ [attribute](https://en.cppreference.com/w/cpp/language/attributes) syntax.
-
-See [example/spb_options.proto](../example/proto/spb_options.proto) and [generated/spb_options.pb.h](../example/generated/spb_options.pb.h).
 
 **Notes:**
 - Unknown options are ignored.

@@ -162,11 +162,65 @@ See the [example](example/) directory.
 * [API](doc/API.md)
 * [Options](doc/options.md)
 
+## Performance benchmark
+
+_Tiny and Fast_
+
+See the [benchmark](benchmark/) directory.
+
+### Speed
+
+Measured on `Linux/i7-8650U CPU @ 1.90GHz` with GCC 16.1.1 `-flto -O2` using [nanobench](https://github.com/martinus/nanobench).
+
+SPB protobuf serializer/deserializer has the **same speed** as google GPB.
+SPB JSON serializer/deserializer is about **4x faster** than google GPB.
+
+|               ns/op |                op/s |    err% |          ins/op |          cyc/op |    IPC |         bra/op |   miss% |     total | benchmark
+|--------------------:|--------------------:|--------:|----------------:|----------------:|-------:|---------------:|--------:|----------:|:----------
+|              321.88 |        3,106,725.78 |    0.7% |        1,958.00 |          670.07 |  2.922 |         441.00 |    0.0% |      0.38 | `gpb-pb-serialize`
+|              314.33 |        3,181,404.47 |    0.6% |        1,946.00 |          650.52 |  2.991 |         435.00 |    0.0% |      0.38 | `gpb-lite-pb-serialize`
+|              330.46 |        3,026,072.90 |    1.0% |        2,107.00 |          674.66 |  3.123 |         480.00 |    0.0% |      0.40 | `spb-pb-serialize`
+|              920.77 |        1,086,048.03 |    0.7% |        4,887.00 |        1,922.73 |  2.542 |       1,159.00 |    0.0% |      1.10 | `gpb-pb-init-serialize`
+|              949.20 |        1,053,516.29 |    0.7% |        4,875.00 |        1,966.39 |  2.479 |       1,153.00 |    0.0% |      1.13 | `gpb-lite-pb-init-serialize`
+|              733.35 |        1,363,600.01 |    0.8% |        4,156.00 |        1,509.86 |  2.753 |       1,006.00 |    0.0% |      0.88 | `spb-pb-init-serialize`
+|            1,002.70 |          997,308.51 |    0.6% |        5,208.00 |        2,098.15 |  2.482 |       1,204.00 |    0.1% |      1.20 | `gpb-pb-deserialize`
+|            1,017.12 |          983,171.45 |    0.7% |        5,209.00 |        2,115.23 |  2.463 |       1,204.00 |    0.0% |      1.22 | `gpb-lite-pb-deserialize`
+|              862.48 |        1,159,452.34 |    0.7% |        4,523.00 |        1,772.13 |  2.552 |       1,051.00 |    0.0% |      1.03 | `spb-pb-deserialize`
+|           10,478.95 |           95,429.37 |    0.7% |       51,398.01 |       21,751.67 |  2.363 |      13,117.01 |    0.4% |      1.25 | `gpb-json-serialize`
+|            2,316.65 |          431,657.25 |    0.7% |       10,848.00 |        4,750.24 |  2.284 |       3,005.00 |    0.2% |      2.76 | `spb-json-serialize`
+|           11,229.19 |           89,053.66 |    0.5% |       54,660.36 |       23,453.17 |  2.331 |      13,913.09 |    0.4% |      1.34 | `gpb-json-init-serialize`
+|            2,799.49 |          357,208.27 |    0.9% |       12,898.00 |        5,742.87 |  2.246 |       3,531.00 |    0.2% |      3.37 | `spb-json-init-serialize`
+|           20,054.93 |           49,863.05 |    0.6% |       93,949.63 |       41,858.71 |  2.244 |      22,892.55 |    0.3% |      2.39 | `gpb-json-deserialize`
+|            3,132.97 |          319,186.41 |    0.7% |       16,691.00 |        6,439.46 |  2.592 |       3,194.00 |    0.3% |      3.75 | `spb-json-deserialize`
+
+### Binary size
+
+Measured with 
+```bash
+$ ls -alh ./build/benchmark
+```
+
+SPB is tiny compared to google GPB, which makes it ideal for Embedded systems.
+
+| Binary size (bytes) |             Binary name | Description                                          |
+|--------------------:|:------------------------|------------------------------------------------------|
+|                3,0M |        gpb-pb-serialize | Serialize single PB message with libprotobuf         |
+|                822K |   gpb-lite-pb-serialize | Serialize single PB message with libprotobuf-lite    |
+|             **22K** |        spb-pb-serialize | Serialize single PB message with simple-protobuf     |
+|                3,0M |      gpb-pb-deserialize | Deserialize single PB message with libprotobuf       |
+|                822K | gpb-lite-pb-deserialize | Deserialize single PB message with libprotobuf-lite  |
+|             **31K** |      spb-pb-deserialize | Deserialize single PB message with simple-protobuf   |
+|                3,5M |      gpb-json-serialize | Serialize single JSON message with libprotobuf       |
+|             **27K** |      spb-json-serialize | Serialize single JSON message with simple-protobuf   |
+|                3,5M |    gpb-json-deserialize | Deserialize single JSON message with libprotobuf     |
+|             **81K** |    spb-json-deserialize | Deserialize single JSON message with simple-protobuf |
+
+
 ## Status
 
 * [x] Make it work
 * [x] Make it right
-* [ ] Make it fast
+* [x] Make it fast
 
 ## Roadmap
 
@@ -175,7 +229,7 @@ See the [example](example/) directory.
 * [x] JSON de/serializer for generated C++ data structs (serialized JSON is GPB-compatible)
 * [x] Protobuf de/serializer for generated C++ data structs (serialized protobuf is GPB-compatible)
 * [x] Implement options and user-specified types/containers
-* [ ] Benchmarks for size and speed, direct comparison with other libraries (official protobuf, nanopb)
+* [x] Benchmarks for size and speed, direct comparison with other libraries (official protobuf, nanopb)
 
 ## Missing features
 

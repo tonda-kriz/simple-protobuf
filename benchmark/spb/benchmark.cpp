@@ -10,7 +10,7 @@ int main()
 
     const auto book = init_message();
 
-    ankerl::nanobench::Bench().minEpochIterations(100000).run("pb-serialize",
+    ankerl::nanobench::Bench().minEpochIterations(100000).run("spb-pb-serialize",
                                                               [&]
                                                               {
                                                                   auto size =
@@ -18,7 +18,7 @@ int main()
                                                                   ankerl::nanobench::doNotOptimizeAway(size);
                                                               });
 
-    ankerl::nanobench::Bench().minEpochIterations(100000).run("pb-init-serialize",
+    ankerl::nanobench::Bench().minEpochIterations(100000).run("spb-pb-init-serialize",
                                                               [&buffer]
                                                               {
                                                                   const auto book = init_message();
@@ -28,14 +28,14 @@ int main()
                                                               });
 
     ankerl::nanobench::Bench().minEpochIterations(100000).run(
-        "pb-deserialize",
+        "spb-pb-deserialize",
         [&]
         {
             const auto book = spb::pb::deserialize<AddressBook>(buffer);
             ankerl::nanobench::doNotOptimizeAway(book);
         });
 
-    ankerl::nanobench::Bench().minEpochIterations(100000).run("json-serialize",
+    ankerl::nanobench::Bench().minEpochIterations(100000).run("spb-json-serialize",
                                                               [&]
                                                               {
                                                                   auto size =
@@ -43,7 +43,7 @@ int main()
                                                                   ankerl::nanobench::doNotOptimizeAway(size);
                                                               });
 
-    ankerl::nanobench::Bench().minEpochIterations(100000).run("json-init-serialize",
+    ankerl::nanobench::Bench().minEpochIterations(100000).run("spb-json-init-serialize",
                                                               [&buffer]
                                                               {
                                                                   const auto book = init_message();
@@ -53,7 +53,7 @@ int main()
                                                               });
 
     ankerl::nanobench::Bench().minEpochIterations(100000).run(
-        "json-deserialize",
+        "spb-json-deserialize",
         [&]
         {
             const auto book = spb::json::deserialize<AddressBook>(buffer);
