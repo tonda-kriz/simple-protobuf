@@ -2,6 +2,8 @@
 #include <iostream>
 #include <proto/etl.pb.h>
 
+// Look into example/proto/etl.proto and example/generated/etl.pb.h
+
 auto create_command(uint8_t arg) -> ETL::Example::Command
 {
     return {
