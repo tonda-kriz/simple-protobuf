@@ -179,19 +179,19 @@ SPB JSON serializer/deserializer is about **4x faster** than google GPB.
 |-------------:|--------------------:|--------:|----------------:|----------------:|-------:|---------------:|--------:|:----------
 |       321.88 |        3,106,725.78 |    0.7% |        1,958.00 |          670.07 |  2.922 |         441.00 |    0.0% | [gpb-pb-serialize](benchmark/gpb/benchmark.cpp)
 |       314.33 |        3,181,404.47 |    0.6% |        1,946.00 |          650.52 |  2.991 |         435.00 |    0.0% | [gpb-lite-pb-serialize](benchmark/gpb/benchmark.cpp)
-|       330.46 |        3,026,072.90 |    1.0% |        2,107.00 |          674.66 |  3.123 |         480.00 |    0.0% | [spb-pb-serialize](benchmark/spb/benchmark.cpp)
+|   **330.46** |        3,026,072.90 |    1.0% |        2,107.00 |          674.66 |  3.123 |         480.00 |    0.0% | [spb-pb-serialize](benchmark/spb/benchmark.cpp)
 |       920.77 |        1,086,048.03 |    0.7% |        4,887.00 |        1,922.73 |  2.542 |       1,159.00 |    0.0% | [gpb-pb-init-serialize](benchmark/gpb/benchmark.cpp)
 |       949.20 |        1,053,516.29 |    0.7% |        4,875.00 |        1,966.39 |  2.479 |       1,153.00 |    0.0% | [gpb-lite-pb-init-serialize](benchmark/gpb/benchmark.cpp)
-|       733.35 |        1,363,600.01 |    0.8% |        4,156.00 |        1,509.86 |  2.753 |       1,006.00 |    0.0% | [spb-pb-init-serialize](benchmark/spb/benchmark.cpp)
+|   **733.35** |        1,363,600.01 |    0.8% |        4,156.00 |        1,509.86 |  2.753 |       1,006.00 |    0.0% | [spb-pb-init-serialize](benchmark/spb/benchmark.cpp)
 |     1,002.70 |          997,308.51 |    0.6% |        5,208.00 |        2,098.15 |  2.482 |       1,204.00 |    0.1% | [gpb-pb-deserialize](benchmark/gpb/benchmark.cpp)
 |     1,017.12 |          983,171.45 |    0.7% |        5,209.00 |        2,115.23 |  2.463 |       1,204.00 |    0.0% | [gpb-lite-pb-deserialize](benchmark/gpb/benchmark.cpp)
-|       862.48 |        1,159,452.34 |    0.7% |        4,523.00 |        1,772.13 |  2.552 |       1,051.00 |    0.0% | [spb-pb-deserialize](benchmark/spb/benchmark.cpp)
+|   **862.48** |        1,159,452.34 |    0.7% |        4,523.00 |        1,772.13 |  2.552 |       1,051.00 |    0.0% | [spb-pb-deserialize](benchmark/spb/benchmark.cpp)
 |    10,478.95 |           95,429.37 |    0.7% |       51,398.01 |       21,751.67 |  2.363 |      13,117.01 |    0.4% | [gpb-json-serialize](benchmark/gpb/benchmark.cpp)
-|     2,316.65 |          431,657.25 |    0.7% |       10,848.00 |        4,750.24 |  2.284 |       3,005.00 |    0.2% | [spb-json-serialize](benchmark/spb/benchmark.cpp)
+| **2,316.65** |          431,657.25 |    0.7% |       10,848.00 |        4,750.24 |  2.284 |       3,005.00 |    0.2% | [spb-json-serialize](benchmark/spb/benchmark.cpp)
 |    11,229.19 |           89,053.66 |    0.5% |       54,660.36 |       23,453.17 |  2.331 |      13,913.09 |    0.4% | [gpb-json-init-serialize](benchmark/gpb/benchmark.cpp)
-|     2,799.49 |          357,208.27 |    0.9% |       12,898.00 |        5,742.87 |  2.246 |       3,531.00 |    0.2% | [spb-json-init-serialize](benchmark/spb/benchmark.cpp)
+| **2,799.49** |          357,208.27 |    0.9% |       12,898.00 |        5,742.87 |  2.246 |       3,531.00 |    0.2% | [spb-json-init-serialize](benchmark/spb/benchmark.cpp)
 |    20,054.93 |           49,863.05 |    0.6% |       93,949.63 |       41,858.71 |  2.244 |      22,892.55 |    0.3% | [gpb-json-deserialize](benchmark/gpb/benchmark.cpp)
-|     3,132.97 |          319,186.41 |    0.7% |       16,691.00 |        6,439.46 |  2.592 |       3,194.00 |    0.3% | [spb-json-deserialize](benchmark/spb/benchmark.cpp)
+| **3,132.97** |          319,186.41 |    0.7% |       16,691.00 |        6,439.46 |  2.592 |       3,194.00 |    0.3% | [spb-json-deserialize](benchmark/spb/benchmark.cpp)
 
 ### Binary size
 
