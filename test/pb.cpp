@@ -576,13 +576,20 @@ TEST_CASE("protobuf")
                 SUBCASE("invalid")
                 {
                     CHECK_THROWS((void)spb::pb::deserialize<Test::Scalar::ReqString>("\x0a\x02h\x80"sv));
-                    CHECK_THROWS((void)spb::json::serialize<std::string, std::string>("h\x80"));
-                    CHECK_THROWS((void)spb::json::deserialize<std::string>(R"("h\u02w1")"sv));
-                    CHECK_THROWS((void)spb::json::deserialize<std::string>(R"("h\u02")"sv));
-                    CHECK_THROWS((void)spb::json::deserialize<std::string>(R"("h\ud800\u")"sv));
-                    CHECK_THROWS((void)spb::json::deserialize<std::string>(R"("h\ud800\u1")"sv));
-                    CHECK_THROWS((void)spb::json::deserialize<std::string>(R"("h\ud800\udbff")"sv));
-                    CHECK_THROWS((void)spb::json::deserialize<std::string>(R"("h\ud800\ue000")"sv));
+                    CHECK_THROWS(
+                        (void)spb::json::serialize<std::string>(Test::Scalar::ReqString{.value = "h\x80"}));
+                    CHECK_THROWS(
+                        (void)spb::json::deserialize<Test::Scalar::ReqString>(R"({"value":"h\u02w1"})"sv));
+                    CHECK_THROWS(
+                        (void)spb::json::deserialize<Test::Scalar::ReqString>(R"({"value":"h\u02"})"sv));
+                    CHECK_THROWS(
+                        (void)spb::json::deserialize<Test::Scalar::ReqString>(R"({"value":"h\ud800\u"})"sv));
+                    CHECK_THROWS(
+                        (void)spb::json::deserialize<Test::Scalar::ReqString>(R"({"value":"h\ud800\u1"})"sv));
+                    CHECK_THROWS((void)spb::json::deserialize<Test::Scalar::ReqString>(
+                        R"({"value":"h\ud800\udbff"})"sv));
+                    CHECK_THROWS((void)spb::json::deserialize<Test::Scalar::ReqString>(
+                        R"({"value":"h\ud800\ue000"})"sv));
                 }
             }
         }

@@ -222,7 +222,7 @@ void check_if_empty_or_throw(auto &stream)
         throw std::runtime_error("unexpected data in stream");
 }
 
-[[nodiscard]] inline auto read_tag_or_eof(auto &stream) -> tag_type
+[[nodiscard]] auto read_tag_or_eof(auto &stream) -> tag_type
 {
     auto byte_or_eof = stream.read_byte_or_eof();
     if (byte_or_eof < 0)

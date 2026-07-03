@@ -10,22 +10,17 @@ namespace
 {
 auto base64_encode_size(std::string_view value) -> size_t
 {
-    auto stream = spb::json::detail::ostream(nullptr);
+    auto stream = spb::json::detail::ostream_size();
     spb::json::detail::base64_encode(stream,
                                      {reinterpret_cast<const std::byte *>(value.data()), value.size()});
-    return stream.size();
+    return stream.size;
 }
 
 auto base64_encode(std::string_view value) -> std::string
 {
     auto encode_size = base64_encode_size(value);
     auto result = std::string(encode_size, '\0');
-    auto writer = [ptr = result.data()](const void *data, size_t size) mutable
-    {
-        memcpy(ptr, data, size);
-        ptr += size;
-    };
-    auto stream = spb::json::detail::ostream(writer);
+    auto stream = spb::json::detail::ostream_buffer(result.data());
     spb::json::detail::base64_encode(stream,
                                      {reinterpret_cast<const std::byte *>(value.data()), value.size()});
     return result;
@@ -43,22 +38,11 @@ auto generate_random_bytes(size_t size) -> std::string
 
 auto base64_decode(std::string_view value) -> std::string
 {
-    auto reader = [ptr = value.data(), end = value.data() + value.size()](void *data,
-                                                                          size_t size) mutable -> size_t
-    {
-        size_t bytes_left = end - ptr;
-
-        size = std::min(size, bytes_left);
-        memcpy(data, ptr, size);
-        ptr += size;
-        return size;
-    };
-
-    auto stream = spb::json::detail::istream(reader);
+    auto stream = spb::json::detail::istream_buffer(value.data(), value.size());
     auto result = std::vector<std::byte>();
 
     spb::json::detail::base64_decode_string(result, stream);
-    REQUIRE_THROWS((void)stream.view(1));
+    REQUIRE_THROWS((void)stream.view(1, 1));
 
     return {std::string(reinterpret_cast<const char *>(result.data()),
                         reinterpret_cast<const char *>(result.data() + result.size()))};
@@ -66,22 +50,11 @@ auto base64_decode(std::string_view value) -> std::string
 
 template <size_t N> auto base64_decode_fixed(std::string_view value) -> std::string
 {
-    auto reader = [ptr = value.data(), end = value.data() + value.size()](void *data,
-                                                                          size_t size) mutable -> size_t
-    {
-        size_t bytes_left = end - ptr;
-
-        size = std::min(size, bytes_left);
-        memcpy(data, ptr, size);
-        ptr += size;
-        return size;
-    };
-
-    auto stream = spb::json::detail::istream(reader);
+    auto stream = spb::json::detail::istream_buffer(value.data(), value.size());
     auto result = std::array<std::byte, N>();
 
     spb::json::detail::base64_decode_string(result, stream);
-    REQUIRE_THROWS((void)stream.view(1));
+    REQUIRE_THROWS((void)stream.view(1, 1));
 
     return {std::string(reinterpret_cast<const char *>(result.data()),
                         reinterpret_cast<const char *>(result.data() + result.size()))};

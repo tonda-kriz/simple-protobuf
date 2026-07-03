@@ -94,33 +94,190 @@ template <spb::detail::proto_field_bytes T> void clear(T &container)
     }
 }
 
-struct istream
+struct istream_buffer
+{
+    const uint8_t *p_start;
+    const uint8_t *p_end;
+
+    istream_buffer(const void *start, const void *end) noexcept
+        : p_start((uint8_t *)start), p_end((uint8_t *)end)
+    {
+        assert(start <= end);
+    }
+    istream_buffer(const void *start, size_t size) noexcept : p_start((uint8_t *)start), p_end(p_start + size)
+    {
+    }
+    [[nodiscard]] size_t size() const noexcept
+    {
+        return p_end - p_start;
+    }
+    [[nodiscard]] bool empty() const noexcept
+    {
+        return p_start >= p_end;
+    }
+    void skip(size_t chars)
+    {
+        assert(size() >= chars);
+        p_start += chars;
+    }
+    [[nodiscard]] bool consume(char c)
+    {
+        if (current_char() != c)
+            return false;
+
+        ++p_start;
+        return true;
+    }
+
+    [[nodiscard]] bool consume_and_skip_white_space(char c)
+    {
+        if (!consume(c))
+            return false;
+
+        skip_white_spaces();
+        return true;
+    }
+
+    [[nodiscard]] bool consume_and_skip_white_space(std::string_view token)
+    {
+        assert(!token.empty());
+
+        if (size() < token.size()) [[unlikely]]
+            return false;
+
+        if (memcmp(token.data(), p_start, token.size()) != 0)
+            return false;
+
+        if (size() == token.size()) [[unlikely]]
+            return true;
+
+        const auto char_behind_token = p_start[token.size()];
+        if (!isalnum(char_behind_token) && char_behind_token != '_')
+        {
+            skip(token.size());
+            return true;
+        }
+
+        if (isspace(char_behind_token))
+        {
+            skip(token.size());
+            skip_white_spaces();
+            return true;
+        }
+        return false;
+    }
+    [[nodiscard]] int current_char() const
+    {
+        return (p_start < p_end) ? *p_start : -1;
+    }
+    void skip_white_spaces() noexcept
+    {
+        while (!empty() && isspace(*p_start))
+        {
+            ++p_start;
+        }
+    }
+    void consume_current_char(bool skip_white_space)
+    {
+        if (empty()) [[unlikely]]
+            throw std::runtime_error("unexpected end of stream");
+
+        ++p_start;
+        if (skip_white_space)
+            skip_white_spaces();
+    }
+
+    [[nodiscard]] auto view(size_t min_size, size_t max_size) -> std::string_view
+    {
+        if (size() < min_size) [[unlikely]]
+            throw std::runtime_error("unexpected end of stream");
+
+        return {(char *)p_start, std::min(size(), max_size)};
+    }
+};
+
+struct istream_reader
 {
   private:
     spb::io::buffered_reader reader;
+    size_t m_consumed_size = 0;
 
-    //- current char
-    int m_current = -1;
+    void consume_bytes(size_t size)
+    {
+        m_consumed_size += size;
+        reader.skip(size);
+    }
 
-    std::string_view m_current_key;
+  public:
+    istream_reader(spb::io::reader reader) : reader(reader)
+    {
+    }
 
-    /**
-     * @brief gets the next char from the stream
-     *
-     * @param skip_white_space if true, skip white spaces
-     */
-    void update_current(bool skip_white_space)
+    size_t consumed_size() const
+    {
+        return m_consumed_size;
+    }
+
+    [[nodiscard]] auto current_char() -> char
+    {
+        auto view = reader.view(1);
+        if (view.empty())
+            throw std::runtime_error("unexpected end of stream");
+
+        return view[0];
+    }
+
+    [[nodiscard]] auto consume(char c) -> bool
+    {
+        if (current_char() != c)
+            return false;
+
+        skip(1);
+        return true;
+    }
+
+    [[nodiscard]] auto consume_and_skip_white_space(char c) -> bool
+    {
+        if (!consume(c))
+            return false;
+
+        skip_white_spaces();
+        return true;
+    }
+
+    [[nodiscard]] auto consume_and_skip_white_space(std::string_view token) -> bool
+    {
+        assert(!token.empty());
+
+        const auto token_view = reader.view(token.size() + 1);
+        if (!token_view.starts_with(token))
+            return false;
+
+        if (token_view.size() == token.size()) [[unlikely]]
+            return true;
+
+        const auto char_behind_token = token_view.back();
+        if (!isalnum(char_behind_token) && char_behind_token != '_')
+        {
+            skip(token.size());
+            return true;
+        }
+
+        if (isspace(char_behind_token))
+        {
+            skip(token.size());
+            skip_white_spaces();
+            return true;
+        }
+        return false;
+    }
+
+    void skip_white_spaces()
     {
         for (;;)
         {
             auto view = reader.view(1);
             if (view.empty())
-            {
-                m_current = 0;
-                return;
-            }
-            m_current = view[0];
-            if (!skip_white_space)
                 return;
 
             size_t spaces = 0;
@@ -128,174 +285,128 @@ struct istream
             {
                 if (!isspace(c))
                 {
-                    m_current = c;
-                    reader.skip(spaces);
+                    consume_bytes(spaces);
                     return;
                 }
                 spaces += 1;
             }
-            reader.skip(spaces);
+            consume_bytes(spaces);
         }
     }
 
-    [[nodiscard]] auto eof() -> bool
+    [[nodiscard]] auto view(size_t min_size, size_t max_size) -> std::string_view
     {
-        return current_char() == 0;
-    }
-
-  public:
-    istream(spb::io::reader reader) : reader(reader)
-    {
-    }
-
-    void deserialize(auto &value, const field_attributes & = {});
-    template <size_t ordinal, typename T> void deserialize_variant(T &variant);
-    template <typename T> [[nodiscard]] auto deserialize_bitfield(uint32_t bits) -> T;
-    [[nodiscard]] auto deserialize_int() -> int32_t;
-    [[nodiscard]] auto deserialize_string_or_int(size_t min_size, size_t max_size)
-        -> std::variant<std::string_view, int32_t>;
-    [[nodiscard]] auto deserialize_key(size_t min_size, size_t max_size) -> std::string_view;
-    [[nodiscard]] auto current_key() const -> std::string_view;
-
-    [[nodiscard]] auto current_char() -> char
-    {
-        if (m_current < 0)
-            update_current(true);
-
-        return m_current;
-    }
-    /**
-     * @brief consumes `current char` if its equal to c
-     *
-     * @param c consumed char
-     * @return true if char was consumed
-     */
-    [[nodiscard]] auto consume(char c) -> bool
-    {
-        if (current_char() == c)
-        {
-            consume_current_char(true);
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * @brief consumes an `token`
-     *
-     * @param token consumed `token` (whole word)
-     * @return true if `token` was consumed
-     */
-    [[nodiscard]] auto consume(std::string_view token) -> bool
-    {
-        assert(!token.empty());
-
-        if (current_char() != token[0])
-            return false;
-
-        if (!reader.view(token.size()).starts_with(token))
-            return false;
-
-        auto token_view = reader.view(token.size() + 1).substr(0, token.size() + 1);
-        if (token_view.size() == token.size() || isspace(token_view.back()) ||
-            (!isalnum(token_view.back()) && token_view.back() != '_'))
-        {
-            reader.skip(token.size());
-            update_current(true);
-            return true;
-        }
-        return false;
-    }
-
-    [[nodiscard]] auto view(size_t size) -> std::string_view
-    {
-        auto result = reader.view(size);
-        if (result.empty()) [[unlikely]]
+        auto result = reader.view(max_size);
+        if (result.size() < min_size) [[unlikely]]
             throw std::runtime_error("unexpected end of stream");
+
+        if (result.size() > max_size)
+            result = result.substr(0, max_size);
 
         return result;
     }
 
     void consume_current_char(bool skip_white_space) noexcept
     {
-        reader.skip(1);
-        update_current(skip_white_space);
+        consume_bytes(1);
+        if (skip_white_space)
+            skip_white_spaces();
     }
 
     void skip(size_t size)
     {
-        reader.skip(size);
-        m_current = -1;
+        consume_bytes(size);
     }
-    void skip_value();
 };
 
-static inline void deserialize(istream &stream, spb::detail::proto_enum auto &value,
-                               const field_attributes & = {})
+[[nodiscard]] bool eof(const auto &stream)
+{
+    return stream.current_char() == -1;
+}
+
+template <field_attributes> void deserialize(auto &stream, spb::detail::proto_enum auto &value)
 {
     deserialize_value(stream, value);
 }
 
-static inline void ignore_string(istream &stream)
+void ignore_string_until_double_quota(auto &stream)
 {
-    if (stream.current_char() != '"') [[unlikely]]
-        throw std::runtime_error("expecting '\"'");
-
-    auto last = escape;
     for (;;)
     {
-        auto view = stream.view(UINT32_MAX);
-        auto length = 0U;
-        for (auto current : view)
+        auto view = stream.view(1, UINT32_MAX);
+        auto pos = view.find_first_of(R"(\")");
+        if (pos == view.npos)
         {
-            length += 1;
-            if (current == '"' && last != escape)
-            {
-                stream.skip(length);
-                return;
-            }
-            //- handle \\"
-            last = current != escape || last != escape ? current : ' ';
+            stream.skip(view.size());
+            continue;
         }
-        stream.skip(view.size());
+
+        if (view[pos] == '"') [[likely]]
+        {
+            // +1 for '""
+            stream.skip(pos + 1);
+            stream.skip_white_spaces();
+            return;
+        }
+
+        stream.skip(pos + 1);
+        // +1 for char behind '\'
+        (void)stream.view(1, UINT32_MAX);
+        stream.skip(1);
     }
 }
 
-static inline auto deserialize_string_view(istream &stream, size_t min_size, size_t max_size)
+void ignore_string(auto &stream)
+{
+    if (!stream.consume('"')) [[unlikely]]
+        throw std::runtime_error(R"(expecting '"')");
+
+    if (stream.consume_and_skip_white_space('"')) [[unlikely]]
+        return;
+
+    ignore_string_until_double_quota(stream);
+}
+
+auto deserialize_string_to_buffer(auto &stream, size_t min_size, size_t max_size, char *buffer)
     -> std::string_view
 {
-    if (stream.current_char() != '"') [[unlikely]]
-        throw std::runtime_error("expecting '\"'");
+    assert(max_size < SPB_READ_BUFFER_SIZE);
 
-    //- +2 for '"'
-    auto view = stream.view(max_size + 2);
-    auto last = escape;
-    auto length = size_t(0);
-    for (auto current : view)
+    if (!stream.consume('"')) [[unlikely]]
+        throw std::runtime_error(R"(expecting '"')");
+
+    // +1 for "
+    auto view = stream.view(1, max_size + 1);
+    size_t start = 0;
+    for (;;)
     {
-        length += 1;
-
-        if (current == '"' && last != escape)
+        const auto pos = view.find_first_of(R"(\")", start);
+        if (pos == view.npos) [[unlikely]]
         {
-            stream.skip(length);
-
-            if ((length - 2) >= min_size && (length - 2) <= max_size)
-                return view.substr(1, length - 2);
-
-            return {};
+            stream.skip(view.size());
+            break;
         }
-        //- handle \\"
-        last = current != escape || last != escape ? current : ' ';
-    }
 
-    ignore_string(stream);
+        if (view[pos] == '"') [[likely]]
+        {
+            memcpy(buffer, view.data(), pos);
+            // +1 for '""
+            stream.skip(pos + 1);
+            stream.skip_white_spaces();
+            return (pos >= min_size) ? std::string_view{buffer, pos} : std::string_view{};
+        }
+
+        // +2 for \ and char behind
+        start = pos + 2;
+    }
+    ignore_string_until_double_quota(stream);
     return {};
 }
 
-static inline auto unicode_from_hex(istream &stream) -> uint16_t
+auto unicode_from_hex(auto &stream) -> uint16_t
 {
     const auto esc_size = 4U;
-    auto unicode_view = stream.view(esc_size);
+    auto unicode_view = stream.view(esc_size, esc_size);
     if (unicode_view.size() < esc_size) [[unlikely]]
         throw std::runtime_error("invalid escape sequence");
 
@@ -308,10 +419,10 @@ static inline auto unicode_from_hex(istream &stream) -> uint16_t
     return value;
 }
 
-static inline auto unescape_unicode(istream &stream, char utf8[4]) -> uint32_t
+auto unescape_unicode(auto &stream, char utf8[4]) -> uint32_t
 {
     auto value = uint32_t(unicode_from_hex(stream));
-    if (value >= 0xD800 && value <= 0xDBFF && stream.view(2).starts_with("\\u"sv))
+    if (value >= 0xD800 && value <= 0xDBFF && stream.view(2, 2).starts_with("\\u"sv))
     {
         stream.skip(2);
         auto low = unicode_from_hex(stream);
@@ -326,7 +437,8 @@ static inline auto unescape_unicode(istream &stream, char utf8[4]) -> uint32_t
 
     throw std::runtime_error("invalid escape sequence");
 }
-static inline auto unescape(istream &stream, char utf8[4]) -> uint32_t
+
+auto unescape(auto &stream, char utf8[4]) -> uint32_t
 {
     auto c = stream.current_char();
     stream.consume_current_char(false);
@@ -363,13 +475,11 @@ static inline auto unescape(istream &stream, char utf8[4]) -> uint32_t
     }
 }
 
-static inline void deserialize(istream &stream, spb::detail::proto_field_string auto &value,
-                               const field_attributes &field = {})
+template <field_attributes attributes>
+void deserialize(auto &stream, spb::detail::proto_field_string auto &value)
 {
-    if (stream.current_char() != '"') [[unlikely]]
-        throw std::runtime_error("expecting '\"'");
-
-    stream.consume_current_char(false);
+    if (!stream.consume('"')) [[unlikely]]
+        throw std::runtime_error(R"(expecting '"')");
 
     if constexpr (spb::detail::proto_field_string_resizable<decltype(value)>)
     {
@@ -378,8 +488,8 @@ static inline void deserialize(istream &stream, spb::detail::proto_field_string 
     auto index = size_t(0);
     auto append_to_value = [&](const char *str, size_t size)
     {
-        if (field.max_size && (value.size() + size > field.max_size)) [[unlikely]]
-            throw std::length_error("string is too large");
+        if constexpr (attributes.max_size)
+            check_size(value.size() + size, attributes.max_size);
 
         if constexpr (spb::detail::proto_field_string_resizable<decltype(value)>)
         {
@@ -401,7 +511,7 @@ static inline void deserialize(istream &stream, spb::detail::proto_field_string 
 
     for (;;)
     {
-        auto view = stream.view(UINT32_MAX);
+        auto view = stream.view(1, UINT32_MAX);
         auto found = view.find_first_of(R"("\)");
         if (found == view.npos) [[unlikely]]
         {
@@ -429,21 +539,21 @@ static inline void deserialize(istream &stream, spb::detail::proto_field_string 
     spb::detail::utf8::validate(std::string_view(value.data(), value.size()));
 }
 
-static inline void deserialize(istream &stream, spb::detail::proto_field_int_or_float auto &value,
-                               const field_attributes & = {})
+template <field_attributes> void deserialize(auto &stream, spb::detail::proto_field_int_or_float auto &value)
 {
     if (stream.current_char() == '"') [[unlikely]]
     {
         //- https://protobuf.dev/programming-guides/proto2/#json
         //- number can be a string
-        auto view = deserialize_string_view(stream, 1, UINT32_MAX);
+        char buffer[32];
+        auto view = deserialize_string_to_buffer(stream, 1, 32, buffer);
         auto result = spb_std_emu::from_chars(view.data(), view.data() + view.size(), value);
-        if (result.ec != std::errc{}) [[unlikely]]
+        if (result.ec != std::errc{} || result.ptr != (view.data() + view.size())) [[unlikely]]
             throw std::runtime_error("invalid number");
 
         return;
     }
-    auto view = stream.view(UINT32_MAX);
+    auto view = stream.view(1, 32);
     auto result = spb_std_emu::from_chars(view.data(), view.data() + view.size(), value);
     if (result.ec != std::errc{}) [[unlikely]]
         throw std::runtime_error("invalid number");
@@ -451,13 +561,13 @@ static inline void deserialize(istream &stream, spb::detail::proto_field_int_or_
     stream.skip(result.ptr - view.data());
 }
 
-static inline void deserialize(istream &stream, bool &value, const field_attributes & = {})
+template <field_attributes> void deserialize(auto &stream, bool &value)
 {
-    if (stream.consume("true"sv))
+    if (stream.consume_and_skip_white_space("true"sv))
     {
         value = true;
     }
-    else if (stream.consume("false"sv))
+    else if (stream.consume_and_skip_white_space("false"sv))
     {
         value = false;
     }
@@ -467,56 +577,56 @@ static inline void deserialize(istream &stream, bool &value, const field_attribu
     }
 }
 
-static inline void deserialize(istream &stream, auto &value, const field_attributes & = {});
+template <field_attributes> void deserialize(auto &stream, spb::detail::proto_message auto &value);
 
-template <typename keyT, typename valueT>
-static inline void deserialize(istream &stream, std::map<keyT, valueT> &value, const field_attributes & = {});
+template <field_attributes, typename keyT, typename valueT>
+void deserialize(auto &stream, std::map<keyT, valueT> &value);
 
-static inline void deserialize(istream &stream, spb::detail::proto_label_optional auto &value,
-                               const field_attributes & = {});
+template <field_attributes attributes, spb::detail::proto_label_optional Container>
+void deserialize(auto &stream, Container &p_value);
 
-template <spb::detail::proto_label_repeated C>
-static inline void deserialize(istream &stream, C &value, const field_attributes &field = {})
+template <field_attributes attributes, spb::detail::proto_label_repeated Container>
+void deserialize(auto &stream, Container &value)
 {
-    if (stream.consume("null"sv))
+    if (stream.consume_and_skip_white_space("null"sv))
     {
         value.clear();
         return;
     }
 
-    if (!stream.consume('[')) [[unlikely]]
+    if (!stream.consume_and_skip_white_space('[')) [[unlikely]]
         throw std::runtime_error("expecting '['");
 
-    if (stream.consume(']'))
+    if (stream.consume_and_skip_white_space(']'))
         return;
 
     do
     {
-        if (field.max_count && value.size() >= field.max_count) [[unlikely]]
-            throw std::length_error("repeated is too large");
+        if constexpr (attributes.max_count)
+            check_size(value.size() + 1, attributes.max_count);
 
-        if constexpr (std::is_same_v<typename C::value_type, bool>)
+        if constexpr (std::is_same_v<typename Container::value_type, bool>)
         {
             auto b = false;
-            deserialize(stream, b);
+            deserialize<attributes>(stream, b);
             value.push_back(b);
         }
         else
         {
-            deserialize(stream, value.emplace_back());
+            deserialize<attributes>(stream, value.emplace_back());
         }
-    } while (stream.consume(','));
+    } while (stream.consume_and_skip_white_space(','));
 
-    if (!stream.consume(']')) [[unlikely]]
+    if (!stream.consume_and_skip_white_space(']')) [[unlikely]]
         throw std::runtime_error("expecting ']'");
 }
 
-template <spb::detail::proto_label_repeated_fixed_size C>
-static inline void deserialize(istream &stream, C &value, const field_attributes & = {})
+template <field_attributes attributes, spb::detail::proto_label_repeated_fixed_size Container>
+void deserialize(auto &stream, Container &value)
 {
-    if (stream.consume("null"sv))
+    if (stream.consume_and_skip_white_space("null"sv))
     {
-        typename C::value_type tmp = {};
+        typename Container::value_type tmp = {};
         for (size_t i = 0; i < value.size(); i++)
         {
             value[i] = tmp;
@@ -524,92 +634,87 @@ static inline void deserialize(istream &stream, C &value, const field_attributes
         return;
     }
 
-    if (!stream.consume('[')) [[unlikely]]
+    if (!stream.consume_and_skip_white_space('[')) [[unlikely]]
         throw std::runtime_error("expecting '['");
 
     for (size_t i = 0; i < value.size(); i++)
     {
-        typename C::value_type tmp;
-        deserialize(stream, tmp);
+        typename Container::value_type tmp;
+        deserialize<attributes>(stream, tmp);
         value[i] = tmp;
         if (i + 1 >= value.size())
             break;
 
-        while (stream.consume(','))
+        while (stream.consume_and_skip_white_space(','))
             ;
     }
 
-    if (!stream.consume(']')) [[unlikely]]
+    if (!stream.consume_and_skip_white_space(']')) [[unlikely]]
         throw std::runtime_error("expecting ']'");
 }
 
-static inline void deserialize(istream &stream, spb::detail::proto_field_bytes auto &value,
-                               const field_attributes &field = {})
+template <field_attributes attributes>
+void deserialize(auto &stream, spb::detail::proto_field_bytes auto &value)
 {
-    if (stream.consume("null"sv))
+    if (stream.consume_and_skip_white_space("null"sv))
     {
         clear(value);
         return;
     }
 
-    base64_decode_string(value, stream, field.max_size);
+    base64_decode_string(value, stream, attributes.max_size);
 }
 
-template <typename T> void deserialize_map_key(istream &stream, T &map_key)
+template <field_attributes attributes, typename T> void deserialize_map_key(auto &stream, T &map_key)
 {
     if constexpr (std::is_same_v<T, std::string>)
     {
-        return deserialize(stream, map_key);
+        deserialize<attributes>(stream, map_key);
     }
-    auto str_key_map = deserialize_string_view(stream, 1, UINT32_MAX);
-    auto reader = [ptr = str_key_map.data(),
-                   end = str_key_map.data() + str_key_map.size()](void *data, size_t size) mutable -> size_t
+    else
     {
-        size_t bytes_left = end - ptr;
-        size = std::min(size, bytes_left);
-        memcpy(data, ptr, size);
-        ptr += size;
-        return size;
-    };
-    auto key_stream = istream(reader);
-    deserialize(key_stream, map_key);
+        char buffer[128];
+        auto str_key_map = deserialize_string_to_buffer(stream, 1, 128, buffer);
+        auto key_stream = istream_buffer(str_key_map.data(), str_key_map.size());
+        deserialize<attributes>(key_stream, map_key);
+    }
 }
 
-template <typename keyT, typename valueT>
-static inline void deserialize(istream &stream, std::map<keyT, valueT> &value, const field_attributes &)
+template <field_attributes attributes, typename keyT, typename valueT>
+void deserialize(auto &stream, std::map<keyT, valueT> &value)
 {
-    if (stream.consume("null"sv))
+    if (stream.consume_and_skip_white_space("null"sv))
     {
         value.clear();
         return;
     }
 
-    if (!stream.consume('{')) [[unlikely]]
+    if (!stream.consume_and_skip_white_space('{')) [[unlikely]]
         throw std::runtime_error("expecting '{'");
 
-    if (stream.consume('}'))
+    if (stream.consume_and_skip_white_space('}'))
         return;
 
     do
     {
         auto map_key = keyT();
-        deserialize_map_key(stream, map_key);
-        if (!stream.consume(':')) [[unlikely]]
+        deserialize_map_key<attributes>(stream, map_key);
+        if (!stream.consume_and_skip_white_space(':')) [[unlikely]]
             throw std::runtime_error("expecting ':'");
 
         auto map_value = valueT();
-        deserialize(stream, map_value);
+        deserialize<attributes>(stream, map_value);
         value.emplace(std::move(map_key), std::move(map_value));
-    } while (stream.consume(','));
+    } while (stream.consume_and_skip_white_space(','));
 
-    if (!stream.consume('}')) [[unlikely]]
+    if (!stream.consume_and_skip_white_space('}')) [[unlikely]]
         throw std::runtime_error("expecting '}'");
 }
 
-static inline void deserialize(istream &stream, spb::detail::proto_label_optional auto &p_value,
-                               const field_attributes &field)
+template <field_attributes attributes, spb::detail::proto_label_optional Container>
+void deserialize(auto &stream, Container &p_value)
 {
-    if (stream.consume("null"sv))
+    if (stream.consume_and_skip_white_space("null"sv))
     {
         p_value.reset();
         return;
@@ -617,18 +722,17 @@ static inline void deserialize(istream &stream, spb::detail::proto_label_optiona
 
     if (p_value.has_value())
     {
-        deserialize(stream, *p_value, field);
+        deserialize<attributes>(stream, *p_value);
     }
     else
     {
-        deserialize(stream, p_value.emplace(typename std::decay_t<decltype(p_value)>::value_type()), field);
+        deserialize<attributes>(stream, p_value.emplace(typename Container::value_type()));
     }
 }
 
-template <typename T>
-static inline void deserialize(istream &stream, std::unique_ptr<T> &value, const field_attributes &field = {})
+template <field_attributes attributes, typename T> void deserialize(auto &stream, std::unique_ptr<T> &value)
 {
-    if (stream.consume("null"sv))
+    if (stream.consume_and_skip_white_space("null"sv))
     {
         value.reset();
         return;
@@ -636,80 +740,80 @@ static inline void deserialize(istream &stream, std::unique_ptr<T> &value, const
 
     if (value)
     {
-        deserialize(stream, *value, field);
+        deserialize<attributes>(stream, *value);
     }
     else
     {
         value = std::make_unique<T>();
-        deserialize(stream, *value, field);
+        deserialize<attributes>(stream, *value);
     }
 }
 
-static inline void ignore_value(istream &stream);
-static inline void ignore_key_and_value(istream &stream)
+void ignore_value(auto &stream);
+void ignore_key_and_value(auto &stream)
 {
     ignore_string(stream);
-    if (!stream.consume(':')) [[unlikely]]
+    if (!stream.consume_and_skip_white_space(':')) [[unlikely]]
         throw std::runtime_error("expecting ':'");
 
     ignore_value(stream);
 }
 
-static inline void ignore_object(istream &stream)
+void ignore_object(auto &stream)
 {
     //- '{' was already checked by caller
     stream.consume_current_char(true);
 
-    if (stream.consume('}'))
+    if (stream.consume_and_skip_white_space('}'))
         return;
 
     do
     {
         ignore_key_and_value(stream);
-    } while (stream.consume(','));
+    } while (stream.consume_and_skip_white_space(','));
 
-    if (!stream.consume('}'))
+    if (!stream.consume_and_skip_white_space('}'))
     {
         throw std::runtime_error("expecting '}'");
     }
 }
 
-static inline void ignore_array(istream &stream)
+void ignore_array(auto &stream)
 {
     //- '[' was already checked by caller
     stream.consume_current_char(true);
 
-    if (stream.consume(']'))
+    if (stream.consume_and_skip_white_space(']'))
         return;
 
     do
     {
         ignore_value(stream);
-    } while (stream.consume(','));
+    } while (stream.consume_and_skip_white_space(','));
 
-    if (!stream.consume(']')) [[unlikely]]
+    if (!stream.consume_and_skip_white_space(']')) [[unlikely]]
         throw std::runtime_error("expecting ']");
 }
 
-static inline void ignore_number(istream &stream)
+void ignore_number(auto &stream)
 {
     auto value = double{};
-    deserialize(stream, value);
+    deserialize<field_attributes{}>(stream, value);
 }
 
-static inline void ignore_bool(istream &stream)
+void ignore_bool(auto &stream)
 {
     auto value = bool{};
-    deserialize(stream, value);
+    deserialize<field_attributes{}>(stream, value);
 }
 
-static inline void ignore_null(istream &stream)
+void ignore_null(auto &stream)
 {
-    if (!stream.consume("null"sv)) [[unlikely]]
+    if (!stream.consume_and_skip_white_space("null"sv)) [[unlikely]]
         throw std::runtime_error("expecting 'null'");
 }
 
-static inline void ignore_value(istream &stream)
+void ignore_value(auto &stream)
 {
     switch (stream.current_char())
     {
@@ -729,93 +833,71 @@ static inline void ignore_value(istream &stream)
     }
 }
 
-template <typename T> inline auto deserialize_bitfield(istream &stream, uint32_t bits) -> T
+template <field_attributes attributes, typename T> T deserialize_bitfield(auto &stream, uint32_t bits)
 {
     auto value = T();
-    deserialize(stream, value);
+    deserialize<attributes>(stream, value);
     spb::detail::check_if_value_fit_in_bits(value, bits);
     return value;
 }
 
-template <size_t ordinal, typename T> static inline void deserialize_variant(istream &stream, T &variant)
+template <field_attributes attributes, size_t ordinal, typename T>
+void deserialize_variant(auto &stream, T &variant)
 {
-    deserialize(stream, variant.template emplace<ordinal>());
+    deserialize<attributes>(stream, variant.template emplace<ordinal>());
 }
 
-static inline void deserialize(istream &stream, auto &value, const field_attributes &)
+template <field_attributes> void deserialize(auto &stream, spb::detail::proto_message auto &value)
 {
-    if (!stream.consume('{')) [[unlikely]]
+    if (!stream.consume_and_skip_white_space('{')) [[unlikely]]
         throw std::runtime_error("expecting '{'");
 
-    if (stream.consume('}'))
+    if (stream.consume_and_skip_white_space('}'))
         return;
 
     for (;;)
     {
-        //
-        //- deserialize_value is generated by the sprotoc
-        //
+        //- generated by the sprotoc
         deserialize_value(stream, value);
 
-        if (stream.consume(','))
+        if (stream.consume_and_skip_white_space(','))
             continue;
 
-        if (stream.consume('}'))
+        if (stream.consume_and_skip_white_space('}'))
             return;
 
         throw std::runtime_error("expecting '}' or ','");
     }
 }
 
-inline auto istream::deserialize_key(size_t min_size, size_t max_size) -> std::string_view
+auto deserialize_key(auto &stream, size_t min_size, size_t max_size, char *buffer) -> std::string_view
 {
-    m_current_key = deserialize_string_view(*this, min_size, max_size);
-    if (!consume(':')) [[unlikely]]
+    auto key = deserialize_string_to_buffer(stream, min_size, max_size, buffer);
+    if (!stream.consume_and_skip_white_space(':')) [[unlikely]]
         throw std::runtime_error("expecting ':'");
 
-    return m_current_key;
+    return key;
 }
 
-inline void istream::deserialize(auto &value, const field_attributes &field)
-{
-    return detail::deserialize(*this, value, field);
-}
-
-template <size_t ordinal, typename T> inline void istream::deserialize_variant(T &variant)
-{
-    return detail::deserialize_variant<ordinal>(*this, variant);
-}
-
-template <typename T> inline auto istream::deserialize_bitfield(uint32_t bits) -> T
-{
-    return detail::deserialize_bitfield<T>(*this, bits);
-}
-
-inline auto istream::deserialize_string_or_int(size_t min_size, size_t max_size)
+auto deserialize_string_or_int(auto &stream, size_t min_size, size_t max_size, char *buffer)
     -> std::variant<std::string_view, int32_t>
 {
-    if (current_char() == '"')
-        return deserialize_string_view(*this, min_size, max_size);
+    if (stream.current_char() == '"')
+        return deserialize_string_to_buffer(stream, min_size, max_size, buffer);
 
-    return deserialize_int();
+    return deserialize_int(stream);
 }
 
-inline auto istream::deserialize_int() -> int32_t
+auto deserialize_int(auto &stream) -> int32_t
 {
     auto result = int32_t{};
-    detail::deserialize(*this, result);
+    deserialize<field_attributes{}>(stream, result);
     return result;
 }
 
-inline void istream::skip_value()
+void skip_value(auto &stream)
 {
-    return detail::ignore_value(*this);
-}
-
-static inline void deserialize(auto &value, spb::io::reader reader)
-{
-    auto stream = detail::istream(reader);
-    return detail::deserialize(stream, value);
+    ignore_value(stream);
 }
 
 } // namespace spb::json::detail
