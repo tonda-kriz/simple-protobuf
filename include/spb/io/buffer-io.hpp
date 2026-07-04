@@ -15,20 +15,21 @@
 #include <cstdlib>
 #include <cstring>
 #include <string_view>
+#include <sys/types.h>
 
 namespace spb::io
 {
-#ifndef SPB_READ_BUFFER_SIZE
-#define SPB_READ_BUFFER_SIZE 256U
-#endif
-
 class buffered_reader
 {
+  public:
+    static constexpr size_t BUFFER_SIZE = 256;
+
   private:
-    std::array<char, SPB_READ_BUFFER_SIZE> buffer;
+    using buffer_index_type = uint16_t;
+    std::array<char, BUFFER_SIZE> buffer;
     io::reader on_read;
-    uint32_t begin_index = 0;
-    uint32_t end_index = 0;
+    buffer_index_type begin_index = 0;
+    buffer_index_type end_index = 0;
     bool eof_reached = false;
 
     auto bytes_in_buffer() const noexcept -> size_t
@@ -57,7 +58,8 @@ class buffered_reader
 
         while (bytes_in_buffer() < buffer.size() && !eof_reached)
         {
-            auto bytes_in = on_read(&buffer[end_index], space_left_in_buffer());
+            auto bytes_in =
+                static_cast<buffer_index_type>(on_read(&buffer[end_index], space_left_in_buffer()));
             eof_reached |= bytes_in == 0;
             end_index += bytes_in;
         }

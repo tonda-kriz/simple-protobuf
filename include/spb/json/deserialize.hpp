@@ -370,7 +370,7 @@ void ignore_string(auto &stream)
 auto deserialize_string_to_buffer(auto &stream, size_t min_size, size_t max_size, char *buffer)
     -> std::string_view
 {
-    assert(max_size < SPB_READ_BUFFER_SIZE);
+    assert(max_size < io::buffered_reader::BUFFER_SIZE);
 
     if (!stream.consume('"')) [[unlikely]]
         throw std::runtime_error(R"(expecting '"')");
@@ -797,13 +797,13 @@ void ignore_array(auto &stream)
 
 void ignore_number(auto &stream)
 {
-    auto value = double{};
+    double value;
     deserialize<field_attributes{}>(stream, value);
 }
 
 void ignore_bool(auto &stream)
 {
-    auto value = bool{};
+    bool value;
     deserialize<field_attributes{}>(stream, value);
 }
 
@@ -890,7 +890,7 @@ auto deserialize_string_or_int(auto &stream, size_t min_size, size_t max_size, c
 
 auto deserialize_int(auto &stream) -> int32_t
 {
-    auto result = int32_t{};
+    int32_t result;
     deserialize<field_attributes{}>(stream, result);
     return result;
 }

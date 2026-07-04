@@ -105,7 +105,7 @@ TEST_CASE("base64")
     }
     SUBCASE("encode/decode")
     {
-        const auto buffer_max_size = SPB_READ_BUFFER_SIZE * 10;
+        const auto buffer_max_size = spb::io::buffered_reader::BUFFER_SIZE * 10;
         for (auto i = 8U; i <= buffer_max_size; i++)
         {
             srand(i);

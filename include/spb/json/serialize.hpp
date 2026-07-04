@@ -209,15 +209,17 @@ void write_escaped(auto &stream, std::string_view str)
     }
 }
 
-void serialize_key(auto &stream, std::string_view key)
+void put_comma_if_needed(auto &stream)
 {
     if (stream.put_comma)
         stream.write(',');
 
     stream.put_comma = true;
+}
 
-    if (key.empty())
-        return;
+void serialize_key(auto &stream, std::string_view key)
+{
+    put_comma_if_needed(stream);
 
     stream.write('"');
     stream.write(key.data(), key.size());
@@ -379,13 +381,15 @@ void serialize(auto &stream, const spb::detail::proto_label_repeated auto &value
     stream.put_comma = false;
     for (const auto &v : value)
     {
+        put_comma_if_needed(stream);
+
         if constexpr (std::is_same_v<typename std::decay_t<decltype(value)>::value_type, bool>)
         {
-            serialize<attributes>(stream, bool(v), {});
+            serialize<attributes>(stream, bool(v));
         }
         else
         {
-            serialize<attributes>(stream, v, {});
+            serialize<attributes>(stream, v);
         }
     }
     stream.write(']');
@@ -399,13 +403,15 @@ void serialize(auto &stream, const spb::detail::proto_label_repeated_fixed_size 
     stream.put_comma = false;
     for (size_t i = 0; i < value.size(); i++)
     {
+        put_comma_if_needed(stream);
+
         if constexpr (std::is_same_v<typename std::decay_t<decltype(value)>::value_type, bool>)
         {
             serialize<attributes>(stream, bool(value[i]));
         }
         else
         {
-            serialize<attributes>(stream, value[i], {});
+            serialize<attributes>(stream, value[i]);
         }
     }
     stream.write(']');
