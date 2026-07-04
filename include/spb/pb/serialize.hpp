@@ -84,6 +84,7 @@ struct ostream_writer
 };
 
 template <serialize_mode = serialize_mode{}> size_t serialize_size(const auto &value);
+template <serialize_mode = serialize_mode{}> size_t serialize_size(uint32_t field, const auto &value);
 template <serialize_mode> void serialize(auto &stream, const spb::detail::proto_message auto &value);
 
 inline size_t serialize_varint_size(uint64_t value)
@@ -202,19 +203,6 @@ template <serialize_mode mode> void serialize(auto &stream, spb::detail::proto_f
     }
 }
 
-template <serialize_mode mode, typename keyT, typename valueT>
-void serialize(auto &stream, const std::map<keyT, valueT> &value)
-{
-    constexpr auto key_encoder = serialize_mode{.encoder = mode.encoder};
-    constexpr auto value_encoder = serialize_mode{.encoder = mode.encoder2};
-
-    for (const auto &[k, v] : value)
-    {
-        serialize<key_encoder>(stream, 1, k);
-        serialize<value_encoder>(stream, 2, v);
-    }
-}
-
 template <serialize_mode mode>
 void serialize_packed(auto &stream, const spb::detail::proto_label_repeated_fixed_size auto &container)
 {
@@ -300,10 +288,17 @@ void serialize(auto &stream, uint32_t field, const std::map<keyT, valueT> &value
     if (value.empty())
         return;
 
-    const auto size = serialize_size<mode>(value);
-    serialize_tag(stream, field, wire_type::length_delimited);
-    serialize_varint(stream, size);
-    serialize<mode>(stream, value);
+    constexpr auto key_encoder = serialize_mode{.encoder = mode.encoder};
+    constexpr auto value_encoder = serialize_mode{.encoder = mode.encoder2};
+
+    for (const auto &[k, v] : value)
+    {
+        const auto size = serialize_size<key_encoder>(1, k) + serialize_size<value_encoder>(2, v);
+        serialize_tag(stream, field, wire_type::length_delimited);
+        serialize_varint(stream, size);
+        serialize<key_encoder>(stream, 1, k);
+        serialize<value_encoder>(stream, 2, v);
+    }
 }
 
 template <serialize_mode mode>
@@ -379,6 +374,13 @@ template <serialize_mode mode> auto serialize_size(const auto &value) -> size_t
 {
     auto stream = ostream_size();
     serialize<mode>(stream, value);
+    return stream.size;
+}
+
+template <serialize_mode mode> auto serialize_size(uint32_t field, const auto &value) -> size_t
+{
+    auto stream = ostream_size();
+    serialize<mode>(stream, field, value);
     return stream.size;
 }
 

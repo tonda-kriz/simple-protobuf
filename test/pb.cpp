@@ -1807,7 +1807,7 @@ TEST_CASE("protobuf")
         {
             CHECK(pb_serialize<mode>(std::map<int32_t, int32_t>{{1, 2}}) == "\x0a\x04\x08\x01\x10\x02");
             CHECK(pb_serialize<mode>(std::map<int32_t, int32_t>{{1, 2}, {2, 3}}) ==
-                  "\x0a\x08\x08\x01\x10\x02\x08\x02\x10\x03");
+                  "\x0a\x04\x08\x01\x10\x02\x0a\x04\x08\x02\x10\x03");
         }
         SUBCASE("string/string")
         {
