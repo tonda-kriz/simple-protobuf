@@ -81,7 +81,7 @@ class buffered_reader
 
     void skip(size_t size) noexcept
     {
-        assert(bytes_in_buffer() <= size);
+        assert(size <= bytes_in_buffer());
         begin_index += static_cast<buffer_index_type>(size);
     }
 };

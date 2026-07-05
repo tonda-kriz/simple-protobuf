@@ -30,7 +30,7 @@ namespace spb::json
 size_t serialize(const auto &message, spb::io::writer on_write)
 {
     auto stream = detail::ostream_writer{on_write};
-    serialize_value(stream, message);
+    detail::serialize<detail::field_attributes{}>(stream, message);
     return stream.size;
 }
 
@@ -50,7 +50,7 @@ size_t serialize(const auto &message, void *buffer)
 {
     const auto start = (uint8_t *)buffer;
     auto stream = detail::ostream_buffer((uint8_t *)buffer);
-    serialize_value(stream, message);
+    detail::serialize<detail::field_attributes{}>(stream, message);
     return stream.p_buffer - start;
 }
 
@@ -71,9 +71,7 @@ template <spb::resizable_container Container> size_t serialize(const auto &messa
 
     const auto size = detail::serialize_size(message);
     result.resize(size);
-    auto stream = detail::ostream_buffer((uint8_t *)result.data());
-    detail::serialize<detail::field_attributes{}>(stream, message);
-    return result.size();
+    return serialize(message, result.data());
 }
 
 /**
