@@ -2,6 +2,7 @@
 
 mkdir -p benchmark/img
 
+find build/benchmark -type f -executable -exec strip --strip-all {} +
 python scripts/file-size-plotter.py build/benchmark
 mv file-size-benchmark.png benchmark/img/file-size-benchmark.png
 

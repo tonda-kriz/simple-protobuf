@@ -166,21 +166,22 @@ See the [example](example/) directory.
 
 _Tiny and Fast_
 
+Measured on `Linux/i7-8650U CPU @ 1.90GHz` with GCC 16.1.1 `-flto -O2` using [nanobench](https://github.com/martinus/nanobench).
+
 See the [benchmark](benchmark/) directory.
 
 ### Speed
 
-Measured on `Linux/i7-8650U CPU @ 1.90GHz` with GCC 16.1.1 `-flto -O2` using [nanobench](https://github.com/martinus/nanobench).
-
-* SPB protobuf serializer/deserializer has the **same speed** as google GPB.
+* SPB protobuf serializer/deserializer has about the **same speed** as google GPB.
 * SPB JSON serializer/deserializer is about **8x faster** than google GPB.
 
 ![Speed benchmark](benchmark/img/speed-benchmark.png)
 
 ### Binary size
 
-Measured with 
+Measured on stripped executable files
 ```bash
+$ find build/benchmark -type f -executable -exec strip --strip-all {} +
 $ ls -alh ./build/benchmark
 ```
 
