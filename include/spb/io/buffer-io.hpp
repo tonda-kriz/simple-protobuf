@@ -11,23 +11,25 @@
 #pragma once
 #include "io.hpp"
 #include <array>
+#include <cassert>
 #include <cstdlib>
 #include <cstring>
 #include <string_view>
+#include <sys/types.h>
 
 namespace spb::io
 {
-#ifndef SPB_READ_BUFFER_SIZE
-#define SPB_READ_BUFFER_SIZE 256U
-#endif
-
 class buffered_reader
 {
+  public:
+    static constexpr size_t BUFFER_SIZE = 256;
+
   private:
+    using buffer_index_type = uint16_t;
+    std::array<char, BUFFER_SIZE> buffer;
     io::reader on_read;
-    std::array<char, SPB_READ_BUFFER_SIZE> buffer;
-    size_t begin_index = 0;
-    size_t end_index = 0;
+    buffer_index_type begin_index = 0;
+    buffer_index_type end_index = 0;
     bool eof_reached = false;
 
     auto bytes_in_buffer() const noexcept -> size_t
@@ -37,26 +39,27 @@ class buffered_reader
 
     auto space_left_in_buffer() const noexcept -> size_t
     {
-        return SPB_READ_BUFFER_SIZE - end_index;
+        return buffer.size() - end_index;
     }
 
     void shift_data_to_start() noexcept
     {
-        if (begin_index > 0)
-        {
-            memmove(buffer.data(), buffer.data() + begin_index, bytes_in_buffer());
-            end_index -= begin_index;
-            begin_index = 0;
-        }
+        if (begin_index == 0)
+            return;
+
+        memmove(buffer.data(), buffer.data() + begin_index, bytes_in_buffer());
+        end_index -= begin_index;
+        begin_index = 0;
     }
 
     void read_buffer()
     {
         shift_data_to_start();
 
-        while (bytes_in_buffer() < SPB_READ_BUFFER_SIZE && !eof_reached)
+        while (bytes_in_buffer() < buffer.size() && !eof_reached)
         {
-            auto bytes_in = on_read(&buffer[end_index], space_left_in_buffer());
+            auto bytes_in =
+                static_cast<buffer_index_type>(on_read(&buffer[end_index], space_left_in_buffer()));
             eof_reached |= bytes_in == 0;
             end_index += bytes_in;
         }
@@ -78,7 +81,8 @@ class buffered_reader
 
     void skip(size_t size) noexcept
     {
-        begin_index += std::min(size, bytes_in_buffer());
+        assert(size <= bytes_in_buffer());
+        begin_index += static_cast<buffer_index_type>(size);
     }
 };
 

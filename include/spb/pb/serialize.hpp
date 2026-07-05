@@ -83,7 +83,7 @@ struct ostream_writer
     }
 };
 
-template <serialize_mode = serialize_mode{}> auto serialize_size(const auto &value) -> size_t;
+template <serialize_mode = serialize_mode{}> size_t serialize_size(const auto &value);
 template <serialize_mode> void serialize(auto &stream, const spb::detail::proto_message auto &value);
 
 inline size_t serialize_varint_size(uint64_t value)

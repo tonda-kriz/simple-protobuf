@@ -18,7 +18,7 @@
 
 namespace spb::json::detail
 {
-template <typename ostream> void base64_encode(ostream &output, std::span<const std::byte> input)
+void base64_encode(auto &output, std::span<const std::byte> input)
 {
     static constexpr char encode_table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
 
@@ -89,18 +89,17 @@ void base64_decode_string(spb::detail::proto_field_bytes auto &output, istream &
     if constexpr (spb::detail::proto_field_bytes_resizable<decltype(output)>)
         output.clear();
 
-    if (stream.current_char() != '"') [[unlikely]]
+    if (!stream.consume('"')) [[unlikely]]
         throw std::runtime_error("expecting '\"'");
 
-    stream.consume_current_char(false);
-    if (stream.consume('"'))
+    if (stream.consume_and_skip_white_space('"'))
         return;
 
     auto mask = uint8_t(0);
 
     for (auto out_index = size_t(0);;)
     {
-        auto view = stream.view(UINT32_MAX);
+        auto view = stream.view(1, UINT32_MAX);
         auto length = view.find('"');
         auto end_found = length < view.npos;
         if ((end_found && length % 4 != 0) || view.size() <= 4) [[unlikely]]

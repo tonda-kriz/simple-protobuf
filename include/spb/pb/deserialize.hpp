@@ -222,10 +222,10 @@ void check_if_empty_or_throw(auto &stream)
         throw std::runtime_error("unexpected data in stream");
 }
 
-[[nodiscard]] inline auto read_tag_or_eof(auto &stream) -> tag_type
+[[nodiscard]] auto read_tag_or_eof(auto &stream) -> tag_type
 {
     auto byte_or_eof = stream.read_byte_or_eof();
-    if (byte_or_eof < 0)
+    if (byte_or_eof < 0) [[unlikely]]
         return tag_type::invalid;
 
     auto byte = (uint8_t)(byte_or_eof);
@@ -711,10 +711,11 @@ void deserialize(auto &stream, spb::detail::proto_message auto &value, wire_type
 
     while (!stream.empty())
     {
-        const auto tag = tag_type(read_varint<uint32_t>(stream));
-        const auto field_type = wire_type_from_tag(tag);
-        check_tag_or_throw(tag);
+        const auto tag = read_tag_or_eof(stream);
+        if (tag == tag_type::invalid)
+            return;
 
+        const auto field_type = wire_type_from_tag(tag);
         if (field_type == wire_type::length_delimited)
         {
             const auto size = read_varint<uint32_t>(stream);

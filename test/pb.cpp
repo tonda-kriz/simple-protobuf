@@ -169,7 +169,38 @@ template <typename T> void pb_test(const T &value, std::string_view protobuf)
     }
 
     {
+        auto serialized = std::string();
+        auto writer = [&serialized](const void *data, size_t size) { serialized.append((char *)data, size); };
+        auto serialized_size = spb::pb::serialize(value, writer);
+        auto size = spb::pb::serialize_size(value);
+        CHECK(serialized_size == size);
+        CHECK(serialized == protobuf);
+        CHECK(size == protobuf.size());
+    }
+
+    {
         auto deserialized = spb::pb::deserialize<T>(protobuf);
+        if constexpr (HasValueMember<T>)
+        {
+            using valueT = decltype(T::value);
+            CHECK(valueT(deserialized.value) == valueT(value.value));
+        }
+        else
+        {
+            CHECK(deserialized == value);
+        }
+    }
+    {
+        auto deserialized = T();
+        auto reader = [protobuf](void *data, size_t size) mutable
+        {
+            const auto copy_size = std::min(protobuf.size(), size);
+            memcpy(data, protobuf.data(), copy_size);
+            protobuf.remove_prefix(copy_size);
+            return copy_size;
+        };
+        auto size = spb::pb::deserialize(deserialized, reader);
+        CHECK(size == protobuf.size());
         if constexpr (HasValueMember<T>)
         {
             using valueT = decltype(T::value);
@@ -198,10 +229,10 @@ template <typename T> void pb_test(const T &value, std::string_view protobuf)
 template <typename T> void json_test(const T &value, std::string_view json)
 {
     {
-        auto serialized = spb::json::serialize<std::string>(value);
-        CHECK(serialized.size() == json.size());
-        auto js = std::string_view((char *)serialized.data(), serialized.size());
-        CHECK(js == json);
+        auto serialized = std::string();
+        auto size = spb::json::serialize(value, serialized);
+        CHECK(size == json.size());
+        CHECK(serialized == json);
     }
 
     {
@@ -209,6 +240,14 @@ template <typename T> void json_test(const T &value, std::string_view json)
         CHECK(serialized == json);
         auto size = spb::json::serialize_size(value);
         CHECK(size == json.size());
+    }
+
+    {
+        auto serialized = std::string();
+        auto writer = [&serialized](const void *data, size_t size) { serialized.append((char *)data, size); };
+        auto size = spb::json::serialize(value, writer);
+        CHECK(size == json.size());
+        CHECK(serialized == json);
     }
 
     {
@@ -226,6 +265,27 @@ template <typename T> void json_test(const T &value, std::string_view json)
     {
         auto deserialized = T();
         spb::json::deserialize(deserialized, json);
+        if constexpr (HasValueMember<T>)
+        {
+            using valueT = decltype(T::value);
+            CHECK(valueT(deserialized.value) == valueT(value.value));
+        }
+        else
+        {
+            CHECK(deserialized == value);
+        }
+    }
+    {
+        auto deserialized = T();
+        auto reader = [json](void *data, size_t size) mutable
+        {
+            const auto copy_size = std::min(json.size(), size);
+            memcpy(data, json.data(), copy_size);
+            json.remove_prefix(copy_size);
+            return copy_size;
+        };
+        auto size = spb::json::deserialize(deserialized, reader);
+        CHECK(size == json.size());
         if constexpr (HasValueMember<T>)
         {
             using valueT = decltype(T::value);
@@ -576,13 +636,20 @@ TEST_CASE("protobuf")
                 SUBCASE("invalid")
                 {
                     CHECK_THROWS((void)spb::pb::deserialize<Test::Scalar::ReqString>("\x0a\x02h\x80"sv));
-                    CHECK_THROWS((void)spb::json::serialize<std::string, std::string>("h\x80"));
-                    CHECK_THROWS((void)spb::json::deserialize<std::string>(R"("h\u02w1")"sv));
-                    CHECK_THROWS((void)spb::json::deserialize<std::string>(R"("h\u02")"sv));
-                    CHECK_THROWS((void)spb::json::deserialize<std::string>(R"("h\ud800\u")"sv));
-                    CHECK_THROWS((void)spb::json::deserialize<std::string>(R"("h\ud800\u1")"sv));
-                    CHECK_THROWS((void)spb::json::deserialize<std::string>(R"("h\ud800\udbff")"sv));
-                    CHECK_THROWS((void)spb::json::deserialize<std::string>(R"("h\ud800\ue000")"sv));
+                    CHECK_THROWS(
+                        (void)spb::json::serialize<std::string>(Test::Scalar::ReqString{.value = "h\x80"}));
+                    CHECK_THROWS(
+                        (void)spb::json::deserialize<Test::Scalar::ReqString>(R"({"value":"h\u02w1"})"sv));
+                    CHECK_THROWS(
+                        (void)spb::json::deserialize<Test::Scalar::ReqString>(R"({"value":"h\u02"})"sv));
+                    CHECK_THROWS(
+                        (void)spb::json::deserialize<Test::Scalar::ReqString>(R"({"value":"h\ud800\u"})"sv));
+                    CHECK_THROWS(
+                        (void)spb::json::deserialize<Test::Scalar::ReqString>(R"({"value":"h\ud800\u1"})"sv));
+                    CHECK_THROWS((void)spb::json::deserialize<Test::Scalar::ReqString>(
+                        R"({"value":"h\ud800\udbff"})"sv));
+                    CHECK_THROWS((void)spb::json::deserialize<Test::Scalar::ReqString>(
+                        R"({"value":"h\ud800\ue000"})"sv));
                 }
             }
         }

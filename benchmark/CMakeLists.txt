@@ -22,9 +22,9 @@ add_executable(spb-json-deserialize spb/json-deserialize.cpp)
 target_link_libraries(spb-json-deserialize PUBLIC spb-common)
 spb_set_compile_options(spb-json-deserialize)
 
-add_executable(spb-utf8 spb/utf8.cpp)
-target_link_libraries(spb-utf8 PUBLIC spb::proto)
-spb_set_compile_options(spb-utf8)
+#add_executable(spb-utf8 spb/utf8.cpp)
+#target_link_libraries(spb-utf8 PUBLIC spb::proto)
+#spb_set_compile_options(spb-utf8)
 
 PROTOBUF_GENERATE_CPP(PROTO_BOOK_SRC PROTO_BOOK_HDR ${CMAKE_CURRENT_LIST_DIR}/proto/addressbook.proto)
 add_library(gpb-common STATIC gpb/common.cpp ${PROTO_BOOK_SRC})
