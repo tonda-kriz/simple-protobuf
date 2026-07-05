@@ -323,7 +323,7 @@ void dump_cpp_serialize_field(std::ostream &stream, const proto_file &file, cons
 {
     stream << "\tserialize<";
     dump_field_attributes(stream, file, message, map.key);
-    stream << ">(stream, value." << map.name.get_name() << ", \"" << json_field_name(map.key) << "\"sv);\n";
+    stream << ">(stream, value." << map.name.get_name() << ", \"" << json_field_name(map) << "\"sv);\n";
 }
 
 void dump_cpp_serialize_enum(std::ostream &stream, const proto_enum &, std::string_view full_name)

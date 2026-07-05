@@ -6,6 +6,7 @@
 #include <person.pb.h>
 #include <proto/array.pb.h>
 #include <proto/enum.pb.h>
+#include <proto/map.pb.h>
 #include <proto/options.pb.h>
 #include <proto/simd.pb.h>
 #include <reserved.pb.h>
@@ -118,6 +119,14 @@ auto operator==(const Data &lhs, const Data &rhs) noexcept -> bool
            lhs.words[3] == rhs.words[3];
 }
 } // namespace UnitTest::array
+
+namespace UnitTest::map
+{
+auto operator==(const Data &lhs, const Data &rhs) noexcept -> bool
+{
+    return lhs.map == rhs.map;
+}
+} // namespace UnitTest::map
 
 namespace
 {
@@ -1811,8 +1820,12 @@ TEST_CASE("protobuf")
         }
         SUBCASE("string/string")
         {
-            CHECK(pb_serialize<mode>(std::map<std::string, std::string>{{"hello", "world"}}) ==
-                  "\x0a\x0e\x0a\x05hello\x12\x05world");
+            pb_json_test(UnitTest::map::Data{.map = std::map<std::string, std::string>{{"hello", "world"}}},
+                         "\x0a\x0e\x0a\x05hello\x12\x05world", R"({"map":{"hello":"world"}})");
+            pb_json_test(UnitTest::map::Data{.map = std::map<std::string, std::string>{{"hello", "world"},
+                                                                                       {"name", "john"}}},
+                         "\x0a\x0e\x0a\x05hello\x12\x05world\x0a\x0c\x0a\x04name\x12\x04john",
+                         R"({"map":{"hello":"world","name":"john"}})");
         }
         SUBCASE("int32/string")
         {
