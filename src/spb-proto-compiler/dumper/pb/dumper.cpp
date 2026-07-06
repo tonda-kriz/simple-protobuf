@@ -210,9 +210,12 @@ void dump_cpp_serialize_field(std::ostream &stream, const proto_file &file, cons
 {
     stream << "\t{\n\t\tconst auto index = value." << oneof.name.get_name() << ".index( );\n";
     stream << "\t\tswitch (index)\n\t\t{\n";
+    // Add case 0 for monostate (empty state)
+    stream << "\t\t\tcase 0:\n\t\t\t\tbreak;  // monostate - empty oneof\n";
+    // All field indices shifted by 1
     for (size_t i = 0; i < oneof.fields.size(); ++i)
     {
-        stream << "\t\t\tcase " << i << ":\n\t\t\t\treturn serialize<";
+        stream << "\t\t\tcase " << (i + 1) << ":\n\t\t\t\treturn serialize<";
         dump_serialize_mode(stream, file, message, oneof.fields[i]);
         stream << ">(stream, " << oneof.fields[i].number << ", std::get<" << i << ">(value."
                << oneof.name.get_name() << "));\n";
