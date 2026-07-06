@@ -368,16 +368,13 @@ void dump_message_oneof(std::ostream &stream, const proto_oneof &oneof, const pr
 {
     dump_comment(stream, oneof.comment);
 
-    auto put_comma = false;
-    stream << "std::variant< ";
+    
+    stream << "std::variant< std::monostate";
     for (const auto &field : oneof.fields)
     {
-        if (put_comma)
-            stream << ", ";
-
-        stream << convert_to_ctype(file, field);
-        put_comma = true;
+        stream << ", " << convert_to_ctype(file, field);
     }
+    
     stream << " > " << oneof.name.get_name() << ";\n";
 }
 
