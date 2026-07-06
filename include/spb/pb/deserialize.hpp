@@ -641,10 +641,9 @@ inline void deserialize(auto &stream, std::map<keyT, valueT> &value, wire_type t
         switch (field_number)
         {
         case 1:
-            check_wire_type_or_throw(field_type, type);
             if constexpr (std::is_integral_v<keyT>)
             {
-                deserialize<key_encoder>(stream, pair.first, type);
+                deserialize<key_encoder>(stream, pair.first, field_type);
             }
             else
             {
@@ -652,21 +651,20 @@ inline void deserialize(auto &stream, std::map<keyT, valueT> &value, wire_type t
                 {
                     const auto size = read_varint<uint32_t>(stream);
                     auto substream = stream.sub_stream(size);
-                    deserialize<key_encoder>(substream, pair.first, type);
+                    deserialize<key_encoder>(substream, pair.first, field_type);
                     check_if_empty_or_throw(substream);
                 }
                 else
                 {
-                    deserialize<key_encoder>(stream, pair.first, type);
+                    deserialize<key_encoder>(stream, pair.first, field_type);
                 }
             }
             key_defined = true;
             break;
         case 2:
-            check_wire_type_or_throw(field_type, type);
             if constexpr (spb::detail::proto_field_number<valueT>)
             {
-                deserialize<value_encoder>(stream, pair.second, type);
+                deserialize<value_encoder>(stream, pair.second, field_type);
             }
             else
             {
@@ -674,7 +672,7 @@ inline void deserialize(auto &stream, std::map<keyT, valueT> &value, wire_type t
                 {
                     const auto size = read_varint<uint32_t>(stream);
                     auto substream = stream.sub_stream(size);
-                    deserialize<value_encoder>(substream, pair.second, type);
+                    deserialize<value_encoder>(substream, pair.second, field_type);
                     check_if_empty_or_throw(substream);
                 }
                 else [[unlikely]]
