@@ -2,6 +2,26 @@ syntax = "proto3";
 
 package UnitTest.map;
 
-message Data {
-  map<string, string> map = 1;
+message Int32Int32 {
+  map<int32, int32> map = 1;
 };
+
+message StringString {
+  map<string, string> map = 1;
+}
+
+message Int32String {
+  map<int32, string> map = 1;
+}
+
+message StringInt32 {
+  map<string, int32> map = 1;
+}
+
+message Name {
+  string name = 1;
+}
+
+message StringName {
+  map<string, Name> map = 1;
+}

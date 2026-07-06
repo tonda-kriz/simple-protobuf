@@ -122,7 +122,27 @@ auto operator==(const Data &lhs, const Data &rhs) noexcept -> bool
 
 namespace UnitTest::map
 {
-auto operator==(const Data &lhs, const Data &rhs) noexcept -> bool
+auto operator==(const Int32Int32 &lhs, const Int32Int32 &rhs) noexcept -> bool
+{
+    return lhs.map == rhs.map;
+}
+auto operator==(const StringString &lhs, const StringString &rhs) noexcept -> bool
+{
+    return lhs.map == rhs.map;
+}
+auto operator==(const Int32String &lhs, const Int32String &rhs) noexcept -> bool
+{
+    return lhs.map == rhs.map;
+}
+auto operator==(const StringInt32 &lhs, const StringInt32 &rhs) noexcept -> bool
+{
+    return lhs.map == rhs.map;
+}
+auto operator==(const Name &lhs, const Name &rhs) noexcept -> bool
+{
+    return lhs.name == rhs.name;
+}
+auto operator==(const StringName &lhs, const StringName &rhs) noexcept -> bool
 {
     return lhs.map == rhs.map;
 }
@@ -1810,37 +1830,40 @@ TEST_CASE("protobuf")
     }
     SUBCASE("map")
     {
-        constexpr auto mode = spb::pb::detail::serialize_mode{.encoder = scalar_encoder::varint,
-                                                              .encoder2 = scalar_encoder::varint};
         SUBCASE("int32/int32")
         {
-            CHECK(pb_serialize<mode>(std::map<int32_t, int32_t>{{1, 2}}) == "\x0a\x04\x08\x01\x10\x02");
-            CHECK(pb_serialize<mode>(std::map<int32_t, int32_t>{{1, 2}, {2, 3}}) ==
-                  "\x0a\x04\x08\x01\x10\x02\x0a\x04\x08\x02\x10\x03");
+            pb_json_test(UnitTest::map::Int32Int32{.map = std::map<int32_t, int32_t>{{1, 2}}},
+                         "\x0a\x04\x08\x01\x10\x02", R"({"map":{"1":2}})");
+            pb_json_test(UnitTest::map::Int32Int32{.map = std::map<int32_t, int32_t>{{1, 2}, {2, 3}}},
+                         "\x0a\x04\x08\x01\x10\x02\x0a\x04\x08\x02\x10\x03", R"({"map":{"1":2,"2":3}})");
         }
         SUBCASE("string/string")
         {
-            pb_json_test(UnitTest::map::Data{.map = std::map<std::string, std::string>{{"hello", "world"}}},
-                         "\x0a\x0e\x0a\x05hello\x12\x05world", R"({"map":{"hello":"world"}})");
-            pb_json_test(UnitTest::map::Data{.map = std::map<std::string, std::string>{{"hello", "world"},
-                                                                                       {"name", "john"}}},
-                         "\x0a\x0e\x0a\x05hello\x12\x05world\x0a\x0c\x0a\x04name\x12\x04john",
-                         R"({"map":{"hello":"world","name":"john"}})");
+            pb_json_test(
+                UnitTest::map::StringString{.map = std::map<std::string, std::string>{{"hello", "world"}}},
+                "\x0a\x0e\x0a\x05hello\x12\x05world", R"({"map":{"hello":"world"}})");
+            pb_json_test(
+                UnitTest::map::StringString{
+                    .map = std::map<std::string, std::string>{{"hello", "world"}, {"name", "john"}}},
+                "\x0a\x0e\x0a\x05hello\x12\x05world\x0a\x0c\x0a\x04name\x12\x04john",
+                R"({"map":{"hello":"world","name":"john"}})");
         }
         SUBCASE("int32/string")
         {
-            CHECK(pb_serialize<mode>(std::map<int32_t, std::string>{{1, "hello"}}) ==
-                  "\x0a\x09\x08\x01\x12\x05hello");
+            pb_json_test(UnitTest::map::Int32String{.map = std::map<int32_t, std::string>{{1, "hello"}}},
+                         "\x0a\x09\x08\x01\x12\x05hello", R"({"map":{"1":"hello"}})");
         }
         SUBCASE("string/int32")
         {
-            CHECK(pb_serialize<mode>(std::map<std::string, int32_t>{{"hello", 2}}) ==
-                  "\x0a\x09\x0a\x05hello\x10\x02");
+            pb_json_test(UnitTest::map::StringInt32{.map = std::map<std::string, int32_t>{{"hello", 2}}},
+                         "\x0a\x09\x0a\x05hello\x10\x02", R"({"map":{"hello":2}})");
         }
         SUBCASE("string/name")
         {
-            CHECK(pb_serialize<mode>(std::map<std::string, Test::Name>{{"hello", {.name = "john"}}}) ==
-                  "\x0a\x0f\x0a\x05hello\x12\x06\x0A\x04john");
+            pb_json_test(
+                UnitTest::map::StringName{
+                    .map = std::map<std::string, UnitTest::map::Name>{{"hello", {.name = "john"}}}},
+                "\x0a\x0f\x0a\x05hello\x12\x06\x0A\x04john", R"({"map":{"hello":{"name":"john"}}})");
         }
     }
     SUBCASE("person")
