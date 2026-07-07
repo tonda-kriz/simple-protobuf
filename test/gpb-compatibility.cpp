@@ -1368,7 +1368,7 @@ TEST_CASE("variant")
         auto spb_serialized = spb::pb::serialize(spb);
 
         REQUIRE(gpb.ParseFromString(spb_serialized));
-        REQUIRE(gpb.var_int() == std::get<0>(spb.oneof_field));
+        REQUIRE(gpb.var_int() == std::get<1>(spb.oneof_field));
 
         SUBCASE("deserialize")
         {
@@ -1384,7 +1384,7 @@ TEST_CASE("variant")
         auto spb_serialized = spb::pb::serialize(spb);
 
         REQUIRE(gpb.ParseFromString(spb_serialized));
-        REQUIRE(gpb.var_string() == std::get<1>(spb.oneof_field));
+        REQUIRE(gpb.var_string() == std::get<2>(spb.oneof_field));
 
         SUBCASE("deserialize")
         {
@@ -1400,7 +1400,7 @@ TEST_CASE("variant")
         auto spb_serialized = spb::pb::serialize(spb);
 
         REQUIRE(gpb.ParseFromString(spb_serialized));
-        REQUIRE(gpb.var_bytes() == std::get<2>(spb.oneof_field));
+        REQUIRE(gpb.var_bytes() == std::get<3>(spb.oneof_field));
 
         SUBCASE("deserialize")
         {
@@ -1418,7 +1418,7 @@ TEST_CASE("variant")
         REQUIRE(gpb.ParseFromString(spb_serialized));
         REQUIRE(gpb.has_name());
 
-        REQUIRE(gpb.name().name() == std::get<3>(spb.oneof_field).name);
+        REQUIRE(gpb.name().name() == std::get<4>(spb.oneof_field).name);
 
         SUBCASE("deserialize")
         {
