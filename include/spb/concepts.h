@@ -70,6 +70,17 @@ concept proto_field_string_resizable = proto_field_string<T> && requires(T obj) 
 };
 
 template <class T>
+concept proto_map = requires(T map) {
+    typename std::decay_t<T>::key_type;
+    typename std::decay_t<T>::value_type;
+    typename std::decay_t<T>::mapped_type;
+    { map.begin() };
+    { map.end() };
+    { map.empty() };
+    { map.clear() };
+};
+
+template <class T>
 concept proto_label_repeated = requires(T container) {
     { container.emplace_back() };
     { container.begin() };
@@ -98,7 +109,7 @@ concept proto_label_optional = requires(T container) {
 template <class T>
 concept proto_message =
     std::is_class_v<T> && !proto_field_string<T> && !proto_field_bytes<T> && !proto_label_repeated<T> &&
-    !proto_label_repeated_fixed_size<T> && !proto_label_optional<T>;
+    !proto_label_repeated_fixed_size<T> && !proto_label_optional<T> && !proto_map<T>;
 
 } // namespace detail
 } // namespace spb

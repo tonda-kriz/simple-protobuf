@@ -19,7 +19,6 @@
 #include <cstdint>
 #include <cstring>
 #include <limits>
-#include <map>
 #include <memory>
 #include <spb/io/io.hpp>
 #include <stdexcept>
@@ -311,8 +310,7 @@ void deserialize(auto &stream, Container &value, wire_type type);
 template <serialize_mode, spb::detail::proto_label_optional Container>
 void deserialize(auto &stream, Container &p_value, wire_type type);
 
-template <serialize_mode, typename keyT, typename valueT>
-void deserialize(auto &stream, std::map<keyT, valueT> &value, wire_type type);
+template <serialize_mode> void deserialize(auto &stream, spb::detail::proto_map auto &value, wire_type type);
 
 template <serialize_mode, typename T>
 void deserialize(auto &stream, std::unique_ptr<T> &value, wire_type type);
@@ -619,15 +617,19 @@ void deserialize(auto &stream, Container &value, wire_type type)
     }
 }
 
-template <serialize_mode mode, typename keyT, typename valueT>
-inline void deserialize(auto &stream, std::map<keyT, valueT> &value, wire_type type)
+template <serialize_mode mode>
+inline void deserialize(auto &stream, spb::detail::proto_map auto &value, wire_type type)
 {
+    using map_type = std::remove_cvref_t<decltype(value)>;
+    using key_type = typename map_type::key_type;
+    using mapped_type = typename map_type::mapped_type;
+
     constexpr auto key_encoder = serialize_mode{.encoder = mode.encoder};
     constexpr auto value_encoder = serialize_mode{.encoder = mode.encoder2};
 
     check_wire_type_or_throw(type, wire_type::length_delimited);
 
-    auto pair = std::pair<keyT, valueT>();
+    auto pair = std::pair<key_type, mapped_type>();
     auto key_defined = false;
     auto value_defined = false;
     while (!stream.empty())
@@ -641,7 +643,7 @@ inline void deserialize(auto &stream, std::map<keyT, valueT> &value, wire_type t
         switch (field_number)
         {
         case 1:
-            if constexpr (std::is_integral_v<keyT>)
+            if constexpr (std::is_integral_v<key_type>)
             {
                 deserialize<key_encoder>(stream, pair.first, field_type);
             }
@@ -662,7 +664,7 @@ inline void deserialize(auto &stream, std::map<keyT, valueT> &value, wire_type t
             key_defined = true;
             break;
         case 2:
-            if constexpr (spb::detail::proto_field_number<valueT>)
+            if constexpr (spb::detail::proto_field_number<mapped_type>)
             {
                 deserialize<value_encoder>(stream, pair.second, field_type);
             }

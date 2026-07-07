@@ -21,7 +21,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <map>
 #include <memory>
 #include <spb/io/buffer-io.hpp>
 #include <spb/io/io.hpp>
@@ -578,9 +577,7 @@ template <field_attributes> void deserialize(auto &stream, bool &value)
 }
 
 template <field_attributes> void deserialize(auto &stream, spb::detail::proto_message auto &value);
-
-template <field_attributes, typename keyT, typename valueT>
-void deserialize(auto &stream, std::map<keyT, valueT> &value);
+template <field_attributes> void deserialize(auto &stream, spb::detail::proto_map auto &value);
 
 template <field_attributes attributes, spb::detail::proto_label_optional Container>
 void deserialize(auto &stream, Container &p_value);
@@ -680,9 +677,12 @@ template <field_attributes attributes, typename T> void deserialize_map_key(auto
     }
 }
 
-template <field_attributes attributes, typename keyT, typename valueT>
-void deserialize(auto &stream, std::map<keyT, valueT> &value)
+template <field_attributes attributes> void deserialize(auto &stream, spb::detail::proto_map auto &value)
 {
+    using map_type = std::remove_cvref_t<decltype(value)>;
+    using key_type = typename map_type::key_type;
+    using mapped_type = typename map_type::mapped_type;
+
     if (stream.consume_and_skip_white_space("null"sv))
     {
         value.clear();
@@ -697,12 +697,12 @@ void deserialize(auto &stream, std::map<keyT, valueT> &value)
 
     do
     {
-        auto map_key = keyT();
+        auto map_key = key_type();
         deserialize_map_key<attributes>(stream, map_key);
         if (!stream.consume_and_skip_white_space(':')) [[unlikely]]
             throw std::runtime_error("expecting ':'");
 
-        auto map_value = valueT();
+        auto map_value = mapped_type();
         deserialize<attributes>(stream, map_value);
         value.emplace(std::move(map_key), std::move(map_value));
     } while (stream.consume_and_skip_white_space(','));

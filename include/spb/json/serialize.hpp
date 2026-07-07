@@ -23,7 +23,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <map>
 #include <memory>
 #include <spb/io/io.hpp>
 #include <stdexcept>
@@ -270,10 +269,9 @@ template <field_attributes>
 void serialize(auto &stream, const spb::detail::proto_label_repeated_fixed_size auto &value,
                std::string_view field);
 
-template <field_attributes, typename keyT, typename valueT>
-void serialize(auto &stream, const std::map<keyT, valueT> &map);
-template <field_attributes, typename keyT, typename valueT>
-void serialize(auto &stream, const std::map<keyT, valueT> &map, std::string_view field);
+template <field_attributes> void serialize(auto &stream, const spb::detail::proto_map auto &map);
+template <field_attributes>
+void serialize(auto &stream, const spb::detail::proto_map auto &map, std::string_view field);
 
 template <field_attributes> void serialize(auto &stream, const bool &value)
 {
@@ -426,8 +424,8 @@ void serialize(auto &stream, const spb::detail::proto_label_repeated_fixed_size 
     serialize<attributes>(stream, value);
 }
 
-template <field_attributes attributes, typename keyT, typename valueT>
-void serialize(auto &stream, const std::map<keyT, valueT> &map, std::string_view field)
+template <field_attributes attributes>
+void serialize(auto &stream, const spb::detail::proto_map auto &map, std::string_view field)
 {
     if (map.empty())
         return;
@@ -436,14 +434,16 @@ void serialize(auto &stream, const std::map<keyT, valueT> &map, std::string_view
     serialize<attributes>(stream, map);
 }
 
-template <field_attributes attributes, typename keyT, typename valueT>
-void serialize(auto &stream, const std::map<keyT, valueT> &map)
+template <field_attributes attributes> void serialize(auto &stream, const spb::detail::proto_map auto &map)
 {
+    using map_type = std::remove_cvref_t<decltype(map)>;
+    using key_type = typename map_type::key_type;
+
     stream.write('{');
     stream.put_comma = false;
     for (const auto &[map_key, map_value] : map)
     {
-        if constexpr (std::is_same_v<keyT, std::string_view> || std::is_same_v<keyT, std::string>)
+        if constexpr (std::is_same_v<key_type, std::string_view> || std::is_same_v<key_type, std::string>)
         {
             serialize_key(stream, map_key);
         }

@@ -16,7 +16,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <map>
 #include <memory>
 #include <spb/io/io.hpp>
 #include <sys/types.h>
@@ -131,8 +130,8 @@ void serialize(auto &stream, uint32_t field, const spb::detail::proto_label_repe
 template <serialize_mode>
 void serialize(auto &stream, uint32_t field, const spb::detail::proto_label_repeated_fixed_size auto &value);
 
-template <serialize_mode, typename keyT, typename valueT>
-void serialize(auto &stream, uint32_t field, const std::map<keyT, valueT> &value);
+template <serialize_mode>
+void serialize(auto &stream, uint32_t field, const spb::detail::proto_map auto &value);
 
 template <serialize_mode mode>
 void serialize(auto &stream, uint32_t field, spb::detail::proto_field_number auto value)
@@ -282,8 +281,8 @@ void serialize(auto &stream, uint32_t field, const spb::detail::proto_field_byte
     stream.write(value.data(), value.size());
 }
 
-template <serialize_mode mode, typename keyT, typename valueT>
-void serialize(auto &stream, uint32_t field, const std::map<keyT, valueT> &value)
+template <serialize_mode mode>
+void serialize(auto &stream, uint32_t field, const spb::detail::proto_map auto &value)
 {
     if (value.empty())
         return;
