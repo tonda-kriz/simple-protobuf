@@ -752,28 +752,28 @@ TEST_CASE("json")
             SUBCASE("int")
             {
                 auto variant = spb::json::deserialize<Test::Variant>(R"({"var_int":42})"sv);
-                CHECK(variant.oneof_field.index() == 0);
-                CHECK(std::get<0>(variant.oneof_field) == 42);
+                CHECK(variant.oneof_field.index() == 1);
+                CHECK(std::get<1>(variant.oneof_field) == 42);
             }
             SUBCASE("string")
             {
                 auto variant = spb::json::deserialize<Test::Variant>(R"({"var_string":"hello"})"sv);
-                CHECK(variant.oneof_field.index() == 1);
-                CHECK(std::get<1>(variant.oneof_field) == std::string("hello"));
+                CHECK(variant.oneof_field.index() == 2);
+                CHECK(std::get<2>(variant.oneof_field) == std::string("hello"));
             }
             SUBCASE("bytes")
             {
                 auto variant = spb::json::deserialize<Test::Variant>(R"({"var_bytes":"aGVsbG8="})"sv);
-                CHECK(variant.oneof_field.index() == 2);
-                CHECK(std::get<2>(variant.oneof_field) ==
+                CHECK(variant.oneof_field.index() == 3);
+                CHECK(std::get<3>(variant.oneof_field) ==
                       std::vector<std::byte>{std::byte('h'), std::byte('e'), std::byte('l'), std::byte('l'),
                                              std::byte('o')});
             }
             SUBCASE("name")
             {
                 auto variant = spb::json::deserialize<Test::Variant>(R"({"name":{"name":"John"}})"sv);
-                CHECK(variant.oneof_field.index() == 3);
-                CHECK(std::get<3>(variant.oneof_field) == Test::Name{.name = "John"});
+                CHECK(variant.oneof_field.index() == 4);
+                CHECK(std::get<4>(variant.oneof_field) == Test::Name{.name = "John"});
             }
             SUBCASE("collision")
             {
