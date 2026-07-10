@@ -8,6 +8,8 @@ import "spb.proto"; // this file can be missing
 option (spb_fileopt).include = "<array>";
 // another additional include
 option (spb_fileopt).include = "<memory>";
+// another additional include
+option (spb_fileopt).include = "<unordered_map>";
 
 // int can also be: int8, uint8, int16, uint16
 message Integers {
@@ -50,7 +52,7 @@ message BitFields {
   required uint32 id_minor = 2 [(spb_opt).type = "uint8:4"];
 }
 
-// container types for (`optional`, `repeated`, `string`, `bytes`)
+// container types for (`optional`, `repeated`, `string`, `bytes`, `map`)
 // if you prefer for example boost, you can make all `optional`s in the whole
 // file boost like, just uncomment the following line
 // option (spb_fileopt).optional = "boost::optional<$>";
@@ -109,6 +111,13 @@ message Containers {
       // an array of fixed size bytes
       repeated bytes fixed_bytes = 3 [(spb_opt).bytes = "std::array<$, 8>"];
     }
+  }
+
+  message Maps {
+    // default map is an std::map<>
+    map<int32, int32> default_map = 1;
+    // an unordered_map map
+    map<int32, int32> my_map = 2 [(spb_opt).map = "std::unordered_map<$, @>"];
   }
 }
 

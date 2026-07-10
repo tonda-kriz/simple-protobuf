@@ -37,7 +37,6 @@ struct std_includes
     bool variant;
     bool optional;
     bool memory;
-    bool cstdint;
 };
 
 void dump_comment(std::ostream &stream, const proto_comment &comment)
@@ -420,14 +419,6 @@ void dump_forwards(std::ostream &stream, const forwarded_declarations &forwards)
     stream << '\n';
 }
 
-void get_std_includes(const proto_map &map, const proto_message &message, const proto_file &file,
-                      std_includes &result)
-{
-    result.map |= get_map_type(map.attributes.map, message.attributes.map, file.attributes.map, "K", "V",
-                               "std::map<$, @>")
-                      .starts_with("std::map<");
-}
-
 void get_std_includes(std::string_view ctype, std::string_view type, std_includes &result)
 {
     result.array |= ctype.starts_with("std::array<") || type.starts_with("std::array<");
@@ -435,8 +426,20 @@ void get_std_includes(std::string_view ctype, std::string_view type, std_include
     result.string |= ctype.starts_with("std::string") || type.starts_with("std::string");
     result.optional |= ctype.starts_with("std::optional<") || type.starts_with("std::optional<");
     result.memory |= ctype.starts_with("std::unique_ptr<") || type.starts_with("std::unique_ptr<");
-    result.cstdint |= ctype.starts_with("uint") || ctype.starts_with("int") ||
-                      ctype.starts_with("std::uint") || ctype.starts_with("std::int");
+}
+
+void get_std_includes(const proto_map &map, const proto_message &message, const proto_file &file,
+                      std_includes &result)
+{
+    const auto key_type = convert_to_ctype(file, map.key);
+    const auto value_type = convert_to_ctype(file, map.value);
+
+    result.map |= get_map_type(map.attributes.map, message.attributes.map, file.attributes.map, key_type,
+                               value_type, "std::map<$, @>")
+                      .starts_with("std::map<");
+
+    get_std_includes(key_type, "", result);
+    get_std_includes(value_type, "", result);
 }
 
 void get_std_includes(const proto_field &field, const proto_message &message, const proto_file &file,
@@ -572,6 +575,7 @@ void get_std_includes(cpp_includes &includes, const proto_file &file)
     includes.insert("<spb/json.hpp>");
     includes.insert("<spb/pb.hpp>");
     includes.insert("<cstddef>");
+    includes.insert("<cstdint>");
 
     const auto std_includes = get_std_includes(file);
 
