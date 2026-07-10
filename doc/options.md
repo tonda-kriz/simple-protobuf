@@ -64,6 +64,7 @@ Containers must satisfy a [concept](../include/spb/concepts.h).
 |------------|------------------------------|-------------|
 | `optional` | `proto_label_optional`       | [`optional`](https://protobuf.dev/programming-guides/proto2/#field-labels) field label |
 | `repeated` | `proto_label_repeated`       | [`repeated`](https://protobuf.dev/programming-guides/proto2/#field-labels) field label |
+| `map`      | `proto_map`                  | [`map`](https://protobuf.dev/programming-guides/proto2/#maps) field type |
 | `string`   | `proto_field_string`         | fixed-size [`string`](https://protobuf.dev/programming-guides/proto2/#scalar) field type |
 | `string`   | `proto_field_string_resizable` | resizable [`string`](https://protobuf.dev/programming-guides/proto2/#scalar) field type |
 | `bytes`    | `proto_field_bytes`          | fixed-size [`bytes`](https://protobuf.dev/programming-guides/proto2/#scalar) field type |
@@ -88,6 +89,15 @@ option (spb_msgopt).repeated = "std::vector<$>";
 //[[ (spb_fileopt).repeated = "std::vector<$>" ]]
 option (spb_fileopt).repeated = "std::vector<$>";
 
+//[[ (spb_opt).map = "std::map<$, @>" ]]
+[ (spb_opt).map = "std::map<$, @>" ];
+
+//[[ (spb_msgopt).map = "std::map<$, @>" ]]
+option (spb_msgopt).map = "std::map<$, @>";
+
+//[[ (spb_fileopt).map = "std::map<$, @>" ]]
+option (spb_fileopt).map = "std::map<$, @>";
+
 //[[ (spb_opt).string = "std::string" ]]
 [ (spb_opt).string = "std::string" ];
 
@@ -111,6 +121,7 @@ option (spb_fileopt).bytes = "std::vector<$>";
 
 - For `string`, `$` is replaced by `char`.
 - For `bytes`, `$` is replaced by `std::byte`.
+- For `map`, `$` is replaced by `key_type`, `@` is replaced by `mapped_type`.
 - For `repeated` and `optional`, `$` is replaced by the field type specified in the `.proto` file.
 
 ## fixed size repeated fields

@@ -26,6 +26,11 @@ concept HasValueMember = requires(T t) {
     { t.value };
 };
 
+template <typename T>
+concept HasMapMember = requires(T t) {
+    { t.map };
+    requires spb::detail::proto_map<decltype(t.map)>;
+};
 } // namespace
 
 static_assert(spb::detail::proto_field_bytes_resizable<std::vector<std::byte>>);
@@ -146,6 +151,10 @@ auto operator==(const StringName &lhs, const StringName &rhs) noexcept -> bool
 {
     return lhs.map == rhs.map;
 }
+auto operator==(const UnorderedInt32Int32 &lhs, const UnorderedInt32Int32 &rhs) noexcept -> bool
+{
+    return lhs.map == rhs.map;
+}
 } // namespace UnitTest::map
 
 namespace
@@ -168,17 +177,6 @@ auto to_bytes(std::string_view str) -> std::vector<std::byte>
 {
     auto span = std::span<std::byte>((std::byte *)str.data(), str.size());
     return {span.data(), span.data() + span.size()};
-}
-
-template <spb::pb::detail::serialize_mode mode> auto pb_serialize(const auto &value) -> std::string
-{
-    auto size_stream = spb::pb::detail::ostream_size();
-    spb::pb::detail::serialize<mode>(size_stream, 1, value);
-    const auto size = size_stream.size;
-    auto result = std::string(size, '\0');
-    auto stream = spb::pb::detail::ostream_buffer(result.data());
-    spb::pb::detail::serialize<mode>(stream, 1, value);
-    return result;
 }
 
 template <typename T> void pb_test(const T &value, std::string_view protobuf)
@@ -338,10 +336,6 @@ template <typename T> void pb_json_test(const T &value, std::string_view protobu
         json_test(value, json);
     }
 }
-
-using spb::pb::detail::scalar_encoder;
-using spb::pb::detail::wire_type;
-
 } // namespace
 using namespace std::literals;
 
@@ -1832,38 +1826,42 @@ TEST_CASE("protobuf")
     {
         SUBCASE("int32/int32")
         {
-            pb_json_test(UnitTest::map::Int32Int32{.map = std::map<int32_t, int32_t>{{1, 2}}},
-                         "\x0a\x04\x08\x01\x10\x02", R"({"map":{"1":2}})");
-            pb_json_test(UnitTest::map::Int32Int32{.map = std::map<int32_t, int32_t>{{1, 2}, {2, 3}}},
+            CHECK(std::is_same_v<decltype(UnitTest::map::Int32Int32::map), std::map<int32_t, int32_t>>);
+
+            pb_json_test(UnitTest::map::Int32Int32{.map = {{1, 2}}}, "\x0a\x04\x08\x01\x10\x02",
+                         R"({"map":{"1":2}})");
+            pb_json_test(UnitTest::map::Int32Int32{.map = {{1, 2}, {2, 3}}},
                          "\x0a\x04\x08\x01\x10\x02\x0a\x04\x08\x02\x10\x03", R"({"map":{"1":2,"2":3}})");
         }
         SUBCASE("string/string")
         {
-            pb_json_test(
-                UnitTest::map::StringString{.map = std::map<std::string, std::string>{{"hello", "world"}}},
-                "\x0a\x0e\x0a\x05hello\x12\x05world", R"({"map":{"hello":"world"}})");
-            pb_json_test(
-                UnitTest::map::StringString{
-                    .map = std::map<std::string, std::string>{{"hello", "world"}, {"name", "john"}}},
-                "\x0a\x0e\x0a\x05hello\x12\x05world\x0a\x0c\x0a\x04name\x12\x04john",
-                R"({"map":{"hello":"world","name":"john"}})");
+            pb_json_test(UnitTest::map::StringString{.map = {{"hello", "world"}}},
+                         "\x0a\x0e\x0a\x05hello\x12\x05world", R"({"map":{"hello":"world"}})");
+            pb_json_test(UnitTest::map::StringString{.map = {{"hello", "world"}, {"name", "john"}}},
+                         "\x0a\x0e\x0a\x05hello\x12\x05world\x0a\x0c\x0a\x04name\x12\x04john",
+                         R"({"map":{"hello":"world","name":"john"}})");
         }
         SUBCASE("int32/string")
         {
-            pb_json_test(UnitTest::map::Int32String{.map = std::map<int32_t, std::string>{{1, "hello"}}},
-                         "\x0a\x09\x08\x01\x12\x05hello", R"({"map":{"1":"hello"}})");
+            pb_json_test(UnitTest::map::Int32String{.map = {{1, "hello"}}}, "\x0a\x09\x08\x01\x12\x05hello",
+                         R"({"map":{"1":"hello"}})");
         }
         SUBCASE("string/int32")
         {
-            pb_json_test(UnitTest::map::StringInt32{.map = std::map<std::string, int32_t>{{"hello", 2}}},
-                         "\x0a\x09\x0a\x05hello\x10\x02", R"({"map":{"hello":2}})");
+            pb_json_test(UnitTest::map::StringInt32{.map = {{"hello", 2}}}, "\x0a\x09\x0a\x05hello\x10\x02",
+                         R"({"map":{"hello":2}})");
         }
         SUBCASE("string/name")
         {
-            pb_json_test(
-                UnitTest::map::StringName{
-                    .map = std::map<std::string, UnitTest::map::Name>{{"hello", {.name = "john"}}}},
-                "\x0a\x0f\x0a\x05hello\x12\x06\x0A\x04john", R"({"map":{"hello":{"name":"john"}}})");
+            pb_json_test(UnitTest::map::StringName{.map = {{"hello", {.name = "john"}}}},
+                         "\x0a\x0f\x0a\x05hello\x12\x06\x0A\x04john", R"({"map":{"hello":{"name":"john"}}})");
+        }
+        SUBCASE("options")
+        {
+            CHECK(std::is_same_v<decltype(UnitTest::map::UnorderedInt32Int32::map),
+                                 std::unordered_map<int32_t, int32_t>>);
+            pb_json_test(UnitTest::map::UnorderedInt32Int32{.map = {{1, 2}}}, "\x0a\x04\x08\x01\x10\x02",
+                         R"({"map":{"1":2}})");
         }
     }
     SUBCASE("person")
@@ -1873,13 +1871,10 @@ TEST_CASE("protobuf")
                 .name = "John Doe",
                 .id = 123,
                 .email = "QXUeh@example.com",
-                .phones =
-                    {
-                        PhoneBook::Person::PhoneNumber{
-                            .number = "555-4321",
-                            .type = PhoneBook::Person::PhoneType::HOME,
-                        },
-                    },
+                .phones = {PhoneBook::Person::PhoneNumber{
+                    .number = "555-4321",
+                    .type = PhoneBook::Person::PhoneType::HOME,
+                }},
             },
             "\x0a\x08John Doe\x10\x7b\x1a\x11QXUeh@example.com\x22\x0c\x0A\x08"
             "555-4321\x10\x01",

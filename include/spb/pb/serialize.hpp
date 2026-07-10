@@ -16,7 +16,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
-#include <map>
 #include <memory>
 #include <spb/io/io.hpp>
 #include <sys/types.h>
@@ -39,7 +38,6 @@ struct ostream_size
         ++size;
     }
 };
-
 struct ostream_buffer
 {
     static constexpr bool size_only = false;
@@ -98,7 +96,7 @@ inline size_t serialize_varint_size(uint64_t value)
     return size;
 }
 
-inline void serialize_varint(auto &stream, uint64_t value)
+void serialize_varint(auto &stream, uint64_t value)
 {
     while (value >= 0x80)
     {
@@ -108,13 +106,13 @@ inline void serialize_varint(auto &stream, uint64_t value)
     stream.write((uint8_t)value);
 }
 
-inline void serialize_svarint(auto &stream, int64_t value)
+void serialize_svarint(auto &stream, int64_t value)
 {
     const auto tmp = uint64_t((value << 1) ^ (value >> 63));
     serialize_varint(stream, tmp);
 }
 
-inline void serialize_tag(auto &stream, uint32_t field_number, wire_type type)
+void serialize_tag(auto &stream, uint32_t field_number, wire_type type)
 {
     const auto tag = (field_number << 3) | uint32_t(type);
     serialize_varint(stream, tag);
@@ -131,8 +129,8 @@ void serialize(auto &stream, uint32_t field, const spb::detail::proto_label_repe
 template <serialize_mode>
 void serialize(auto &stream, uint32_t field, const spb::detail::proto_label_repeated_fixed_size auto &value);
 
-template <serialize_mode, typename keyT, typename valueT>
-void serialize(auto &stream, uint32_t field, const std::map<keyT, valueT> &value);
+template <serialize_mode>
+void serialize(auto &stream, uint32_t field, const spb::detail::proto_map auto &value);
 
 template <serialize_mode mode>
 void serialize(auto &stream, uint32_t field, spb::detail::proto_field_number auto value)
@@ -282,8 +280,8 @@ void serialize(auto &stream, uint32_t field, const spb::detail::proto_field_byte
     stream.write(value.data(), value.size());
 }
 
-template <serialize_mode mode, typename keyT, typename valueT>
-void serialize(auto &stream, uint32_t field, const std::map<keyT, valueT> &value)
+template <serialize_mode mode>
+void serialize(auto &stream, uint32_t field, const spb::detail::proto_map auto &value)
 {
     if (value.empty())
         return;

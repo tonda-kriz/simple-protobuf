@@ -214,11 +214,7 @@ void gpb_test(const SPB &spb, const spb::pb::serialize_options &options = {})
         REQUIRE(gpb.SerializeToString(&gpb_serialized));
     }
 
-    REQUIRE(spb::pb::deserialize<SPB>(gpb_serialized,
-                                      {
-                                          .delimited = options.delimited,
-                                      })
-                .value == spb.value);
+    REQUIRE(spb::pb::deserialize<SPB>(gpb_serialized, {.delimited = options.delimited}).value == spb.value);
     REQUIRE(gpb_serialized == spb_serialized);
 }
 
@@ -312,11 +308,7 @@ template <typename GPB, typename SPB> void gpb_compatibility_enum_array()
     gpb_compatibility<GPB>(SPB{.value = {SPB::Enum::Enum_min}});
     gpb_compatibility<GPB>(SPB{.value = {SPB::Enum::Enum_max}});
     gpb_compatibility<GPB>(SPB{.value = {SPB::Enum::Enum_value}});
-    gpb_compatibility<GPB>(SPB{.value = {
-                                   SPB::Enum::Enum_min,
-                                   SPB::Enum::Enum_max,
-                                   SPB::Enum::Enum_value,
-                               }});
+    gpb_compatibility<GPB>(SPB{.value = {SPB::Enum::Enum_min, SPB::Enum::Enum_max, SPB::Enum::Enum_value}});
 }
 
 template <typename GPB, typename SPB, typename POD> void gpb_compatibility_value()
@@ -357,15 +349,9 @@ template <typename GPB, typename SPB> void gpb_compatibility_array()
     gpb_compatibility<GPB>(SPB{.value = {0}});
     gpb_compatibility<GPB>(SPB{.value = {0x42}});
     gpb_compatibility<GPB>(SPB{.value = {0, 0x42, 0x7f}});
-    gpb_compatibility<GPB>(SPB{.value = {
-                                   0,
-                                   0x42,
-                                   0x7f,
-                                   std::numeric_limits<T>::max(),
-                                   std::numeric_limits<T>::max() / 2,
-                                   std::numeric_limits<T>::min(),
-                                   T(-2),
-                               }});
+    gpb_compatibility<GPB>(
+        SPB{.value = {0, 0x42, 0x7f, std::numeric_limits<T>::max(), std::numeric_limits<T>::max() / 2,
+                      std::numeric_limits<T>::min(), T(-2)}});
 }
 
 } // namespace

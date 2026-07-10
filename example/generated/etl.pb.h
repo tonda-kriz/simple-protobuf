@@ -5,12 +5,8 @@
 #include <cstdint>
 #include <etl/string.h>
 #include <etl/vector.h>
-#include <memory>
-#include <optional>
 #include <spb/json.hpp>
 #include <spb/pb.hpp>
-#include <string>
-#include <vector>
 
 namespace ETL::Example
 {
@@ -174,20 +170,122 @@ void deserialize_value(istream_reader &, ::ETL::Example::CommandQueue &message, 
 void deserialize_value(istream_buffer &, ::ETL::Example::CommandQueue &message, tag_type);
 } // namespace detail
 } // namespace spb::pb
-namespace spb::json::detail
+namespace spb::json
 {
-struct ostream;
-struct istream;
+/**
+ * @brief serialize message via writer
+ *
+ * @param[in] message to be serialized
+ * @param[in] on_write function for handling the writes
+ * @param[in] options
+ * @return serialized size in bytes
+ * @throws exceptions only from `on_write`
+ */
+size_t serialize(const auto &message, spb::io::writer on_write);
 
-void serialize_value(ostream &, const ::ETL::Example::DeviceStatus &);
-void deserialize_value(istream &, ::ETL::Example::DeviceStatus &);
+/**
+ * @brief return JSON serialized size in bytes
+ *
+ * @param[in] message to be serialized
+ * @param[in] options
+ * @return serialized size in bytes
+ */
+[[nodiscard]] size_t serialize_size(const auto &message);
 
-void serialize_value(ostream &, const ::ETL::Example::Command &);
-void deserialize_value(istream &, ::ETL::Example::Command &);
+size_t serialize(const auto &message, void *buffer);
 
-void serialize_value(ostream &, const ::ETL::Example::CommandQueue &);
-void deserialize_value(istream &, ::ETL::Example::CommandQueue &);
+/**
+ * @brief serialize message into JSON
+ *
+ * @param[in] message to be serialized
+ * @param[in] options
+ * @param[out] result serialized JSON
+ * @return serialized size in bytes
+ * @throws std::runtime_error on error
+ * @example `std::string json;`
+ *          `spb::json::serialize(message, json);`
+ */
+template <spb::resizable_container Container> size_t serialize(const auto &message, Container &result);
 
-void serialize_value(ostream &, const ::ETL::Example::Command::CMD &);
-void deserialize_value(istream &, ::ETL::Example::Command::CMD &);
-} // namespace spb::json::detail
+/**
+ * @brief serialize message into JSON
+ *
+ * @param[in] message to be serialized
+ * @param[in] options
+ * @return serialized JSON
+ * @throws std::runtime_error on error
+ * @example `auto serialized_message = spb::json::serialize< std::vector< std::byte > >( message );`
+ */
+template <spb::resizable_container Container> [[nodiscard]] Container serialize(const auto &message);
+
+size_t deserialize(auto &message, const void *buffer, size_t size);
+
+/**
+ * @brief deserialize message from JSON
+ *
+ * @param[in] reader function for handling reads
+ * @param[in] options
+ * @param[out] message deserialized message
+ * @throws std::runtime_error on error
+ */
+size_t deserialize(auto &message, spb::io::reader reader);
+
+/**
+ * @brief deserialize message from JSON
+ *
+ * @param[in] JSON string with JSON
+ * @param[in] options
+ * @param[out] message deserialized message
+ * @throws std::runtime_error on error
+ * @example `auto serialized = std::vector<std::byte>( ... );`
+ *          `auto message = Message();`
+ *          `spb::json::deserialize(message, serialized);`
+ */
+size_t deserialize(auto &message, const spb::size_container auto &json);
+
+/**
+ * @brief deserialize message from JSON
+ *
+ * @param[in] JSON serialized JSON
+ * @param[in] options
+ * @return deserialized message
+ * @throws std::runtime_error on error
+ * @example `auto serialized = std::vector<std::byte>( ... );`
+ *          `auto message = spb::json::deserialize<Message>(serialized);`
+ */
+template <typename Message> [[nodiscard]] Message deserialize(const spb::size_container auto &json);
+
+/**
+ * @brief deserialize message from reader
+ *
+ * @param[in] reader function for handling reads
+ * @param[in] options
+ * @return deserialized message
+ * @throws std::runtime_error on error
+ */
+template <typename Message> [[nodiscard]] Message deserialize(spb::io::reader reader);
+namespace detail
+{
+void serialize_value(ostream_size &, const ::ETL::Example::DeviceStatus &message);
+void serialize_value(ostream_writer &, const ::ETL::Example::DeviceStatus &message);
+void serialize_value(ostream_buffer &, const ::ETL::Example::DeviceStatus &message);
+void deserialize_value(istream_reader &, ::ETL::Example::DeviceStatus &message);
+void deserialize_value(istream_buffer &, ::ETL::Example::DeviceStatus &message);
+void serialize_value(ostream_size &, const ::ETL::Example::Command &message);
+void serialize_value(ostream_writer &, const ::ETL::Example::Command &message);
+void serialize_value(ostream_buffer &, const ::ETL::Example::Command &message);
+void deserialize_value(istream_reader &, ::ETL::Example::Command &message);
+void deserialize_value(istream_buffer &, ::ETL::Example::Command &message);
+void serialize_value(ostream_size &, const ::ETL::Example::CommandQueue &message);
+void serialize_value(ostream_writer &, const ::ETL::Example::CommandQueue &message);
+void serialize_value(ostream_buffer &, const ::ETL::Example::CommandQueue &message);
+void deserialize_value(istream_reader &, ::ETL::Example::CommandQueue &message);
+void deserialize_value(istream_buffer &, ::ETL::Example::CommandQueue &message);
+void serialize_value(ostream_size &, const ::ETL::Example::Command::CMD &message);
+void serialize_value(ostream_writer &, const ::ETL::Example::Command::CMD &message);
+void serialize_value(ostream_buffer &, const ::ETL::Example::Command::CMD &message);
+void deserialize_value(istream_reader &, ::ETL::Example::Command::CMD &message);
+void deserialize_value(istream_buffer &, ::ETL::Example::Command::CMD &message);
+} // namespace detail
+
+} // namespace spb::json

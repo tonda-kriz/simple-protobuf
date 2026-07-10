@@ -41,3 +41,5 @@ _deps/
 
 Testing/
 __cmake_systeminformation/
+.zed/
+CMakePresets.json

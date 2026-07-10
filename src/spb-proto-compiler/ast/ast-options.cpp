@@ -169,6 +169,9 @@ void convert_spb_options_legacy(proto_attributes &attributes, const proto_option
 
     if (auto value = option_value({"string", "type"}, options); !value.empty())
         attributes.string = value;
+
+    if (auto value = option_value({"map", "type"}, options); !value.empty())
+        attributes.map = value;
 }
 
 void convert_spb_options(const proto_file &file, proto_attributes &attributes, const proto_options &options,
@@ -194,6 +197,9 @@ void convert_spb_options(const proto_file &file, proto_attributes &attributes, c
 
     if (auto value = option_value({opt_name, "string"}, options); !value.empty())
         attributes.string = value;
+
+    if (auto value = option_value({opt_name, "map"}, options); !value.empty())
+        attributes.map = value;
 
     if (auto value = option_value_int<uint32_t>(file, {opt_name, "max_size"}, options); value.has_value())
         attributes.max_size = value;
@@ -249,6 +255,9 @@ void convert_include_options(proto_attributes &attributes, const proto_options &
 
     if (auto values = option_values({"string", "include"}, options); !values.empty())
         attributes.include.insert(values.begin(), values.end());
+
+    if (auto values = option_values({"map", "include"}, options); !values.empty())
+        attributes.include.insert(values.begin(), values.end());
 }
 
 void convert_options(proto_file &file, proto_attributes &attributes, const proto_options &options,
@@ -274,6 +283,11 @@ void resolve_options(proto_file &file, proto_message &message)
     {
         convert_options(file, field.attributes, field.options, option_type::option_field, true);
         convert_options(file, message.attributes, field.options, option_type::option_message, false);
+    }
+    for (auto &map : message.maps)
+    {
+        convert_options(file, map.attributes, map.options, option_type::option_field, true);
+        convert_options(file, message.attributes, map.options, option_type::option_message, false);
     }
     for (auto &sub_message : message.messages)
     {
