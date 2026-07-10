@@ -13,9 +13,7 @@
 #include <map>
 #include <optional>
 #include <set>
-#include <string>
 #include <string_view>
-#include <variant>
 #include <vector>
 
 struct proto_option;
@@ -78,6 +76,10 @@ struct proto_attributes
     // container type for string type
     // default: "std::string"
     std::string_view string;
+
+    // container type for map
+    // default: "std::map<$, @>", `$` will be replaced by a map's key and `@` by a map's value
+    std::string_view map;
 
     // field name used for json de/serializer
     // default: <none>

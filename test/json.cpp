@@ -1159,13 +1159,10 @@ TEST_CASE("json")
                     .name = "John Doe",
                     .id = 123,
                     .email = "QXUeh@example.com",
-                    .phones =
-                        {
-                            PhoneBook::Person::PhoneNumber{
-                                .number = "555-4321",
-                                .type = PhoneBook::Person::PhoneType::HOME,
-                            },
-                        },
+                    .phones = {PhoneBook::Person::PhoneNumber{
+                        .number = "555-4321",
+                        .type = PhoneBook::Person::PhoneType::HOME,
+                    }},
                 }) ==
                 R"({"name":"John Doe","id":123,"email":"QXUeh@example.com","phones":[{"number":"555-4321","type":"HOME"}]})");
         }

@@ -10,24 +10,15 @@
 
 #include "header.h"
 #include "../parser/char_stream.h"
-#include "ast/ast.h"
 #include "ast/proto-common.h"
 #include "ast/proto-field.h"
 #include "ast/proto-file.h"
 #include "ast/proto-message.h"
 #include "indent_ostream.h"
-#include "io/file.h"
 #include "parser/parser.h"
-#include <algorithm>
-#include <array>
-#include <cctype>
-#include <functional>
-#include <initializer_list>
+#include <set>
 #include <spb/json/deserialize.hpp>
-#include <sstream>
-#include <stdexcept>
 #include <string>
-#include <string_view>
 
 using namespace std::literals;
 
@@ -89,14 +80,14 @@ void dump_includes(std::ostream &stream, const cpp_includes &includes)
     stream << "\n";
 }
 
-auto contains_map(const proto_messages &messages) -> bool
+auto contains_std_map(const proto_messages &messages) -> bool
 {
     for (const auto &message : messages)
     {
         if (!message.maps.empty())
             return true;
 
-        if (contains_map(message.messages))
+        if (contains_std_map(message.messages))
             return true;
     }
     return false;
@@ -113,24 +104,6 @@ auto contains_oneof(const proto_messages &messages) -> bool
             return true;
     }
     return false;
-}
-
-void get_std_includes(cpp_includes &includes, const proto_file &file)
-{
-    includes.insert("<spb/json.hpp>");
-    includes.insert("<spb/pb.hpp>");
-    includes.insert("<cstdint>");
-    includes.insert("<cstddef>");
-    includes.insert("<vector>");
-    includes.insert("<optional>");
-    includes.insert("<memory>");
-    includes.insert("<string>");
-
-    if (contains_map(file.package.messages))
-        includes.insert("<map>");
-
-    if (contains_oneof(file.package.messages))
-        includes.insert("<variant>");
 }
 
 void get_user_includes(cpp_includes &includes, const proto_file &file)
@@ -209,6 +182,22 @@ auto get_container_type(std::string_view options, std::string_view message_optio
         return replace(file_options, "$", ctype);
 
     return replace(default_type, "$", ctype);
+}
+
+auto get_map_type(std::string_view options, std::string_view message_options, std::string_view file_options,
+                  std::string_view key_type, std::string_view value_type, std::string_view default_type = {})
+    -> std::string
+{
+    if (!options.empty())
+        return replace(replace(options, "@", value_type), "$", key_type);
+
+    if (!message_options.empty())
+        return replace(replace(message_options, "@", value_type), "$", key_type);
+
+    if (!file_options.empty())
+        return replace(replace(file_options, "@", value_type), "$", key_type);
+
+    return replace(replace(default_type, "@", value_type), "$", key_type);
 }
 
 auto get_enum_type(const proto_file &file, const proto_attributes &attributes,
@@ -376,12 +365,16 @@ void dump_message_oneof(std::ostream &stream, const proto_oneof &oneof, const pr
     stream << "> " << oneof.name.get_name() << ";\n";
 }
 
-void dump_message_map(std::ostream &stream, const proto_map &map, const proto_file &file)
+void dump_message_map(std::ostream &stream, const proto_map &map, const proto_message &message,
+                      const proto_file &file)
 {
-    dump_comment(stream, map.comment);
+    const auto key_type = convert_to_ctype(file, map.key);
+    const auto value_type = convert_to_ctype(file, map.value);
 
-    stream << "std::map<" << convert_to_ctype(file, map.key) << ", " << convert_to_ctype(file, map.value)
-           << "> " << map.name.get_name() << ";\n";
+    dump_comment(stream, map.comment);
+    stream << get_map_type(map.attributes.map, message.attributes.map, file.attributes.map, key_type,
+                           value_type, "std::map<$, @>")
+           << " " << map.name.get_name() << ";\n";
 }
 
 void dump_default_value(std::ostream &stream, const proto_field &field)
@@ -431,6 +424,39 @@ void dump_forwards(std::ostream &stream, const forwarded_declarations &forwards)
         stream << '\n';
 }
 
+bool is_std_map(const proto_map &map, const proto_message &message, const proto_file &file)
+{
+    return get_map_type(map.attributes.map, message.attributes.map, file.attributes.map, "K", "V",
+                        "std::map<$, @>") == "std::map<K, V>";
+}
+
+bool message_has_std_map(const proto_message &message, const proto_file &file)
+{
+    for (const auto &map : message.maps)
+    {
+        if (is_std_map(map, message, file))
+            return true;
+    }
+
+    for (const auto &sub_message : message.messages)
+    {
+        if (message_has_std_map(sub_message, file))
+            return true;
+    }
+    return false;
+}
+
+bool has_std_map(const proto_file &file)
+{
+    for (const auto &message : file.package.messages)
+    {
+        if (message_has_std_map(message, file))
+            return true;
+    }
+
+    return false;
+}
+
 void dump_message(std::ostream &stream, const proto_message &message, const proto_file &file)
 {
     dump_comment(stream, message.comment);
@@ -455,7 +481,7 @@ void dump_message(std::ostream &stream, const proto_message &message, const prot
 
     for (const auto &map : message.maps)
     {
-        dump_message_map(stream, map, file);
+        dump_message_map(stream, map, message, file);
     }
 
     for (const auto &oneof : message.oneofs)
@@ -506,6 +532,24 @@ void throw_parse_error(const proto_file &file, std::string_view at, std::string_
     auto stream = spb::char_stream(file.content);
     stream.skip_to(at.data());
     stream.throw_parse_error(message);
+}
+
+void get_std_includes(cpp_includes &includes, const proto_file &file)
+{
+    includes.insert("<spb/json.hpp>");
+    includes.insert("<spb/pb.hpp>");
+    includes.insert("<cstdint>");
+    includes.insert("<cstddef>");
+    includes.insert("<vector>");
+    includes.insert("<optional>");
+    includes.insert("<memory>");
+    includes.insert("<string>");
+
+    if (has_std_map(file))
+        includes.insert("<map>");
+
+    if (contains_oneof(file.package.messages))
+        includes.insert("<variant>");
 }
 
 void dump_cpp_definitions(const proto_file &file, std::ostream &stream)

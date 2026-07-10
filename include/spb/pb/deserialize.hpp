@@ -193,12 +193,12 @@ void deserialize_variant(auto &stream, T &variant, wire_type type);
 template <serialize_mode, typename T>
 auto deserialize_bitfield(auto &stream, uint32_t bits, wire_type type) -> T;
 
-[[nodiscard]] static inline auto wire_type_from_tag(tag_type tag) -> wire_type
+[[nodiscard]] inline auto wire_type_from_tag(tag_type tag) -> wire_type
 {
     return wire_type(uint32_t(tag) & 0x07);
 }
 
-[[nodiscard]] static inline auto field_from_tag(tag_type tag) -> uint32_t
+[[nodiscard]] inline auto field_from_tag(tag_type tag) -> uint32_t
 {
     return uint32_t(tag) >> 3;
 }
@@ -244,7 +244,7 @@ void check_if_empty_or_throw(auto &stream)
     return result;
 }
 
-template <typename T> [[nodiscard]] inline auto read_varint(auto &stream) -> T
+template <typename T> [[nodiscard]] auto read_varint(auto &stream) -> T
 {
     if constexpr (std::is_same_v<T, bool>)
     {
@@ -618,7 +618,7 @@ void deserialize(auto &stream, Container &value, wire_type type)
 }
 
 template <serialize_mode mode>
-inline void deserialize(auto &stream, spb::detail::proto_map auto &value, wire_type type)
+void deserialize(auto &stream, spb::detail::proto_map auto &value, wire_type type)
 {
     using map_type = std::remove_cvref_t<decltype(value)>;
     using key_type = typename map_type::key_type;
@@ -699,7 +699,7 @@ inline void deserialize(auto &stream, spb::detail::proto_map auto &value, wire_t
 }
 
 template <serialize_mode mode, size_t ordinal, typename T>
-inline void deserialize_variant(auto &stream, T &variant, wire_type type)
+void deserialize_variant(auto &stream, T &variant, wire_type type)
 {
     deserialize<mode>(stream, variant.template emplace<ordinal>(), type);
 }

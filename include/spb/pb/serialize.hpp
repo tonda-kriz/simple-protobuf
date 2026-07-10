@@ -38,7 +38,6 @@ struct ostream_size
         ++size;
     }
 };
-
 struct ostream_buffer
 {
     static constexpr bool size_only = false;
@@ -97,7 +96,7 @@ inline size_t serialize_varint_size(uint64_t value)
     return size;
 }
 
-inline void serialize_varint(auto &stream, uint64_t value)
+void serialize_varint(auto &stream, uint64_t value)
 {
     while (value >= 0x80)
     {
@@ -107,13 +106,13 @@ inline void serialize_varint(auto &stream, uint64_t value)
     stream.write((uint8_t)value);
 }
 
-inline void serialize_svarint(auto &stream, int64_t value)
+void serialize_svarint(auto &stream, int64_t value)
 {
     const auto tmp = uint64_t((value << 1) ^ (value >> 63));
     serialize_varint(stream, tmp);
 }
 
-inline void serialize_tag(auto &stream, uint32_t field_number, wire_type type)
+void serialize_tag(auto &stream, uint32_t field_number, wire_type type)
 {
     const auto tag = (field_number << 3) | uint32_t(type);
     serialize_varint(stream, tag);

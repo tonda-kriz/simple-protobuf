@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package UnitTest.map;
 
+import "spb.proto";
+
 message Int32Int32 {
   map<int32, int32> map = 1;
 };
@@ -25,3 +27,8 @@ message Name {
 message StringName {
   map<string, Name> map = 1;
 }
+
+option (spb_fileopt).include = "<unordered_map>";
+message UnorderedInt32Int32 {
+  map<int32, int32> map = 1 [(spb_opt).map = "std::unordered_map<$, @>"];
+};
