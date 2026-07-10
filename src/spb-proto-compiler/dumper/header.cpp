@@ -19,6 +19,7 @@
 #include <set>
 #include <spb/json/deserialize.hpp>
 #include <string>
+#include <string_view>
 
 using namespace std::literals;
 
@@ -26,6 +27,18 @@ namespace
 {
 
 using cpp_includes = std::set<std::string>;
+
+struct std_includes
+{
+    bool vector;
+    bool array;
+    bool map;
+    bool string;
+    bool variant;
+    bool optional;
+    bool memory;
+    bool cstdint;
+};
 
 void dump_comment(std::ostream &stream, const proto_comment &comment)
 {
@@ -78,32 +91,6 @@ void dump_includes(std::ostream &stream, const cpp_includes &includes)
             stream << "#include " << file << "\n";
     }
     stream << "\n";
-}
-
-auto contains_std_map(const proto_messages &messages) -> bool
-{
-    for (const auto &message : messages)
-    {
-        if (!message.maps.empty())
-            return true;
-
-        if (contains_std_map(message.messages))
-            return true;
-    }
-    return false;
-}
-
-auto contains_oneof(const proto_messages &messages) -> bool
-{
-    for (const auto &message : messages)
-    {
-        if (!message.oneofs.empty())
-            return true;
-
-        if (contains_oneof(message.messages))
-            return true;
-    }
-    return false;
 }
 
 void get_user_includes(cpp_includes &includes, const proto_file &file)
@@ -301,34 +288,41 @@ auto convert_to_ctype(const proto_file &file, const proto_field &field, const pr
 
     throw_parse_error(file, field.type_name.proto_name, "invalid type");
 }
+auto add_label_type(std::string_view ctype, const proto_field &field, const proto_message &message,
+                    const proto_file &file) -> std::string
+{
+    switch (field.label)
+    {
+    case proto_field::Label::OPTIONAL:
+        return get_container_type(field.attributes.optional, message.attributes.optional,
+                                  file.attributes.optional, ctype, "std::optional<$>");
+
+    case proto_field::Label::REPEATED:
+        return get_container_type(field.attributes.repeated, message.attributes.repeated,
+                                  file.attributes.repeated, ctype, "std::vector<$>");
+    case proto_field::Label::PTR:
+        return get_container_type(field.attributes.pointer, message.attributes.pointer,
+                                  file.attributes.pointer, ctype, "std::unique_ptr<$>");
+    default:
+        return std::string(ctype);
+    }
+}
 
 void dump_field_type_and_name(std::ostream &stream, const proto_field &field, const proto_message &message,
                               const proto_file &file)
 {
     const auto ctype = convert_to_ctype(file, field, message);
 
-    switch (field.label)
+    if (field.label == proto_field::Label::NONE)
     {
-    case proto_field::Label::NONE:
         stream << ctype << ' ' << field.name.get_name() << get_field_bits(field);
         return;
-    case proto_field::Label::OPTIONAL:
-        stream << get_container_type(field.attributes.optional, message.attributes.optional,
-                                     file.attributes.optional, ctype, "std::optional<$>");
-        break;
-    case proto_field::Label::REPEATED:
-        stream << get_container_type(field.attributes.repeated, message.attributes.repeated,
-                                     file.attributes.repeated, ctype, "std::vector<$>");
-        break;
-    case proto_field::Label::PTR:
-        stream << get_container_type(field.attributes.pointer, message.attributes.pointer,
-                                     file.attributes.pointer, ctype, "std::unique_ptr<$>");
-        break;
     }
+
     if (auto bitfield = get_field_bits(field); !bitfield.empty())
         throw_parse_error(file, bitfield, "bitfield can be used only with `required` label");
 
-    stream << ' ' << field.name.get_name();
+    stream << add_label_type(ctype, field, message, file) << ' ' << field.name.get_name();
 }
 
 void dump_enum_field(std::ostream &stream, const proto_base &field)
@@ -416,45 +410,84 @@ void dump_message_field(std::ostream &stream, const proto_field &field, const pr
 
 void dump_forwards(std::ostream &stream, const forwarded_declarations &forwards)
 {
+    if (forwards.empty())
+        return;
+
     for (const auto &forward : forwards)
     {
         stream << "struct " << forward << ";\n";
     }
-    if (!forwards.empty())
-        stream << '\n';
+    stream << '\n';
 }
 
-bool is_std_map(const proto_map &map, const proto_message &message, const proto_file &file)
+void get_std_includes(const proto_map &map, const proto_message &message, const proto_file &file,
+                      std_includes &result)
 {
-    return get_map_type(map.attributes.map, message.attributes.map, file.attributes.map, "K", "V",
-                        "std::map<$, @>") == "std::map<K, V>";
+    result.map |= get_map_type(map.attributes.map, message.attributes.map, file.attributes.map, "K", "V",
+                               "std::map<$, @>")
+                      .starts_with("std::map<");
 }
 
-bool message_has_std_map(const proto_message &message, const proto_file &file)
+void get_std_includes(std::string_view ctype, std::string_view type, std_includes &result)
+{
+    result.array |= ctype.starts_with("std::array<") || type.starts_with("std::array<");
+    result.vector |= ctype.starts_with("std::vector<") || type.starts_with("std::vector<");
+    result.string |= ctype.starts_with("std::string") || type.starts_with("std::string");
+    result.optional |= ctype.starts_with("std::optional<") || type.starts_with("std::optional<");
+    result.memory |= ctype.starts_with("std::unique_ptr<") || type.starts_with("std::unique_ptr<");
+    result.cstdint |= ctype.starts_with("uint") || ctype.starts_with("int") ||
+                      ctype.starts_with("std::uint") || ctype.starts_with("std::int");
+}
+
+void get_std_includes(const proto_field &field, const proto_message &message, const proto_file &file,
+                      std_includes &result)
+{
+    const auto ctype = convert_to_ctype(file, field, message);
+    const auto type = add_label_type(ctype, field, message, file);
+
+    get_std_includes(ctype, type, result);
+}
+
+void get_std_includes(const proto_oneof &oneof, const proto_file &file, std_includes &result)
+{
+    for (const auto &field : oneof.fields)
+    {
+        get_std_includes(convert_to_ctype(file, field), "", result);
+    }
+}
+
+void get_std_includes(const proto_message &message, const proto_file &file, std_includes &result)
 {
     for (const auto &map : message.maps)
     {
-        if (is_std_map(map, message, file))
-            return true;
+        get_std_includes(map, message, file, result);
+    }
+
+    for (const auto &oneof : message.oneofs)
+    {
+        result.variant = true;
+        get_std_includes(oneof, file, result);
+    }
+
+    for (const auto &field : message.fields)
+    {
+        get_std_includes(field, message, file, result);
     }
 
     for (const auto &sub_message : message.messages)
     {
-        if (message_has_std_map(sub_message, file))
-            return true;
+        get_std_includes(sub_message, file, result);
     }
-    return false;
 }
 
-bool has_std_map(const proto_file &file)
+auto get_std_includes(const proto_file &file) -> std_includes
 {
+    auto result = std_includes{};
     for (const auto &message : file.package.messages)
     {
-        if (message_has_std_map(message, file))
-            return true;
+        get_std_includes(message, file, result);
     }
-
-    return false;
+    return result;
 }
 
 void dump_message(std::ostream &stream, const proto_message &message, const proto_file &file)
@@ -538,17 +571,25 @@ void get_std_includes(cpp_includes &includes, const proto_file &file)
 {
     includes.insert("<spb/json.hpp>");
     includes.insert("<spb/pb.hpp>");
-    includes.insert("<cstdint>");
     includes.insert("<cstddef>");
-    includes.insert("<vector>");
-    includes.insert("<optional>");
-    includes.insert("<memory>");
-    includes.insert("<string>");
 
-    if (has_std_map(file))
+    const auto std_includes = get_std_includes(file);
+
+    if (std_includes.optional)
+        includes.insert("<optional>");
+    if (std_includes.memory)
+        includes.insert("<memory>");
+    if (std_includes.string)
+        includes.insert("<string>");
+    if (std_includes.array)
+        includes.insert("<array>");
+    if (std_includes.map)
         includes.insert("<map>");
-
-    if (contains_oneof(file.package.messages))
+    if (std_includes.string)
+        includes.insert("<string>");
+    if (std_includes.vector)
+        includes.insert("<vector>");
+    if (std_includes.variant)
         includes.insert("<variant>");
 }
 
