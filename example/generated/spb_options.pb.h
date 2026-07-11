@@ -18,14 +18,14 @@ namespace SPB::Options
 enum class Enum8 : uint8_t
 {
     MOBILE = 0,
-    HOME = 1,
-    WORK = 2,
+    HOME   = 1,
+    WORK   = 2,
 };
 enum class Enum16 : int16_t
 {
     MOBILE = 0,
-    HOME = 1,
-    WORK = 2,
+    HOME   = 1,
+    WORK   = 2,
 };
 // int can also be: int8, uint8, int16, uint16
 struct Integers
@@ -215,7 +215,7 @@ auto serialize(const auto &message, const serialize_options &options) -> Contain
  * @param[out] message deserialized message
  * @throws std::runtime_error on error
  */
-void deserialize(auto &message, spb::io::reader reader, const deserialize_options &options);
+auto deserialize(auto &message, spb::io::reader reader, const deserialize_options &options) -> size_t;
 
 /**
  * @brief deserialize message from protobuf
@@ -229,7 +229,7 @@ void deserialize(auto &message, spb::io::reader reader, const deserialize_option
  *          `spb::pb::deserialize(message, serialized);`
  */
 template <typename Message, spb::size_container Container>
-void deserialize(Message &message, const Container &protobuf, const deserialize_options &options);
+auto deserialize(Message &message, const Container &protobuf, const deserialize_options &options) -> size_t;
 
 /**
  * @brief deserialize message from protobuf

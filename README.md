@@ -10,6 +10,7 @@
 
 **Lightweight C++ protobuf & JSON serialization library** 
  - _Where **simplicity** meets **usability**_
+ - Fast as [Google Protocol Buffers](https://github.com/protocolbuffers/protobuf), small as [nanopb](https://github.com/nanopb/nanopb)
  - Without **protoc** and without **Google toolchain** dependency
 
 ### Usage
@@ -110,8 +111,11 @@ int main() {
 * Supports `.proto` files with `proto2` or `proto3` syntax (no edition syntax).
 * Generates clean, modern C++ with `std::optional`, `std::vector`, and `enum class`.
 * Bundles protobuf and JSON support in a single library.
-    * Serialized protobuf and JSON are compatible with official protoc, Python, Go, Java.
-* Embedded-friendly, zero heap allocations when paired with [ETL](https://github.com/ETLCPP/etl) or fixed-size strings/vectors.
+    * Serialized protobuf and JSON are compatible with [Google Protocol Buffers](https://github.com/protocolbuffers/protobuf), Python, Go, Java.
+* Embedded-friendly, zero heap allocations when used with fixed-size strings/bytes/arrays.
+  * Supports options
+    * `max_count` for repeated and `max_size` for bytes/string
+    * Can use user types for string/bytes/repeated..., for [example](example/generated/etl.pb.h) [ETL](https://github.com/ETLCPP/etl) 
     * See [options](doc/options.md) for user-specified types and advanced usage.
 
 ## Dependencies
@@ -164,7 +168,7 @@ See the [example](example/) directory.
 
 ## Performance benchmark
 
-_Tiny and Fast_
+_Fast as [Google Protocol Buffers](https://github.com/protocolbuffers/protobuf), small as [nanopb](https://github.com/nanopb/nanopb)_
 
 Measured on `Linux/i7-8650U CPU @ 1.90GHz` with GCC 16.1.1 `-flto -O2` using [nanobench](https://github.com/martinus/nanobench).
 
@@ -172,8 +176,8 @@ See the [benchmark](benchmark/) directory.
 
 ### Speed
 
-* SPB protobuf serializer/deserializer has about the **same speed** as google GPB.
-* SPB JSON serializer/deserializer is about **8x faster** than google GPB.
+* SPB protobuf serializer/deserializer has about the **same speed** as [Google Protocol Buffers](https://github.com/protocolbuffers/protobuf).
+* SPB JSON serializer/deserializer is about **8x faster** than [Google Protocol Buffers](https://github.com/protocolbuffers/protobuf).
 
 ![Speed benchmark](benchmark/img/speed-benchmark.png)
 
@@ -185,7 +189,7 @@ $ find build/benchmark -type f -executable -exec strip --strip-all {} +
 $ ls -alh ./build/benchmark
 ```
 
-* SPB is tiny compared to google GPB, which makes it ideal for Embedded systems.
+* SPB has about the **same code size** as [nanopb](https://github.com/nanopb/nanopb), which makes it ideal for Embedded systems.
 
 ![Size benchmark](benchmark/img/file-size-benchmark.png)
 
