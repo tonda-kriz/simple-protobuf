@@ -165,6 +165,7 @@ See the [example](example/) directory.
 
 * [API](doc/API.md)
 * [Options](doc/options.md)
+* [deepwiki](https://deepwiki.com/tonda-kriz/simple-protobuf)
 
 ## Performance benchmark
 
