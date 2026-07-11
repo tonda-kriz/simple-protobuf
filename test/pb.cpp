@@ -1,4 +1,5 @@
 #include "spb/concepts.h"
+#include "spb/pb/serialize.hpp"
 #include <array>
 #include <name.pb.h>
 #include <person.pb.h>
@@ -177,13 +178,30 @@ auto to_bytes(std::string_view str) -> std::vector<std::byte>
     return {span.data(), span.data() + span.size()};
 }
 
+auto add_length_prepfix(std::string_view protobuf) -> std::string
+{
+    uint8_t buffer[12];
+    auto stream = spb::pb::detail::ostream_buffer(buffer);
+    spb::pb::detail::serialize_varint(stream, protobuf.size());
+    return std::string((char *)buffer, stream.p_buffer - buffer) + std::string(protobuf);
+}
+
 template <typename T> void pb_test(const T &value, std::string_view protobuf)
 {
+    const auto protobuf_length_prefixed = add_length_prepfix(protobuf);
+
     {
         auto serialized = spb::pb::serialize<std::vector<std::byte>>(value);
         CHECK(serialized.size() == protobuf.size());
         auto proto = std::string_view((char *)serialized.data(), serialized.size());
         CHECK(proto == protobuf);
+    }
+
+    {
+        auto serialized = spb::pb::serialize<std::vector<std::byte>>(value, {.delimited = true});
+        CHECK(serialized.size() == protobuf_length_prefixed.size());
+        auto proto = std::string_view((char *)serialized.data(), serialized.size());
+        CHECK(proto == protobuf_length_prefixed);
     }
 
     {
@@ -194,6 +212,13 @@ template <typename T> void pb_test(const T &value, std::string_view protobuf)
     }
 
     {
+        auto serialized = spb::pb::serialize(value, {.delimited = true});
+        CHECK(serialized == protobuf_length_prefixed);
+        auto size = spb::pb::serialize_size(value, {.delimited = true});
+        CHECK(size == protobuf_length_prefixed.size());
+    }
+
+    {
         auto serialized = std::string();
         auto writer = [&serialized](const void *data, size_t size) { serialized.append((char *)data, size); };
         auto serialized_size = spb::pb::serialize(value, writer);
@@ -201,6 +226,16 @@ template <typename T> void pb_test(const T &value, std::string_view protobuf)
         CHECK(serialized_size == size);
         CHECK(serialized == protobuf);
         CHECK(size == protobuf.size());
+    }
+
+    {
+        auto serialized = std::string();
+        auto writer = [&serialized](const void *data, size_t size) { serialized.append((char *)data, size); };
+        auto serialized_size = spb::pb::serialize(value, writer, {.delimited = true});
+        auto size            = spb::pb::serialize_size(value, {.delimited = true});
+        CHECK(serialized_size == size);
+        CHECK(serialized == protobuf_length_prefixed);
+        CHECK(size == protobuf_length_prefixed.size());
     }
 
     {
@@ -215,6 +250,20 @@ template <typename T> void pb_test(const T &value, std::string_view protobuf)
             CHECK(deserialized == value);
         }
     }
+
+    {
+        auto deserialized = spb::pb::deserialize<T>(protobuf_length_prefixed, {.delimited = true});
+        if constexpr (HasValueMember<T>)
+        {
+            using valueT = decltype(T::value);
+            CHECK(valueT(deserialized.value) == valueT(value.value));
+        }
+        else
+        {
+            CHECK(deserialized == value);
+        }
+    }
+
     {
         auto deserialized = T();
         auto reader       = [protobuf](void *data, size_t size) mutable
@@ -236,9 +285,46 @@ template <typename T> void pb_test(const T &value, std::string_view protobuf)
             CHECK(deserialized == value);
         }
     }
+
+    {
+        auto deserialized = T();
+        auto reader = [protobuf = std::string_view(protobuf_length_prefixed)](void *data, size_t size) mutable
+        {
+            const auto copy_size = std::min(protobuf.size(), size);
+            memcpy(data, protobuf.data(), copy_size);
+            protobuf.remove_prefix(copy_size);
+            return copy_size;
+        };
+        auto size = spb::pb::deserialize(deserialized, reader, {.delimited = true});
+        CHECK(size == protobuf_length_prefixed.size());
+        if constexpr (HasValueMember<T>)
+        {
+            using valueT = decltype(T::value);
+            CHECK(valueT(deserialized.value) == valueT(value.value));
+        }
+        else
+        {
+            CHECK(deserialized == value);
+        }
+    }
+
     {
         auto deserialized = T();
         spb::pb::deserialize(deserialized, protobuf);
+        if constexpr (HasValueMember<T>)
+        {
+            using valueT = decltype(T::value);
+            CHECK(valueT(deserialized.value) == valueT(value.value));
+        }
+        else
+        {
+            CHECK(deserialized == value);
+        }
+    }
+
+    {
+        auto deserialized = T();
+        spb::pb::deserialize(deserialized, protobuf_length_prefixed, {.delimited = true});
         if constexpr (HasValueMember<T>)
         {
             using valueT = decltype(T::value);
