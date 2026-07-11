@@ -108,7 +108,7 @@ inline bool is_valid(std::string_view str)
     constexpr size_t mask = (size_t)0x8080808080808080ULL;
 
     const auto *start = str.data();
-    const auto *end = str.data() + str.size() - sizeof(size_t);
+    const auto *end   = str.data() + str.size() - sizeof(size_t);
 
     while (start <= end)
     {
@@ -119,7 +119,7 @@ inline bool is_valid(std::string_view str)
             break;
     }
 
-    end = str.data() + str.size();
+    end            = str.data() + str.size();
     uint32_t state = ok;
     for (uint32_t codepoint; start < end; ++start)
     {

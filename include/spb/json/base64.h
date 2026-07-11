@@ -99,8 +99,8 @@ void base64_decode_string(spb::detail::proto_field_bytes auto &output, istream &
 
     for (auto out_index = size_t(0);;)
     {
-        auto view = stream.view(1, UINT32_MAX);
-        auto length = view.find('"');
+        auto view      = stream.view(1, UINT32_MAX);
+        auto length    = view.find('"');
         auto end_found = length < view.npos;
         if ((end_found && length % 4 != 0) || view.size() <= 4) [[unlikely]]
             throw std::runtime_error("invalid base64");
@@ -112,7 +112,7 @@ void base64_decode_string(spb::detail::proto_field_bytes auto &output, istream &
         if (aligned_length > 4) [[likely]]
         {
             auto out_length = ((aligned_length - 4) / 4) * 3;
-            view = view.substr(0, aligned_length);
+            view            = view.substr(0, aligned_length);
 
             if constexpr (spb::detail::proto_field_bytes_resizable<decltype(output)>)
             {
@@ -127,8 +127,8 @@ void base64_decode_string(spb::detail::proto_field_bytes auto &output, istream &
                     throw std::runtime_error("too large base64");
             }
 
-            auto *p_out = output.data() + out_index;
-            const auto *p_in = reinterpret_cast<const uint8_t *>(view.data());
+            auto *p_out       = output.data() + out_index;
+            const auto *p_in  = reinterpret_cast<const uint8_t *>(view.data());
             const auto *p_end = p_in + aligned_length - 4; //- exclude the last 4 chars (possible padding)
 
             while (p_in < p_end) [[likely]]
@@ -157,16 +157,16 @@ void base64_decode_string(spb::detail::proto_field_bytes auto &output, istream &
 
             uint8_t v0 = decode_table[*p_in++];
             uint8_t v1 = decode_table[*p_in++];
-            auto i1 = *p_in++;
+            auto i1    = *p_in++;
             uint8_t v2 = i1 == '=' ? 0 : decode_table[i1];
-            auto i2 = *p_in++;
+            auto i2    = *p_in++;
             uint8_t v3 = i2 == '=' ? 0 : decode_table[i2];
             mask |= (v0 | v1 | v2 | v3);
             mask |= ((i1 == '=') & (i2 != '=')) ? 128 : 0;
             if (mask & 128) [[unlikely]]
                 throw std::runtime_error("invalid base64");
 
-            auto padding_size = (i1 == '=' ? 1 : 0) + (i2 == '=' ? 1 : 0);
+            auto padding_size   = (i1 == '=' ? 1 : 0) + (i2 == '=' ? 1 : 0);
             auto consumed_bytes = 3 - padding_size;
             //- +1 is for "
             stream.skip(5);

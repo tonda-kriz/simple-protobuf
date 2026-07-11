@@ -1,12 +1,11 @@
 #include <cstdio>
 #include <filesystem>
 #include <proto/mesos.pb.h>
-#include <type_traits>
 
 static auto load_file(const std::filesystem::path &file_path) -> std::string
 {
     const auto file_size = std::filesystem::file_size(file_path);
-    auto file_content = std::string(file_size, '\0');
+    auto file_content    = std::string(file_size, '\0');
 
     if (auto *p_file = fopen(file_path.string().c_str(), "rb"); p_file)
     {
@@ -43,7 +42,7 @@ auto main(int argc, char *argv[]) -> int
     }
 
     auto volume = spb::json::deserialize<mesos::Volume>(load_file(argv[1]));
-    auto json = spb::json::serialize(volume);
+    auto json   = spb::json::serialize(volume);
     save_file(argv[2], json);
     return 0;
 }

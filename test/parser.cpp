@@ -1,4 +1,3 @@
-#include "ast/ast.h"
 #include "io/file.h"
 #include <cstdlib>
 #include <dumper/dumper.h>
@@ -27,7 +26,7 @@ void test_proto_file(const proto_file_test &test, const std::string &test_file =
     REQUIRE_NOTHROW(save_file(test_file, test.file_content));
     try
     {
-        auto file = parse_proto_file(test_file, import_paths);
+        auto file   = parse_proto_file(test_file, import_paths);
         auto stream = std::stringstream();
         dump_cpp_header(file, stream);
         dump_cpp(file, "header.pb.h", stream);
@@ -142,14 +141,14 @@ TEST_CASE("protoc-parser")
                 message Message
                 {
                     // comment
-                    required uint32 value = 1; 
+                    required uint32 value = 1;
                 })"sv,
                                               0},
                                              {R"(syntax = "proto3";
                 message Message
                 {
                     // comment
-                    required uint32 value = 1; // comment 
+                    required uint32 value = 1; // comment
                 })"sv,
                                               0}};
         test_files(tests);

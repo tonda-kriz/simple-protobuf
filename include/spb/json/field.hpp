@@ -18,7 +18,7 @@ namespace spb::json::detail
 struct field_attributes
 {
     size_t max_count = 0;
-    size_t max_size = 0;
+    size_t max_size  = 0;
 };
 
 inline void check_size(size_t size, size_t max_size)

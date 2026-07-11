@@ -286,7 +286,7 @@ void serialize(auto &stream, uint32_t field, const spb::detail::proto_map auto &
     if (value.empty())
         return;
 
-    constexpr auto key_encoder = serialize_mode{.encoder = mode.encoder};
+    constexpr auto key_encoder   = serialize_mode{.encoder = mode.encoder};
     constexpr auto value_encoder = serialize_mode{.encoder = mode.encoder2};
 
     for (const auto &[k, v] : value)
@@ -302,7 +302,7 @@ void serialize(auto &stream, uint32_t field, const spb::detail::proto_map auto &
 template <serialize_mode mode>
 void serialize(auto &stream, uint32_t field, const spb::detail::proto_label_repeated auto &container)
 {
-    using value_type = typename std::remove_cvref_t<decltype(container)>::value_type;
+    using value_type  = typename std::remove_cvref_t<decltype(container)>::value_type;
     using stream_type = std::remove_cvref_t<decltype(stream)>;
 
     if constexpr (!stream_type::size_only && mode.max_count)

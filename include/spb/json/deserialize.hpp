@@ -69,7 +69,7 @@ static constexpr inline auto djb2_hash(std::string_view str) noexcept -> uint32_
 
 static constexpr inline auto fnv1a_hash(std::string_view str) noexcept -> uint64_t
 {
-    uint64_t hash = 14695981039346656037ULL;
+    uint64_t hash        = 14695981039346656037ULL;
     const uint64_t prime = 1099511628211ULL;
 
     for (auto c : str)
@@ -333,7 +333,7 @@ void ignore_string_until_double_quota(auto &stream)
     for (;;)
     {
         auto view = stream.view(1, UINT32_MAX);
-        auto pos = view.find_first_of(R"(\")");
+        auto pos  = view.find_first_of(R"(\")");
         if (pos == view.npos)
         {
             stream.skip(view.size());
@@ -375,7 +375,7 @@ auto deserialize_string_to_buffer(auto &stream, size_t min_size, size_t max_size
         throw std::runtime_error(R"(expecting '"')");
 
     // +1 for "
-    auto view = stream.view(1, max_size + 1);
+    auto view    = stream.view(1, max_size + 1);
     size_t start = 0;
     for (;;)
     {
@@ -405,11 +405,11 @@ auto deserialize_string_to_buffer(auto &stream, size_t min_size, size_t max_size
 auto unicode_from_hex(auto &stream) -> uint16_t
 {
     const auto esc_size = 4U;
-    auto unicode_view = stream.view(esc_size, esc_size);
+    auto unicode_view   = stream.view(esc_size, esc_size);
     if (unicode_view.size() < esc_size) [[unlikely]]
         throw std::runtime_error("invalid escape sequence");
 
-    auto value = uint16_t(0);
+    auto value  = uint16_t(0);
     auto result = spb_std_emu::from_chars(unicode_view.data(), unicode_view.data() + esc_size, value, 16);
     if (result.ec != std::errc{} || result.ptr != unicode_view.data() + esc_size) [[unlikely]]
         throw std::runtime_error("invalid escape sequence");
@@ -484,7 +484,7 @@ void deserialize(auto &stream, spb::detail::proto_field_string auto &value)
     {
         value.clear();
     }
-    auto index = size_t(0);
+    auto index           = size_t(0);
     auto append_to_value = [&](const char *str, size_t size)
     {
         if constexpr (attributes.max_size)
@@ -510,7 +510,7 @@ void deserialize(auto &stream, spb::detail::proto_field_string auto &value)
 
     for (;;)
     {
-        auto view = stream.view(1, UINT32_MAX);
+        auto view  = stream.view(1, UINT32_MAX);
         auto found = view.find_first_of(R"("\)");
         if (found == view.npos) [[unlikely]]
         {
@@ -545,14 +545,14 @@ template <field_attributes> void deserialize(auto &stream, spb::detail::proto_fi
         //- https://protobuf.dev/programming-guides/proto2/#json
         //- number can be a string
         char buffer[32];
-        auto view = deserialize_string_to_buffer(stream, 1, 32, buffer);
+        auto view   = deserialize_string_to_buffer(stream, 1, 32, buffer);
         auto result = spb_std_emu::from_chars(view.data(), view.data() + view.size(), value);
         if (result.ec != std::errc{} || result.ptr != (view.data() + view.size())) [[unlikely]]
             throw std::runtime_error("invalid number");
 
         return;
     }
-    auto view = stream.view(1, 32);
+    auto view   = stream.view(1, 32);
     auto result = spb_std_emu::from_chars(view.data(), view.data() + view.size(), value);
     if (result.ec != std::errc{}) [[unlikely]]
         throw std::runtime_error("invalid number");
@@ -672,15 +672,15 @@ template <field_attributes attributes, typename T> void deserialize_map_key(auto
     {
         char buffer[128];
         auto str_key_map = deserialize_string_to_buffer(stream, 1, 128, buffer);
-        auto key_stream = istream_buffer(str_key_map.data(), str_key_map.size());
+        auto key_stream  = istream_buffer(str_key_map.data(), str_key_map.size());
         deserialize<attributes>(key_stream, map_key);
     }
 }
 
 template <field_attributes attributes> void deserialize(auto &stream, spb::detail::proto_map auto &value)
 {
-    using map_type = std::remove_cvref_t<decltype(value)>;
-    using key_type = typename map_type::key_type;
+    using map_type    = std::remove_cvref_t<decltype(value)>;
+    using key_type    = typename map_type::key_type;
     using mapped_type = typename map_type::mapped_type;
 
     if (stream.consume_and_skip_white_space("null"sv))

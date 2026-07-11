@@ -228,7 +228,7 @@ void check_if_empty_or_throw(auto &stream)
         return tag_type::invalid;
 
     auto byte = (uint8_t)(byte_or_eof);
-    auto tag = (uint32_t)(byte & 0x7F);
+    auto tag  = (uint32_t)(byte & 0x7F);
 
     for (size_t shift = CHAR_BIT - 1; (byte & 0x80) != 0; shift += CHAR_BIT - 1)
     {
@@ -336,7 +336,7 @@ auto deserialize_bitfield(auto &stream, uint32_t bits, wire_type type) -> T
         check_wire_type_or_throw(type, wire_type::varint);
 
         auto tmp = read_varint<std::make_unsigned_t<T>>(stream);
-        value = T((tmp >> 1) ^ (~(tmp & 1) + 1));
+        value    = T((tmp >> 1) ^ (~(tmp & 1) + 1));
     }
     else if constexpr (scalar_encoder(mode.encoder) == scalar_encoder::varint)
     {
@@ -385,7 +385,7 @@ auto deserialize_bitfield(auto &stream, uint32_t bits, wire_type type) -> T
 template <serialize_mode mode>
 void deserialize(auto &stream, spb::detail::proto_enum auto &value, wire_type type)
 {
-    using T = std::remove_cvref_t<decltype(value)>;
+    using T        = std::remove_cvref_t<decltype(value)>;
     using int_type = std::underlying_type_t<T>;
 
     if constexpr (!is_packed(mode.encoder))
@@ -408,7 +408,7 @@ void deserialize(auto &stream, spb::detail::proto_field_int_or_float auto &value
             check_wire_type_or_throw(type, wire_type::varint);
         }
         auto tmp = read_varint<std::make_unsigned_t<T>>(stream);
-        value = T((tmp >> 1) ^ (~(tmp & 1) + 1));
+        value    = T((tmp >> 1) ^ (~(tmp & 1) + 1));
     }
     else if constexpr (scalar_encoder(mode.encoder) == scalar_encoder::varint)
     {
@@ -620,23 +620,23 @@ void deserialize(auto &stream, Container &value, wire_type type)
 template <serialize_mode mode>
 void deserialize(auto &stream, spb::detail::proto_map auto &value, wire_type type)
 {
-    using map_type = std::remove_cvref_t<decltype(value)>;
-    using key_type = typename map_type::key_type;
+    using map_type    = std::remove_cvref_t<decltype(value)>;
+    using key_type    = typename map_type::key_type;
     using mapped_type = typename map_type::mapped_type;
 
-    constexpr auto key_encoder = serialize_mode{.encoder = mode.encoder};
+    constexpr auto key_encoder   = serialize_mode{.encoder = mode.encoder};
     constexpr auto value_encoder = serialize_mode{.encoder = mode.encoder2};
 
     check_wire_type_or_throw(type, wire_type::length_delimited);
 
-    auto pair = std::pair<key_type, mapped_type>();
-    auto key_defined = false;
+    auto pair          = std::pair<key_type, mapped_type>();
+    auto key_defined   = false;
     auto value_defined = false;
     while (!stream.empty())
     {
-        const auto tag = tag_type(read_varint<uint32_t>(stream));
+        const auto tag          = tag_type(read_varint<uint32_t>(stream));
         const auto field_number = field_from_tag(tag);
-        const auto field_type = wire_type_from_tag(tag);
+        const auto field_type   = wire_type_from_tag(tag);
 
         check_tag_or_throw(tag);
 
@@ -652,7 +652,7 @@ void deserialize(auto &stream, spb::detail::proto_map auto &value, wire_type typ
                 if (field_type == wire_type::length_delimited)
                 {
                     const auto size = read_varint<uint32_t>(stream);
-                    auto substream = stream.sub_stream(size);
+                    auto substream  = stream.sub_stream(size);
                     deserialize<key_encoder>(substream, pair.first, field_type);
                     check_if_empty_or_throw(substream);
                 }
@@ -673,7 +673,7 @@ void deserialize(auto &stream, spb::detail::proto_map auto &value, wire_type typ
                 if (field_type == wire_type::length_delimited)
                 {
                     const auto size = read_varint<uint32_t>(stream);
-                    auto substream = stream.sub_stream(size);
+                    auto substream  = stream.sub_stream(size);
                     deserialize<value_encoder>(substream, pair.second, field_type);
                     check_if_empty_or_throw(substream);
                 }
@@ -719,7 +719,7 @@ void deserialize(auto &stream, spb::detail::proto_message auto &value, wire_type
         if (field_type == wire_type::length_delimited)
         {
             const auto size = read_varint<uint32_t>(stream);
-            auto substream = stream.sub_stream(size);
+            auto substream  = stream.sub_stream(size);
             deserialize_value(substream, value, tag);
             check_if_empty_or_throw(substream);
         }

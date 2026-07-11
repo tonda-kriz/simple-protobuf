@@ -12,6 +12,7 @@
 
 #include "ast/proto-file.h"
 #include <filesystem>
+#include <set>
 #include <span>
 #include <string_view>
 
@@ -37,3 +38,15 @@
 auto parse_proto_file(const std::filesystem::path &file_path,
                       std::span<const std::filesystem::path> import_paths,
                       const std::filesystem::path &base_dir = std::filesystem::current_path()) -> proto_file;
+
+namespace fs       = std::filesystem;
+using parsed_files = std::set<std::string>;
+
+struct parsing_ctx
+{
+    const fs::path &base_dir;
+    parsed_files &already_parsed;
+    std::span<const fs::path> import_paths;
+};
+
+void parse_proto_file_content(proto_file &file, parsing_ctx &ctx);

@@ -34,7 +34,7 @@ struct search_state
         optional_pointers,
     };
 
-    resolve_mode mode = dependencies_only;
+    resolve_mode mode        = dependencies_only;
     size_t resolved_messages = 0;
     const proto_file &file;
 };
@@ -198,7 +198,7 @@ auto get_sub_message(const proto_message &message, const proto_field &field, siz
     -> const proto_message *
 {
     const auto type_name = get_type_part(field, type_part);
-    const auto index = std::find_if(
+    const auto index     = std::find_if(
         message.messages.begin(), message.messages.end(), [type_name](const auto &sub_message) -> bool
         { return type_name == sub_message.name.proto_name && sub_message.resolved > 0; });
     return (index != message.messages.end()) ? &*index : nullptr;
@@ -373,9 +373,9 @@ void resolve_message_dependencies(search_ctx &ctx)
     for (auto &message : ctx.message.messages)
     {
         auto sub_ctx = search_ctx{
-            .message = message,
+            .message  = message,
             .p_parent = &ctx,
-            .state = ctx.state,
+            .state    = ctx.state,
         };
 
         resolve_message_dependencies(sub_ctx);
@@ -409,9 +409,9 @@ void sort_messages(proto_messages &messages)
 void resolve_messages_order(proto_file &file)
 {
     auto state = search_state{
-        .mode = search_state::dependencies_only,
+        .mode              = search_state::dependencies_only,
         .resolved_messages = 0,
-        .file = file,
+        .file              = file,
     };
 
     while (!all_types_are_resolved(file.package.messages))
@@ -419,9 +419,9 @@ void resolve_messages_order(proto_file &file)
         const auto resolved_messages = state.resolved_messages;
 
         auto top_level_ctx = search_ctx{
-            .message = file.package,
+            .message  = file.package,
             .p_parent = nullptr,
-            .state = state,
+            .state    = state,
         };
 
         resolve_message_dependencies(top_level_ctx);

@@ -75,7 +75,7 @@ size_t serialize(const auto &message, spb::io::writer on_write, const serialize_
 size_t serialize(const auto &message, void *buffer, const serialize_options &options = {})
 {
     const auto start = (uint8_t *)buffer;
-    auto stream = detail::ostream_buffer((uint8_t *)buffer);
+    auto stream      = detail::ostream_buffer((uint8_t *)buffer);
     if (options.delimited)
         detail::serialize_varint(stream, detail::serialize_size(message));
 
@@ -99,7 +99,7 @@ size_t serialize(const auto &message, Container &result, const serialize_options
 {
     static_assert(sizeof(*result.data()) == sizeof(uint8_t));
 
-    const auto size = detail::serialize_size(message);
+    const auto size            = detail::serialize_size(message);
     const auto serialized_size = options.delimited ? size + detail::serialize_varint_size(size) : size;
     result.resize(serialized_size);
     auto stream = detail::ostream_buffer((uint8_t *)result.data());
@@ -133,7 +133,7 @@ size_t deserialize(auto &message, const void *buffer, size_t size, const deseria
     if (options.delimited)
     {
         const auto substream_length = read_varint<uint32_t>(stream);
-        auto substream = stream.sub_stream(substream_length);
+        auto substream              = stream.sub_stream(substream_length);
         deserialize<detail::serialize_mode{}>(substream, message);
     }
     else
@@ -157,7 +157,7 @@ size_t deserialize(auto &message, spb::io::reader reader, const deserialize_opti
     if (options.delimited)
     {
         const auto substream_length = read_varint<uint32_t>(stream);
-        auto substream = stream.sub_stream(substream_length);
+        auto substream              = stream.sub_stream(substream_length);
         deserialize<detail::serialize_mode{}>(substream, message);
     }
     else

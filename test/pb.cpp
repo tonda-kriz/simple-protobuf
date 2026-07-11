@@ -1,6 +1,4 @@
 #include "spb/concepts.h"
-#include "spb/pb/serialize.hpp"
-#include "spb/pb/wire-types.h"
 #include <array>
 #include <name.pb.h>
 #include <person.pb.h>
@@ -199,7 +197,7 @@ template <typename T> void pb_test(const T &value, std::string_view protobuf)
         auto serialized = std::string();
         auto writer = [&serialized](const void *data, size_t size) { serialized.append((char *)data, size); };
         auto serialized_size = spb::pb::serialize(value, writer);
-        auto size = spb::pb::serialize_size(value);
+        auto size            = spb::pb::serialize_size(value);
         CHECK(serialized_size == size);
         CHECK(serialized == protobuf);
         CHECK(size == protobuf.size());
@@ -219,7 +217,7 @@ template <typename T> void pb_test(const T &value, std::string_view protobuf)
     }
     {
         auto deserialized = T();
-        auto reader = [protobuf](void *data, size_t size) mutable
+        auto reader       = [protobuf](void *data, size_t size) mutable
         {
             const auto copy_size = std::min(protobuf.size(), size);
             memcpy(data, protobuf.data(), copy_size);
@@ -257,7 +255,7 @@ template <typename T> void json_test(const T &value, std::string_view json)
 {
     {
         auto serialized = std::string();
-        auto size = spb::json::serialize(value, serialized);
+        auto size       = spb::json::serialize(value, serialized);
         CHECK(size == json.size());
         CHECK(serialized == json);
     }
@@ -272,7 +270,7 @@ template <typename T> void json_test(const T &value, std::string_view json)
     {
         auto serialized = std::string();
         auto writer = [&serialized](const void *data, size_t size) { serialized.append((char *)data, size); };
-        auto size = spb::json::serialize(value, writer);
+        auto size   = spb::json::serialize(value, writer);
         CHECK(size == json.size());
         CHECK(serialized == json);
     }
@@ -304,7 +302,7 @@ template <typename T> void json_test(const T &value, std::string_view json)
     }
     {
         auto deserialized = T();
-        auto reader = [json](void *data, size_t size) mutable
+        auto reader       = [json](void *data, size_t size) mutable
         {
             const auto copy_size = std::min(json.size(), size);
             memcpy(data, json.data(), copy_size);
@@ -350,9 +348,9 @@ TEST_CASE("protobuf")
             const auto ints = spb::pb::serialize<std::string>(Test::MaxCountInt{.value = {0, 1, 2, 3, 4}});
             const auto strings =
                 spb::pb::serialize<std::string>(Test::MaxCountString{.value = {"0", "1", "2", "3", "4"}});
-            const auto bytes = spb::pb::serialize<std::string>(Test::MaxCountBytes{
+            const auto bytes   = spb::pb::serialize<std::string>(Test::MaxCountBytes{
                 .value = {to_bytes("0"), to_bytes("1"), to_bytes("2"), to_bytes("3"), to_bytes("4")}});
-            const auto person = Test::TestPerson{.value = "3"};
+            const auto person  = Test::TestPerson{.value = "3"};
             const auto persons = spb::pb::serialize<std::string>(
                 Test::MaxCountPerson{.value = {person, person, person, person, person}});
 
@@ -1868,12 +1866,12 @@ TEST_CASE("protobuf")
     {
         pb_json_test(
             PhoneBook::Person{
-                .name = "John Doe",
-                .id = 123,
-                .email = "QXUeh@example.com",
+                .name   = "John Doe",
+                .id     = 123,
+                .email  = "QXUeh@example.com",
                 .phones = {PhoneBook::Person::PhoneNumber{
                     .number = "555-4321",
-                    .type = PhoneBook::Person::PhoneType::HOME,
+                    .type   = PhoneBook::Person::PhoneType::HOME,
                 }},
             },
             "\x0a\x08John Doe\x10\x7b\x1a\x11QXUeh@example.com\x22\x0c\x0A\x08"
@@ -1894,7 +1892,7 @@ TEST_CASE("protobuf")
     }
     SUBCASE("simd")
     {
-        auto data = UnitTest::simd::Data{};
+        auto data           = UnitTest::simd::Data{};
         data.coordinates[0] = 0;
         data.coordinates[1] = 1;
         data.coordinates[2] = 2;

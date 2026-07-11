@@ -11,7 +11,6 @@
 #pragma once
 
 #include "ast/proto-file.h"
-#include <filesystem>
 
 /**
  * @brief dump C++ header file for parsed proto

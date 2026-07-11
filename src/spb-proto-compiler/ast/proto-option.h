@@ -17,7 +17,7 @@
 #include <vector>
 
 struct proto_option;
-using proto_option_name = std::string_view;
+using proto_option_name  = std::string_view;
 using proto_option_value = std::string_view;
 
 using proto_options = std::map<proto_option_name, proto_option>;

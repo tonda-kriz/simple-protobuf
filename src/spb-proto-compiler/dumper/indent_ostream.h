@@ -21,7 +21,7 @@ class indented_streambuf : public std::streambuf
   private:
     std::streambuf *dest;
     int indent_level = 0;
-    int last_char = 0;
+    int last_char    = 0;
     std::string indent;
     static constexpr int indent_spaces = 4;
 

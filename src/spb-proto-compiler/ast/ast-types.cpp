@@ -206,9 +206,9 @@ using scalar_encoder = spb::pb::detail::scalar_encoder;
     -> const proto_message *
 {
     const auto type_name = get_type_part(field, type_part);
-    const auto index = std::find_if(message.messages.begin(), message.messages.end(),
-                                    [type_name](const auto &sub_message) -> bool
-                                    { return type_name == sub_message.name.proto_name; });
+    const auto index     = std::find_if(message.messages.begin(), message.messages.end(),
+                                        [type_name](const auto &sub_message) -> bool
+                                        { return type_name == sub_message.name.proto_name; });
     return (index != message.messages.end()) ? &*index : nullptr;
 }
 
@@ -305,7 +305,7 @@ void resolve_types(const search_ctx &self, proto_field &field)
 {
     const auto [type, bit_type] = resolve_type(self, field, 0);
 
-    field.type = type;
+    field.type     = type;
     field.bit_type = bit_type;
 }
 
@@ -326,8 +326,8 @@ void resolve_types(const search_ctx &self, proto_oneof &oneof)
 void resolve_types(const search_ctx &parent, proto_message &message)
 {
     auto ctx = search_ctx{
-        .file = parent.file,
-        .message = message,
+        .file     = parent.file,
+        .message  = message,
         .p_parent = &parent,
     };
 
@@ -394,8 +394,8 @@ auto is_scalar(const proto_field::Type &type) -> bool
 void resolve_types(proto_file &file)
 {
     auto ctx = search_ctx{
-        .file = file,
-        .message = file.package,
+        .file     = file,
+        .message  = file.package,
         .p_parent = nullptr,
     };
     resolve_types(ctx, file.package);

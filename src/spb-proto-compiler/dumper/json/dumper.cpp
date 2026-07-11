@@ -29,7 +29,7 @@ namespace
 {
 using message_dumper = spb::detail::function_ref<void(std::ostream &, const proto_file &,
                                                       const proto_message &, std::string_view)>;
-using enum_dumper = spb::detail::function_ref<void(std::ostream &, const proto_enum &, std::string_view)>;
+using enum_dumper    = spb::detail::function_ref<void(std::ostream &, const proto_enum &, std::string_view)>;
 
 void dump_prototypes(std::ostream &stream, std::string_view type)
 {
@@ -51,7 +51,7 @@ auto convert_to_camelCase(std::string_view input) -> std::string
         return result;
 
     auto index = 0U;
-    auto up = false;
+    auto up    = false;
     for (auto c : input)
     {
         if (c == '_')
@@ -179,7 +179,7 @@ void dump_field_attributes(std::ostream &stream, const proto_file &file, const p
                            const proto_attributes &attributes)
 {
     const auto max_count = field_max_count(file, message, attributes);
-    const auto max_size = field_max_size(file, message, attributes);
+    const auto max_size  = field_max_size(file, message, attributes);
 
     stream << "field_attributes";
 
@@ -394,9 +394,9 @@ void dump_cpp_deserialize_message_gen(std::ostream &stream, const proto_file &fi
         const auto field_name = json_field_name_or_camelCase(field);
         name_map.emplace(spb::json::detail::djb2_hash(field_name), one_field{
                                                                        .parsed_name = field_name,
-                                                                       .name = field.name,
-                                                                       .attributes = field.attributes,
-                                                                       .bitfield = field.bit_field,
+                                                                       .name        = field.name,
+                                                                       .attributes  = field.attributes,
+                                                                       .bitfield    = field.bit_field,
                                                                    });
         if (field_name != field.name.proto_name)
         {
@@ -406,9 +406,9 @@ void dump_cpp_deserialize_message_gen(std::ostream &stream, const proto_file &fi
             name_map.emplace(spb::json::detail::djb2_hash(field.name.proto_name),
                              one_field{
                                  .parsed_name = std::string(field.name.proto_name),
-                                 .name = field.name,
-                                 .attributes = field.attributes,
-                                 .bitfield = field.bit_field,
+                                 .name        = field.name,
+                                 .attributes  = field.attributes,
+                                 .bitfield    = field.bit_field,
                              });
         }
     }
@@ -420,7 +420,7 @@ void dump_cpp_deserialize_message_gen(std::ostream &stream, const proto_file &fi
         const auto field_name = json_field_name_or_camelCase(field);
         name_map.emplace(spb::json::detail::djb2_hash(field_name), one_field{
                                                                        .parsed_name = field_name,
-                                                                       .name = field.name,
+                                                                       .name        = field.name,
                                                                    });
         if (field_name != field.name.proto_name)
         {
@@ -442,7 +442,7 @@ void dump_cpp_deserialize_message_gen(std::ostream &stream, const proto_file &fi
             const auto field_name = json_field_name_or_camelCase(oneof.fields[i]);
             name_map.emplace(spb::json::detail::djb2_hash(field_name), one_field{
                                                                            .parsed_name = field_name,
-                                                                           .name = oneof.name,
+                                                                           .name        = oneof.name,
                                                                            .oneof_index = i,
                                                                        });
             if (field_name != oneof.fields[i].name.proto_name)
@@ -453,7 +453,7 @@ void dump_cpp_deserialize_message_gen(std::ostream &stream, const proto_file &fi
                 name_map.emplace(spb::json::detail::djb2_hash(oneof.fields[i].name.proto_name),
                                  one_field{
                                      .parsed_name = std::string(oneof.fields[i].name.proto_name),
-                                     .name = oneof.name,
+                                     .name        = oneof.name,
                                      .oneof_index = i,
                                  });
             }

@@ -158,7 +158,7 @@ void gpb_test(const SPB &spb, const spb::pb::serialize_options &options = {})
 {
     using T = typename ExtractOptional<std::decay_t<decltype(SPB::value)>>::type;
 
-    auto gpb = GPB();
+    auto gpb            = GPB();
     auto spb_serialized = spb::pb::serialize(spb, options);
 
     if (options.delimited)
@@ -222,7 +222,7 @@ template <typename GPB, typename SPB> void gpb_json(const SPB &spb)
 {
     using T = typename ExtractOptional<std::decay_t<decltype(SPB::value)>>::type;
 
-    auto gpb = GPB();
+    auto gpb            = GPB();
     auto spb_serialized = spb::json::serialize(spb);
 
     auto parse_options = google::protobuf::util::JsonParseOptions{};
@@ -253,8 +253,8 @@ template <typename GPB, typename SPB> void gpb_json(const SPB &spb)
         auto gpb_value = gpb.value();
         REQUIRE(spb.value == gpb_value);
     }
-    auto json_string = std::string();
-    auto print_options = google::protobuf::util::JsonPrintOptions();
+    auto json_string                         = std::string();
+    auto print_options                       = google::protobuf::util::JsonPrintOptions();
     print_options.preserve_proto_field_names = true;
 
     REQUIRE(MessageToJsonString(gpb, &json_string, print_options).ok());
@@ -1349,8 +1349,8 @@ TEST_CASE("variant")
 {
     SUBCASE("int")
     {
-        auto gpb = Test::gpb::Variant();
-        auto spb = Test::Variant{.oneof_field = 0x42U};
+        auto gpb            = Test::gpb::Variant();
+        auto spb            = Test::Variant{.oneof_field = 0x42U};
         auto spb_serialized = spb::pb::serialize(spb);
 
         REQUIRE(gpb.ParseFromString(spb_serialized));
@@ -1365,8 +1365,8 @@ TEST_CASE("variant")
     }
     SUBCASE("string")
     {
-        auto gpb = Test::gpb::Variant();
-        auto spb = Test::Variant{.oneof_field = "hello"};
+        auto gpb            = Test::gpb::Variant();
+        auto spb            = Test::Variant{.oneof_field = "hello"};
         auto spb_serialized = spb::pb::serialize(spb);
 
         REQUIRE(gpb.ParseFromString(spb_serialized));
@@ -1381,8 +1381,8 @@ TEST_CASE("variant")
     }
     SUBCASE("bytes")
     {
-        auto gpb = Test::gpb::Variant();
-        auto spb = Test::Variant{.oneof_field = to_bytes("hello")};
+        auto gpb            = Test::gpb::Variant();
+        auto spb            = Test::Variant{.oneof_field = to_bytes("hello")};
         auto spb_serialized = spb::pb::serialize(spb);
 
         REQUIRE(gpb.ParseFromString(spb_serialized));
@@ -1397,8 +1397,8 @@ TEST_CASE("variant")
     }
     SUBCASE("name")
     {
-        auto gpb = Test::gpb::Variant();
-        auto spb = Test::Variant{.oneof_field = Test::Name{.name = "John"}};
+        auto gpb            = Test::gpb::Variant();
+        auto spb            = Test::Variant{.oneof_field = Test::Name{.name = "John"}};
         auto spb_serialized = spb::pb::serialize(spb);
 
         REQUIRE(gpb.ParseFromString(spb_serialized));
@@ -1417,17 +1417,17 @@ TEST_CASE("variant")
 TEST_CASE("person")
 {
     auto gpb = PhoneBook::gpb::Person();
-    auto spb = PhoneBook::Person{.name = "John Doe",
-                                 .id = 123,
-                                 .email = "QXUeh@example.com",
+    auto spb = PhoneBook::Person{.name   = "John Doe",
+                                 .id     = 123,
+                                 .email  = "QXUeh@example.com",
                                  .phones = {
                                      PhoneBook::Person::PhoneNumber{
                                          .number = "555-4321",
-                                         .type = PhoneBook::Person::PhoneType::HOME,
+                                         .type   = PhoneBook::Person::PhoneType::HOME,
                                      },
                                      PhoneBook::Person::PhoneNumber{
                                          .number = "999-1234",
-                                         .type = PhoneBook::Person::PhoneType::MOBILE,
+                                         .type   = PhoneBook::Person::PhoneType::MOBILE,
                                      },
                                  }};
     SUBCASE("gpb serialize/deserialize")
@@ -1467,8 +1467,8 @@ TEST_CASE("person")
             REQUIRE(int(gpb.phones(i).type()) == int(spb.phones[i].type.value()));
         }
 
-        auto json_string = std::string();
-        auto print_options = google::protobuf::util::JsonPrintOptions();
+        auto json_string                         = std::string();
+        auto print_options                       = google::protobuf::util::JsonPrintOptions();
         print_options.preserve_proto_field_names = true;
 
         REQUIRE(MessageToJsonString(gpb, &json_string, print_options).ok());
