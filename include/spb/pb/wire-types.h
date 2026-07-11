@@ -55,10 +55,10 @@ enum scalar_encoder : uint8_t
 
 struct serialize_mode
 {
-    scalar_encoder encoder = {};
+    scalar_encoder encoder  = {};
     scalar_encoder encoder2 = {};
-    size_t max_count = 0;
-    size_t max_size = 0;
+    size_t max_count        = 0;
+    size_t max_size         = 0;
 };
 
 constexpr auto make_packed(scalar_encoder a) noexcept -> scalar_encoder

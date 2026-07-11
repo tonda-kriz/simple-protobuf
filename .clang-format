@@ -5,3 +5,4 @@ UseTab: Never
 BreakBeforeBraces: Allman
 AllowShortFunctionsOnASingleLine: false
 ColumnLimit: 110
+AlignConsecutiveAssignments: true

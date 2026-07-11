@@ -133,9 +133,9 @@ auto field_max_count(const proto_file &file, const proto_message &message, const
 void dump_serialize_mode(std::ostream &stream, const proto_file &file, const proto_message &message,
                          const proto_field &field)
 {
-    const auto encoder = encoder_type_str(file, field);
+    const auto encoder   = encoder_type_str(file, field);
     const auto max_count = field_max_count(file, message, field);
-    const auto max_size = field_max_size(file, message, field);
+    const auto max_size  = field_max_size(file, message, field);
 
     stream << "serialize_mode";
 
@@ -165,7 +165,7 @@ void dump_serialize_mode(std::ostream &stream, const proto_file &file, const pro
 void dump_serialize_mode(std::ostream &stream, const proto_file &file, const proto_message &,
                          const proto_map &map)
 {
-    const auto key_encoder = encoder_type_str(file, map.key);
+    const auto key_encoder   = encoder_type_str(file, map.key);
     const auto value_encoder = encoder_type_str(file, map.value);
 
     stream << "serialize_mode";

@@ -65,7 +65,7 @@ struct proto_field : public proto_base
         PTR = 3,
     };
 
-    Type type = Type::NONE;
+    Type type   = Type::NONE;
     Label label = Label::OPTIONAL;
 
     cpp_ident type_name;

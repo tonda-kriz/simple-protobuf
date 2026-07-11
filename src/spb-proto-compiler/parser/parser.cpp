@@ -31,16 +31,6 @@
 namespace
 {
 using namespace std::literals;
-namespace fs = std::filesystem;
-using parsed_files = std::set<std::string>;
-
-struct parsing_ctx
-{
-    const fs::path &base_dir;
-    parsed_files &already_parsed;
-    std::span<const fs::path> import_paths;
-};
-
 [[nodiscard]] auto parse_proto_file(const fs::path &file, parsing_ctx &ctx) -> proto_file;
 
 auto find_file_in_paths(const fs::path &file_name, const parsing_ctx &ctx) -> fs::path
@@ -98,7 +88,7 @@ concept int_or_float = std::integral<T> || std::floating_point<T>;
 
 auto consume_number(spb::char_stream &stream, std::integral auto &number) -> bool
 {
-    number = {};
+    number    = {};
     auto base = 10;
     if (stream.consume('0'))
     {
@@ -151,8 +141,8 @@ template <int_or_float T> auto parse_number(spb::char_stream &stream) -> T
 auto parse_int_or_float(spb::char_stream &stream) -> std::string_view
 {
     const auto *start = stream.begin();
-    auto number = double();
-    auto result = spb_std_emu::from_chars(stream.begin(), stream.end(), number);
+    auto number       = double();
+    auto result       = spb_std_emu::from_chars(stream.begin(), stream.end(), number);
     if (result.ec == std::errc{}) [[likely]]
     {
         stream.skip_to(result.ptr);
@@ -165,7 +155,7 @@ auto parse_int_or_float(spb::char_stream &stream) -> std::string_view
 void parse_comment_line(spb::char_stream &stream, proto_comment &comment)
 {
     const auto *start = stream.begin();
-    const auto end = stream.content().find('\n');
+    const auto end    = stream.content().find('\n');
     if (end == std::string_view::npos)
         stream.throw_parse_error("expecting \\n");
 
@@ -177,7 +167,7 @@ void parse_comment_line(spb::char_stream &stream, proto_comment &comment)
 void parse_comment_multiline(spb::char_stream &stream, proto_comment &comment)
 {
     const auto *start = stream.begin();
-    const auto end = stream.content().find("*/");
+    const auto end    = stream.content().find("*/");
     if (end == std::string_view::npos)
         stream.throw_parse_error("expecting */");
 
@@ -229,7 +219,7 @@ auto parse_comment(spb::char_stream &stream) -> proto_comment
 
     stream.consume_current_char(false);
     const auto *start = stream.begin();
-    auto current = stream.current_char();
+    auto current      = stream.current_char();
     while ((current != 0) && current != c)
     {
         stream.consume_current_char(false);
@@ -294,7 +284,7 @@ auto parse_comment(spb::char_stream &stream) -> proto_comment
 [[nodiscard]] auto parse_full_ident(spb::char_stream &stream) -> cpp_ident
 {
     const auto *start = stream.begin();
-    auto cpp_name = std::string();
+    auto cpp_name     = std::string();
 
     for (;;)
     {
@@ -376,15 +366,15 @@ void parse_top_level_import(spb::char_stream &stream, proto_file &file, parsing_
     consume_or_fail(stream, "import");
     stream.consume("weak") || stream.consume("public");
     const auto import_name = parse_string_literal(stream);
-    auto import_comment = std::move(comment);
+    auto import_comment    = std::move(comment);
     consume_statement_end(stream, import_comment);
     try
     {
         const auto base_dir = file.path.parent_path();
-        auto import_ctx = parsing_ctx{
-            .base_dir = base_dir,
+        auto import_ctx     = parsing_ctx{
+            .base_dir       = base_dir,
             .already_parsed = ctx.already_parsed,
-            .import_paths = ctx.import_paths,
+            .import_paths   = ctx.import_paths,
         };
 
         try
@@ -414,7 +404,7 @@ void parse_top_level_package(spb::char_stream &stream, proto_base &package, prot
 {
     //- "package" fullIdent ";"
     consume_or_fail(stream, "package");
-    package.name = parse_full_ident(stream);
+    package.name    = parse_full_ident(stream);
     package.comment = std::move(comment);
     consume_statement_end(stream, package.comment);
 }
@@ -422,7 +412,7 @@ void parse_top_level_package(spb::char_stream &stream, proto_base &package, prot
 [[nodiscard]] auto parse_option_name(spb::char_stream &stream, proto_options &options) -> proto_option &
 {
     auto *current = &options;
-    auto *option = (proto_option *)nullptr;
+    auto *option  = (proto_option *)nullptr;
     //- ( ident | "(" fullIdent ")" ) { "." ident }
     parse_comment(stream);
     do
@@ -433,7 +423,7 @@ void parse_top_level_package(spb::char_stream &stream, proto_base &package, prot
         if (full_ident)
             consume_or_fail(stream, ')');
 
-        option = &(*current)[ident];
+        option  = &(*current)[ident];
         current = option->options.empty() ? &option->options.emplace_back() : &option->options.front();
     } while (stream.consume('.'));
 
@@ -571,7 +561,7 @@ void parse_reserved_ranges(spb::char_stream &stream, proto_reserved_range &range
     do
     {
         const auto number = parse_number<uint32_t>(stream);
-        auto number2 = number;
+        auto number2      = number;
 
         if (stream.consume("to"))
         {
@@ -646,8 +636,8 @@ void parse_enum_field(spb::char_stream &stream, proto_enum &new_enum, proto_comm
     //]";"
     //- enumValueOption = optionName "=" constant
     auto field = proto_base{
-        .name = parse_ident(stream),
-        .number = (consume_or_fail(stream, '='), parse_number<decltype(proto_field::number)>(stream)),
+        .name    = parse_ident(stream),
+        .number  = (consume_or_fail(stream, '='), parse_number<decltype(proto_field::number)>(stream)),
         .options = parse_field_options(stream),
         .comment = std::move(comment)};
 
@@ -661,7 +651,7 @@ void parse_enum_field(spb::char_stream &stream, proto_enum &new_enum, proto_comm
 
     auto new_enum = proto_enum{
         proto_base{
-            .name = parse_ident(stream),
+            .name    = parse_ident(stream),
             .comment = std::move(enum_comment),
         },
     };
@@ -714,12 +704,12 @@ void parse_field(spb::char_stream &stream, proto_fields &fields, proto_comment &
     //- fieldOptions = fieldOption { ","  fieldOption }
     //- fieldOption = optionName "=" constant
     auto new_field = proto_field{
-        .label = parse_field_label(stream),
+        .label     = parse_field_label(stream),
         .type_name = parse_full_ident(stream),
     };
 
-    new_field.name = parse_ident(stream);
-    new_field.number = (consume_or_fail(stream, '='), parse_number<decltype(proto_field::number)>(stream));
+    new_field.name    = parse_ident(stream);
+    new_field.number  = (consume_or_fail(stream, '='), parse_number<decltype(proto_field::number)>(stream));
     new_field.options = parse_field_options(stream);
     new_field.comment = std::move(comment);
     consume_statement_end(stream, new_field.comment);
@@ -747,11 +737,11 @@ auto parse_map_body(spb::char_stream &stream, proto_comment &&comment) -> proto_
     //- "map" "<" keyType "," type ">" mapName "=" fieldNumber [ "[" fieldOptions "]" ] ";"
 
     auto new_map = proto_map{
-        .key = proto_field{.type_name = {.proto_name = parse_map_key_type(stream)}},
+        .key   = proto_field{.type_name = {.proto_name = parse_map_key_type(stream)}},
         .value = proto_field{.type_name = (consume_or_fail(stream, ','), parse_full_ident(stream))},
     };
-    new_map.name = (consume_or_fail(stream, '>'), parse_ident(stream));
-    new_map.number = (consume_or_fail(stream, '='), parse_number<decltype(proto_map::number)>(stream));
+    new_map.name    = (consume_or_fail(stream, '>'), parse_ident(stream));
+    new_map.number  = (consume_or_fail(stream, '='), parse_number<decltype(proto_map::number)>(stream));
     new_map.options = parse_field_options(stream);
     new_map.comment = std::move(comment);
     consume_statement_end(stream, new_map.comment);
@@ -775,8 +765,8 @@ void parse_oneof_field(spb::char_stream &stream, proto_fields &fields, proto_com
     //- oneofField = type fieldName "=" fieldNumber [ "[" fieldOptions "]" ] ";"
     auto new_field = proto_field{.type_name = parse_full_ident(stream)};
 
-    new_field.name = parse_ident(stream);
-    new_field.number = (consume_or_fail(stream, '='), parse_number<decltype(proto_field::number)>(stream));
+    new_field.name    = parse_ident(stream);
+    new_field.number  = (consume_or_fail(stream, '='), parse_number<decltype(proto_field::number)>(stream));
     new_field.options = parse_field_options(stream);
     new_field.comment = std::move(comment);
     consume_statement_end(stream, new_field.comment);
@@ -787,7 +777,7 @@ void parse_oneof_field(spb::char_stream &stream, proto_fields &fields, proto_com
 {
     //- oneof = "oneof" oneofName "{" { option | oneofField } "}"
     auto new_oneof = proto_oneof{proto_base{
-        .name = parse_ident(stream),
+        .name    = parse_ident(stream),
         .comment = std::move(oneof_comment),
     }};
     consume_or_fail(stream, '{');
@@ -822,7 +812,7 @@ void parse_message_body(spb::char_stream &stream, proto_messages &messages, prot
     // messageBody = messageName "{" { field | enum | message | extend | extensions | group |
     // option | oneof | mapField | reserved | emptyStatement } "}"
     auto new_message = proto_message{proto_base{
-        .name = parse_ident(stream),
+        .name    = parse_ident(stream),
         .comment = std::move(message_comment),
     }};
 
@@ -915,7 +905,7 @@ auto find_extendable_message( proto_file & file, std::string_view extend ) -> pr
 
 void check_extendable_message(proto_file &file, std::string_view extend)
 {
-    static constexpr auto package = "google.protobuf."sv;
+    static constexpr auto package          = "google.protobuf."sv;
     static constexpr auto extendee_options = std::array<std::string_view, 9>{
         "FileOptions", "MessageOptions",   "FieldOptions",   "OneofOptions", "ExtensionRangeOptions",
         "EnumOptions", "EnumValueOptions", "ServiceOptions", "MethodOptions"};
@@ -1013,25 +1003,12 @@ void set_default_attributes(proto_file &file)
 {
     file.attributes.optional = "std::optional<$>";
     file.attributes.repeated = "std::vector<$>";
-    file.attributes.string = "std::string";
-    file.attributes.bytes = "std::vector<$>";
-    file.attributes.pointer = "std::unique_ptr<$>";
-    file.attributes.enum_ = "int32";
-    file.attributes.exclude = {"nanopb.proto", "spb.proto", "google/protobuf/descriptor.proto"};
-}
-
-void parse_proto_file_content(proto_file &file, parsing_ctx &ctx)
-{
-    set_default_attributes(file);
-
-    auto stream = spb::char_stream(file.content);
-
-    while (!stream.empty())
-    {
-        auto comment = parse_comment(stream);
-        parse_options_from_comments(stream, file.options, comment);
-        parse_top_level(stream, file, ctx, std::move(comment));
-    }
+    file.attributes.string   = "std::string";
+    file.attributes.bytes    = "std::vector<$>";
+    file.attributes.pointer  = "std::unique_ptr<$>";
+    file.attributes.map      = "std::map<$, @>";
+    file.attributes.enum_    = "int32";
+    file.attributes.exclude  = {"nanopb.proto", "spb.proto", "google/protobuf/descriptor.proto"};
 }
 
 [[nodiscard]] auto parse_proto_file(const fs::path &file, parsing_ctx &ctx) -> proto_file
@@ -1039,7 +1016,7 @@ void parse_proto_file_content(proto_file &file, parsing_ctx &ctx)
     try
     {
         auto result = proto_file{
-            .path = file,
+            .path    = file,
             .content = load_file(file),
         };
 
@@ -1055,15 +1032,29 @@ void parse_proto_file_content(proto_file &file, parsing_ctx &ctx)
 
 } // namespace
 
+void parse_proto_file_content(proto_file &file, parsing_ctx &ctx)
+{
+    set_default_attributes(file);
+
+    auto stream = spb::char_stream(file.content);
+
+    while (!stream.empty())
+    {
+        auto comment = parse_comment(stream);
+        parse_options_from_comments(stream, file.options, comment);
+        parse_top_level(stream, file, ctx, std::move(comment));
+    }
+}
+
 auto parse_proto_file(const fs::path &file, std::span<const fs::path> import_paths, const fs::path &base_dir)
     -> proto_file
 {
     auto already_parsed = parsed_files();
 
     auto ctx = parsing_ctx{
-        .base_dir = base_dir,
+        .base_dir       = base_dir,
         .already_parsed = already_parsed,
-        .import_paths = import_paths,
+        .import_paths   = import_paths,
     };
     const auto file_path = find_file_in_paths(file, ctx);
     already_parsed.insert(file_path.string());

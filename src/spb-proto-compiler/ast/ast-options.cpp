@@ -96,7 +96,7 @@ auto option_value_int(const proto_file &file, std::initializer_list<const std::s
     if (option.empty())
         return {};
 
-    auto value = T{};
+    auto value  = T{};
     auto result = spb_std_emu::from_chars(option.data(), option.data() + option.size(), value);
     if (result.ec == std::errc{}) [[likely]]
         return value;

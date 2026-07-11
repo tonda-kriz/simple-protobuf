@@ -47,12 +47,12 @@ static inline auto from_chars(const char *first, const char *last, std::integral
     auto copy_size = std::min<size_t>(last - first, sizeof(buffer) - 1);
     memcpy(buffer, first, copy_size);
     buffer[copy_size] = '\0';
-    const char *end = nullptr;
+    const char *end   = nullptr;
 
     using T = std::decay_t<decltype(number)>;
 
     static_assert(sizeof(number) >= 1 && sizeof(number) <= 8, "unsupported size");
-    errno = 0;
+    errno       = 0;
     auto result = T(0);
 
     if constexpr (std::is_signed_v<T>)
@@ -120,10 +120,10 @@ static inline auto from_chars(const char *first, const char *last, std::floating
     auto copy_size = std::min<size_t>(last - first, sizeof(buffer) - 1);
     memcpy(buffer, first, copy_size);
     buffer[copy_size] = '\0';
-    const char *end = nullptr;
+    const char *end   = nullptr;
 
     static_assert(sizeof(number) == 4 || sizeof(number) == 8, "unsupported size");
-    errno = 0;
+    errno       = 0;
     auto result = std::decay_t<decltype(number)>{0};
     if constexpr (sizeof(number) == 4)
     {
@@ -153,7 +153,7 @@ static inline auto to_chars(char *first, char *last, const std::integral auto &n
     if (last <= first)
         return {first, std::errc::value_too_large};
 
-    const auto result = std::to_string(number);
+    const auto result      = std::to_string(number);
     const auto buffer_size = static_cast<size_t>(last - first);
 
     if (result.size() > buffer_size)

@@ -49,7 +49,7 @@ size_t serialize(const auto &message, spb::io::writer on_write)
 size_t serialize(const auto &message, void *buffer)
 {
     const auto start = (uint8_t *)buffer;
-    auto stream = detail::ostream_buffer((uint8_t *)buffer);
+    auto stream      = detail::ostream_buffer((uint8_t *)buffer);
     detail::serialize<detail::field_attributes{}>(stream, message);
     return stream.p_buffer - start;
 }

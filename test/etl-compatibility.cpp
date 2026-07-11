@@ -86,7 +86,7 @@ template <typename T, size_t S> auto opt_size(const etl::vector<T, S> &opt) -> s
 
 template <typename GPB, typename SPB> void gpb_test(const SPB &spb)
 {
-    auto gpb = GPB();
+    auto gpb            = GPB();
     auto spb_serialized = spb::pb::serialize(spb);
 
     REQUIRE(gpb.ParseFromString(spb_serialized));
@@ -109,7 +109,7 @@ template <typename GPB, typename SPB> void gpb_test(const SPB &spb)
 
 template <typename GPB, typename SPB> void gpb_json(const SPB &spb)
 {
-    auto gpb = GPB();
+    auto gpb            = GPB();
     auto spb_serialized = spb::json::serialize(spb);
 
     auto parse_options = google::protobuf::util::JsonParseOptions{};
@@ -127,8 +127,8 @@ template <typename GPB, typename SPB> void gpb_json(const SPB &spb)
     {
         REQUIRE(spb.value == gpb.value());
     }
-    auto json_string = std::string();
-    auto print_options = google::protobuf::util::JsonPrintOptions();
+    auto json_string                         = std::string();
+    auto print_options                       = google::protobuf::util::JsonPrintOptions();
     print_options.preserve_proto_field_names = true;
 
     (void)MessageToJsonString(gpb, &json_string, print_options);
@@ -530,17 +530,17 @@ TEST_CASE("bytes")
 TEST_CASE("person")
 {
     auto gpb = PhoneBook::Etl::gpb::Person();
-    auto spb = PhoneBook::Etl::Person{.name = "John Doe",
-                                      .id = 123,
-                                      .email = "QXUeh@example.com",
+    auto spb = PhoneBook::Etl::Person{.name   = "John Doe",
+                                      .id     = 123,
+                                      .email  = "QXUeh@example.com",
                                       .phones = {
                                           PhoneBook::Etl::Person::PhoneNumber{
                                               .number = "555-4321",
-                                              .type = PhoneBook::Etl::Person::PhoneType::HOME,
+                                              .type   = PhoneBook::Etl::Person::PhoneType::HOME,
                                           },
                                           PhoneBook::Etl::Person::PhoneNumber{
                                               .number = "999-1234",
-                                              .type = PhoneBook::Etl::Person::PhoneType::MOBILE,
+                                              .type   = PhoneBook::Etl::Person::PhoneType::MOBILE,
                                           },
                                       }};
     SUBCASE("gpb serialize/deserialize")
@@ -579,8 +579,8 @@ TEST_CASE("person")
             REQUIRE(int(gpb.phones(i).type()) == int(spb.phones[i].type.value()));
         }
 
-        auto json_string = std::string();
-        auto print_options = google::protobuf::util::JsonPrintOptions();
+        auto json_string                         = std::string();
+        auto print_options                       = google::protobuf::util::JsonPrintOptions();
         print_options.preserve_proto_field_names = true;
 
         (void)MessageToJsonString(gpb, &json_string, print_options);

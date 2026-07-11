@@ -58,7 +58,7 @@ void dump_comment(std::ostream &stream, const proto_comment &comment)
 auto trim_include(std::string_view str) -> std::string
 {
     auto p_begin = str.data();
-    auto p_end = str.data() + str.size();
+    auto p_end   = str.data() + str.size();
     while (p_begin < p_end && isspace(*p_begin))
     {
         p_begin++;
@@ -72,7 +72,7 @@ auto trim_include(std::string_view str) -> std::string
     if (p_begin == p_end)
         return {};
 
-    auto add_prefix = *p_begin != '"' && *p_begin != '<';
+    auto add_prefix  = *p_begin != '"' && *p_begin != '<';
     auto add_postfix = p_end[-1] != '"' && p_end[-1] != '>';
 
     if (add_prefix || add_postfix)
@@ -361,7 +361,7 @@ void dump_message_oneof(std::ostream &stream, const proto_oneof &oneof, const pr
 void dump_message_map(std::ostream &stream, const proto_map &map, const proto_message &message,
                       const proto_file &file)
 {
-    const auto key_type = convert_to_ctype(file, map.key);
+    const auto key_type   = convert_to_ctype(file, map.key);
     const auto value_type = convert_to_ctype(file, map.value);
 
     dump_comment(stream, map.comment);
@@ -431,7 +431,7 @@ void get_std_includes(std::string_view ctype, std::string_view type, std_include
 void get_std_includes(const proto_map &map, const proto_message &message, const proto_file &file,
                       std_includes &result)
 {
-    const auto key_type = convert_to_ctype(file, map.key);
+    const auto key_type   = convert_to_ctype(file, map.key);
     const auto value_type = convert_to_ctype(file, map.value);
 
     result.map |= get_map_type(map.attributes.map, message.attributes.map, file.attributes.map, key_type,
@@ -446,7 +446,7 @@ void get_std_includes(const proto_field &field, const proto_message &message, co
                       std_includes &result)
 {
     const auto ctype = convert_to_ctype(file, field, message);
-    const auto type = add_label_type(ctype, field, message, file);
+    const auto type  = add_label_type(ctype, field, message, file);
 
     get_std_includes(ctype, type, result);
 }
@@ -617,7 +617,7 @@ void dump_cpp_definitions(const proto_file &file, std::ostream &stream)
 auto replace(std::string_view input, std::string_view what, std::string_view with) -> std::string
 {
     auto result = std::string(input);
-    auto pos = size_t{};
+    auto pos    = size_t{};
 
     while ((pos = result.find(what, pos)) != std::string::npos)
     {

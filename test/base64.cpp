@@ -19,8 +19,8 @@ auto base64_encode_size(std::string_view value) -> size_t
 auto base64_encode(std::string_view value) -> std::string
 {
     auto encode_size = base64_encode_size(value);
-    auto result = std::string(encode_size, '\0');
-    auto stream = spb::json::detail::ostream_buffer(result.data());
+    auto result      = std::string(encode_size, '\0');
+    auto stream      = spb::json::detail::ostream_buffer(result.data());
     spb::json::detail::base64_encode(stream,
                                      {reinterpret_cast<const std::byte *>(value.data()), value.size()});
     return result;
@@ -110,7 +110,7 @@ TEST_CASE("base64")
         {
             srand(i);
 
-            auto bytes = generate_random_bytes(i);
+            auto bytes   = generate_random_bytes(i);
             auto encoded = base64_encode(bytes);
             CHECK((encoded.size() % 4) == 0);
             CHECK(std::all_of(encoded.begin(), encoded.end(), isprint));

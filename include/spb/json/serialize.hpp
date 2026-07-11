@@ -77,7 +77,7 @@ struct ostream_writer
 {
     static constexpr bool size_only = false;
     spb::io::writer on_write;
-    size_t size = 0;
+    size_t size    = 0;
     bool put_comma = false;
 
     explicit ostream_writer(spb::io::writer writer) : on_write(writer)
@@ -103,17 +103,17 @@ void write_unicode(auto &stream, uint32_t codepoint)
     if (codepoint <= 0xffff)
     {
         char buffer[8] = {};
-        auto size = snprintf(buffer, sizeof(buffer), "\\u%04" PRIx32, codepoint);
+        auto size      = snprintf(buffer, sizeof(buffer), "\\u%04" PRIx32, codepoint);
         return stream.write(buffer, size);
     }
     if (codepoint <= 0x10FFFF)
     {
         codepoint -= 0x10000;
 
-        auto high = static_cast<uint16_t>((codepoint >> 10) + 0xD800);
-        auto low = static_cast<uint16_t>((codepoint & 0x3FF) + 0xDC00);
+        auto high       = static_cast<uint16_t>((codepoint >> 10) + 0xD800);
+        auto low        = static_cast<uint16_t>((codepoint & 0x3FF) + 0xDC00);
         char buffer[16] = {};
-        auto size = snprintf(buffer, sizeof(buffer), "\\u%04" PRIx16 "\\u%04" PRIx16, high, low);
+        auto size       = snprintf(buffer, sizeof(buffer), "\\u%04" PRIx16 "\\u%04" PRIx16, high, low);
         return stream.write(buffer, size);
     }
     throw std::invalid_argument("invalid utf8");
@@ -150,7 +150,7 @@ void write_escaped(auto &stream, std::string_view str)
     }
 
     uint32_t codepoint = 0;
-    uint32_t state = spb::detail::utf8::ok;
+    uint32_t state     = spb::detail::utf8::ok;
     bool decoding_utf8 = false;
     for (uint8_t c : str)
     {

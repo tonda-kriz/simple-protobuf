@@ -21,7 +21,7 @@
 #include <vector>
 
 using proto_reserved_range = std::vector<std::pair<int32_t, int32_t>>;
-using proto_reserved_name = std::unordered_set<std::string_view>;
+using proto_reserved_name  = std::unordered_set<std::string_view>;
 
 struct proto_reserved
 {

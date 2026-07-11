@@ -113,12 +113,12 @@ TEST_CASE("json")
 {
     SUBCASE("dj2hash")
     {
-        const auto hash = spb::json::detail::djb2_hash("hello");
-        const auto collision = spb::json::detail::djb2_hash("narpjy");
-        const auto hash2 = spb::json::detail::djb2_hash("world");
-        const auto name_hash = spb::json::detail::djb2_hash("name");
+        const auto hash           = spb::json::detail::djb2_hash("hello");
+        const auto collision      = spb::json::detail::djb2_hash("narpjy");
+        const auto hash2          = spb::json::detail::djb2_hash("world");
+        const auto name_hash      = spb::json::detail::djb2_hash("name");
         const auto name_collision = spb::json::detail::djb2_hash("bkfvdzz");
-        const auto hash3 = spb::json::detail::djb2_hash({});
+        const auto hash3          = spb::json::detail::djb2_hash({});
         CHECK(hash == collision);
         CHECK(name_hash == name_collision);
         CHECK(hash3 != 0);
@@ -140,9 +140,9 @@ TEST_CASE("json")
                     spb::json::serialize<std::string>(Test::MaxCountInt{.value = {0, 1, 2, 3, 4}});
                 const auto strings = spb::json::serialize<std::string>(
                     Test::MaxCountString{.value = {"0", "1", "2", "3", "4"}});
-                const auto bytes = spb::json::serialize<std::string>(Test::MaxCountBytes{
+                const auto bytes   = spb::json::serialize<std::string>(Test::MaxCountBytes{
                     .value = {to_bytes("0"), to_bytes("1"), to_bytes("2"), to_bytes("3"), to_bytes("4")}});
-                const auto person = Test::TestPerson{.value = "3"};
+                const auto person  = Test::TestPerson{.value = "3"};
                 const auto persons = spb::json::serialize<std::string>(
                     Test::MaxCountPerson{.value = {person, person, person, person, person}});
 
@@ -1156,12 +1156,12 @@ TEST_CASE("json")
         {
             CHECK(
                 spb::json::serialize(PhoneBook::Person{
-                    .name = "John Doe",
-                    .id = 123,
-                    .email = "QXUeh@example.com",
+                    .name   = "John Doe",
+                    .id     = 123,
+                    .email  = "QXUeh@example.com",
                     .phones = {PhoneBook::Person::PhoneNumber{
                         .number = "555-4321",
-                        .type = PhoneBook::Person::PhoneType::HOME,
+                        .type   = PhoneBook::Person::PhoneType::HOME,
                     }},
                 }) ==
                 R"({"name":"John Doe","id":123,"email":"QXUeh@example.com","phones":[{"number":"555-4321","type":"HOME"}]})");
