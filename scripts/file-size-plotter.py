@@ -1,11 +1,13 @@
 import os
 import sys
 from collections import defaultdict
+#from turtle import color
 
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import Patch
 
+color_map = {"gpb-lite-": "#1f77b4", "gpb-": "#0d4a8c", "spb-": "#2ca02c", "nanopb-": "#d62728"}
 
 def is_executable(file_path: str) -> bool:
     """Check if file is executable (has execute permission)."""
@@ -14,7 +16,7 @@ def is_executable(file_path: str) -> bool:
 
 def get_base_name(name: str) -> str:
     """Extract base name by removing known prefixes."""
-    for prefix in ["gpb-lite-", "gpb-", "spb-"]:
+    for prefix in color_map.keys():
         if name.startswith(prefix):
             return name[len(prefix) :]
     return name
@@ -31,18 +33,17 @@ def main():
         print(f"Error: '{directory}' is not a valid directory.")
         sys.exit(1)
 
-    # Find all executable files (non-recursive)
     executables = []
-    for f in os.listdir(directory):
-        full_path = os.path.join(directory, f)
-        if os.path.isfile(full_path) and is_executable(full_path):
-            size_bytes = os.path.getsize(full_path)
-            executables.append(
-                {
+    for root, _, files in os.walk(directory):
+        for f in files:
+            full_path = os.path.join(root, f)
+
+            if os.path.isfile(full_path) and is_executable(full_path):
+                size_bytes = os.path.getsize(full_path)
+                executables.append({
                     "filename": f,
-                    "size": size_bytes / 1024,  # KB
-                }
-            )
+                    "size": size_bytes / 1024,
+                })
 
     if not executables:
         print("No executable files found in the directory.")
@@ -55,7 +56,7 @@ def main():
     for exe in executables:
         base = get_base_name(exe["filename"])
         prefix = next(
-            (p for p in ["gpb-lite-", "gpb-", "spb-"] if exe["filename"].startswith(p)),
+            (p for p in color_map.keys() if exe["filename"].startswith(p)),
             "other",
         )
         groups[base][prefix] = exe["size"]
@@ -66,9 +67,7 @@ def main():
         key=lambda b: max((v for v in groups[b].values() if v is not None), default=0),
     )
 
-    # Plot
-    color_map = {"gpb-lite-": "#1f77b4", "gpb-": "#0d4a8c", "spb-": "#2ca02c"}
-    bar_width = 0.25
+    bar_width = 0.22
     x = np.arange(len(base_names))
 
     fig, ax = plt.subplots(figsize=(max(12, len(base_names) * 0.7), 9))
@@ -94,11 +93,9 @@ def main():
     )
     ax.grid(axis="y", linestyle="--", alpha=0.7)
 
-    # Legend
     legend_elements = [
-        Patch(facecolor="#1f77b4", label="gpb-lite"),
-        Patch(facecolor="#0d4a8c", label="gpb"),
-        Patch(facecolor="#2ca02c", label="spb"),
+         Patch(facecolor=color, label=label.rstrip('-'))
+         for label, color in color_map.items()
     ]
     ax.legend(
         handles=legend_elements, title="Implementation", loc="upper left", fontsize=10
