@@ -2,7 +2,7 @@ syntax = "proto2";
 
 package SPB.Options;
 
-import "spb.proto"; // this file can be missing
+import "spb.proto"; // this file can be missing, if options are specified in the comments
 
 // additional include
 option (spb_fileopt).include = "<array>";
