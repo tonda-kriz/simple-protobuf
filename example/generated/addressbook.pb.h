@@ -15,9 +15,9 @@ struct Person
     enum class PhoneType : int32_t
     {
         PHONE_TYPE_UNSPECIFIED = 0,
-        PHONE_TYPE_MOBILE = 1,
-        PHONE_TYPE_HOME = 2,
-        PHONE_TYPE_WORK = 3,
+        PHONE_TYPE_MOBILE      = 1,
+        PHONE_TYPE_HOME        = 2,
+        PHONE_TYPE_WORK        = 3,
     };
     struct PhoneNumber
     {
@@ -103,7 +103,7 @@ auto serialize(const auto &message, const serialize_options &options) -> Contain
  * @param[out] message deserialized message
  * @throws std::runtime_error on error
  */
-void deserialize(auto &message, spb::io::reader reader, const deserialize_options &options);
+auto deserialize(auto &message, spb::io::reader reader, const deserialize_options &options) -> size_t;
 
 /**
  * @brief deserialize message from protobuf
@@ -117,7 +117,7 @@ void deserialize(auto &message, spb::io::reader reader, const deserialize_option
  *          `spb::pb::deserialize(message, serialized);`
  */
 template <typename Message, spb::size_container Container>
-void deserialize(Message &message, const Container &protobuf, const deserialize_options &options);
+auto deserialize(Message &message, const Container &protobuf, const deserialize_options &options) -> size_t;
 
 /**
  * @brief deserialize message from protobuf

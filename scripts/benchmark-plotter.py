@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.patches import Patch
 
+color_map = {"gpb-lite-": "#1f77b4", "gpb-": "#0d4a8c", "spb-": "#2ca02c", "nanopb-": "#d62728"}
 
 def parse_benchmark_output(output: str):
     """Parse pyperf-style table."""
@@ -31,7 +32,7 @@ def parse_benchmark_output(output: str):
 
 
 def get_base_name(name: str) -> str:
-    for prefix in ["gpb-lite-", "gpb-", "spb-"]:
+    for prefix in color_map.keys():
         if name.startswith(prefix):
             return name[len(prefix) :]
     return name
@@ -82,7 +83,7 @@ def main():
     for r in all_raw_results:
         base = get_base_name(r["benchmark"])
         prefix = next(
-            (p for p in ["gpb-lite-", "gpb-", "spb-"] if r["benchmark"].startswith(p)),
+            (p for p in color_map.keys() if r["benchmark"].startswith(p)),
             "other",
         )
         groups[base][prefix] = r["ns_op"]
@@ -93,8 +94,7 @@ def main():
     )
 
     # Plot
-    color_map = {"gpb-lite-": "#1f77b4", "gpb-": "#0d4a8c", "spb-": "#2ca02c"}
-    bar_width = 0.25
+    bar_width = 0.22
     x = np.arange(len(base_names))
 
     fig, ax = plt.subplots(figsize=(max(12, len(base_names) * 0.7), 9))
@@ -120,12 +120,11 @@ def main():
     )
     ax.grid(axis="y", linestyle="--", alpha=0.7)
 
-    # Legend
     legend_elements = [
-        Patch(facecolor="#1f77b4", label="gpb-lite"),
-        Patch(facecolor="#0d4a8c", label="gpb"),
-        Patch(facecolor="#2ca02c", label="spb"),
+        Patch(facecolor=color, label=label.rstrip('-'))
+        for label, color in color_map.items()
     ]
+
     ax.legend(
         handles=legend_elements, title="Implementation", loc="upper left", fontsize=10
     )

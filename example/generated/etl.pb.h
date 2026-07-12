@@ -22,10 +22,10 @@ struct Command
 {
     enum class CMD : uint8_t
     {
-        CMD_RST = 1,
-        CMD_READ = 2,
+        CMD_RST   = 1,
+        CMD_READ  = 2,
         CMD_WRITE = 3,
-        CMD_TST = 4,
+        CMD_TST   = 4,
     };
     // CMD
     uint8_t command_id : 4;
@@ -111,7 +111,7 @@ auto serialize(const auto &message, const serialize_options &options) -> Contain
  * @param[out] message deserialized message
  * @throws std::runtime_error on error
  */
-void deserialize(auto &message, spb::io::reader reader, const deserialize_options &options);
+auto deserialize(auto &message, spb::io::reader reader, const deserialize_options &options) -> size_t;
 
 /**
  * @brief deserialize message from protobuf
@@ -125,7 +125,7 @@ void deserialize(auto &message, spb::io::reader reader, const deserialize_option
  *          `spb::pb::deserialize(message, serialized);`
  */
 template <typename Message, spb::size_container Container>
-void deserialize(Message &message, const Container &protobuf, const deserialize_options &options);
+auto deserialize(Message &message, const Container &protobuf, const deserialize_options &options) -> size_t;
 
 /**
  * @brief deserialize message from protobuf

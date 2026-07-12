@@ -8,15 +8,16 @@
 [![Mac-build](https://github.com/tonda-kriz/simple-protobuf/actions/workflows/ci-macos-tests.yml/badge.svg)](https://github.com/tonda-kriz/simple-protobuf/actions/workflows/ci-macos-tests.yml)
 [![Library-coverage](https://tonda-kriz.github.io/simple-protobuf/library/coverage.svg)](https://tonda-kriz.github.io/simple-protobuf/library)
 
-**Lightweight C++ protobuf & JSON serialization library** 
- - _Where **simplicity** meets **usability**_
- - Without **protoc** and without **Google toolchain** dependency
+**A lightweight C++20 library for Protocol Buffers and JSON serialization.**
+ - **Simple native C++ structs** with zero boilerplate
+ - **Fast** as [Google Protocol Buffers](https://github.com/protocolbuffers/protobuf), **tiny** as [nanopb](https://github.com/nanopb/nanopb)
+ - **Fully self-contained** — No `protoc`, no Google toolchain, no external dependencies
 
 ### Usage
 
-1. Define your data in standard `.proto` files.
-2. Generate clean, native C++ structs.
-3. Serialize/deserialize to `protobuf` (GPB-wire-compatible) and `JSON` (GPB-compatible) with minimal effort.
+1. Write standard `.proto` files (proto2 or proto3).
+2. Run the included **`sprotoc`** tool to generate clean C++ source files (`.pb.h` + `.pb.cc`).
+3. Serialize to **Protobuf** (wire-compatible) or **JSON** (Google-compatible) with one function call.
 
 ### Example
 
@@ -106,52 +107,43 @@ int main() {
 
 ## Features
 
-* No `protoc` or `Google libs` dependency - instead it uses its own proto-compiler called `sprotoc`.
-* Supports `.proto` files with `proto2` or `proto3` syntax (no edition syntax).
+* Fully self-contained, no `protoc`, no `Google libs`, no `external` dependencies - instead it uses its own proto-compiler called `sprotoc`.
+* Full `proto2`/`proto3` support (no editions)
 * Generates clean, modern C++ with `std::optional`, `std::vector`, and `enum class`.
-* Bundles protobuf and JSON support in a single library.
-    * Serialized protobuf and JSON are compatible with official protoc, Python, Go, Java.
-* Embedded-friendly, zero heap allocations when paired with [ETL](https://github.com/ETLCPP/etl) or fixed-size strings/vectors.
-    * See [options](doc/options.md) for user-specified types and advanced usage.
+* Protobuf wire format is 100% compatible with Google libraries, Python, Go, Java...
+* JSON serialization is compatible with Google's JSON mapping
+* Embedded-friendly: the library itself performs `zero heap allocations` - only user data (dynamic strings/vectors) may allocate, which can be eliminated with for [example](example/generated/etl.pb.h) [ETL](https://github.com/ETLCPP/etl) or `static strings/vectors` (std::array<...>)
+* Highly configurable via [options](doc/options.md)
+  * `max_count` for `repeated fields` and `max_size` for `bytes`/`string`
+  * Supports user-defined types (including bitfields and embedded containers), see [spb_options.proto](example/proto/spb_options.proto) with generated [spb_options.pb.h](example/generated/spb_options.pb.h)
 
 ## Dependencies
 
 * C++ compiler with C++20 support
-* CMake
+* CMake (for build integration)
 * Standard C++ library
-* *(optional) clang-format for code formatting*
+* Optional: clang-format for code formatting
 
 ## Type mapping
 
-| proto type | CPP type | GPB encoding |
+| Proto | CPP type | Notes |
 |------------|----------|--------------|
-| `bool`     | `bool` | varint |
-| `float`    | `float` | 4 bytes |
-| `double`   | `double` | 8 bytes |
-| `int32`    | `int32_t` | varint |
-| `sint32`   | `int32_t` | zig-zag varint |
-| `uint32`   | `uint32_t` | varint |
-| `int64`    | `int64_t` | varint |
-| `sint64`   | `int64_t` | zig-zag varint |
-| `uint64`   | `uint64_t` | varint |
-| `fixed32`  | `uint32_t` | 4 bytes |
-| `sfixed32` | `int32_t` | 4 bytes |
-| `fixed64`  | `uint64_t` | 8 bytes |
-| `sfixed64` | `int64_t` | 8 bytes |
-| `string`   | `std::string` | UTF-8 string |
-| `bytes`    | `std::vector<std::byte>` | base64 encoded in JSON |
-| `message`  | `struct` | length delimited |
-| `enum`     | `enum class` | varint |
-| `map`      | `std::map<,>` | |
-| `oneof`    | `std::variant<>` | |
+| `bool`     | `bool` |  |
+| `float`/`double`   | `float`/`double` | |
+| `int32`/`sint32`/`sfixed32` | `int32_t` |  |
+| `fixed32`/`uint32` | `uint32_t` | |
+| `int64`/`sint64`/`sfixed64` | `int64_t` | |
+| `fixed64`/`uint64` | `uint64_t` | |
+| `string`   | `std::string` | UTF-8 (Validated during de/serialize) |
+| `bytes`    | `std::vector<std::byte>` | [Base64](https://en.wikipedia.org/wiki/Base64) in JSON |
+| `message`  | `struct` | |
+| `enum`     | `enum class` | |
+| `repeated` | `std::vector<MessageT>` | |
+| `optional` | `std::optional<MessageT>` | Or `std::unique_ptr<MessageT>` for cycle dependencies|
+| `map`      | `std::map<KeyT, ValueT>` | |
+| `oneof`    | `std::variant<std::monostate, ...>` | |
 
-| proto type modifier | CPP type modifier | Notes |
-|---------------------|-------------------|-------|
-| `optional`          | `std::optional<Message>` | |
-| `optional`          | `std::unique_ptr<Message>` | for cyclic message dependencies (A -> B, B -> A) |
-| `repeated`          | `std::vector<Message>` | |
-
-See also [options](doc/options.md) for user-specified types and advanced usage.
+**All types** can be user-specified, see [options](doc/options.md).
 
 ## Examples
 
@@ -161,49 +153,28 @@ See the [example](example/) directory.
 
 * [API](doc/API.md)
 * [Options](doc/options.md)
+* [deepwiki](https://deepwiki.com/tonda-kriz/simple-protobuf)
 
-## Performance benchmark
+## Performance
 
-_Tiny and Fast_
+_Fast as [Google Protocol Buffers](https://github.com/protocolbuffers/protobuf), tiny as [nanopb](https://github.com/nanopb/nanopb)_
 
 Measured on `Linux/i7-8650U CPU @ 1.90GHz` with GCC 16.1.1 `-flto -O2` using [nanobench](https://github.com/martinus/nanobench).
 
-See the [benchmark](benchmark/) directory.
-
-### Speed
-
-* SPB protobuf serializer/deserializer has about the **same speed** as google GPB.
-* SPB JSON serializer/deserializer is about **8x faster** than google GPB.
+* Protobuf serialization/deserialization: **As fast as** [Google Protocol Buffers](https://github.com/protocolbuffers/protobuf).
+* JSON serialization/deserialization: **~8x faster** than [Google Protocol Buffers](https://github.com/protocolbuffers/protobuf).
+* Binary size (stripped executables): **As tiny as** [nanopb](https://github.com/nanopb/nanopb), which makes it ideal for Embedded systems.
 
 ![Speed benchmark](benchmark/img/speed-benchmark.png)
-
-### Binary size
-
-Measured on stripped executable files
-```bash
-$ find build/benchmark -type f -executable -exec strip --strip-all {} +
-$ ls -alh ./build/benchmark
-```
-
-* SPB is tiny compared to google GPB, which makes it ideal for Embedded systems.
-
 ![Size benchmark](benchmark/img/file-size-benchmark.png)
+See the [benchmark](benchmark/) directory for more details.
+
+## Missing features
+
+* gRPC is not implemented
 
 ## Status
 
 * [x] Make it work
 * [x] Make it right
 * [x] Make it fast
-
-## Roadmap
-
-* [x] Parser for proto files (supported syntax: `proto2` and `proto3`)
-* [x] Compile proto messages to C++ data structs
-* [x] JSON de/serializer for generated C++ data structs (serialized JSON is GPB-compatible)
-* [x] Protobuf de/serializer for generated C++ data structs (serialized protobuf is GPB-compatible)
-* [x] Implement options and user-specified types/containers
-* [x] Benchmarks for size and speed, direct comparison with other libraries (official protobuf, nanopb)
-
-## Missing features
-
-* gRPC is not implemented
