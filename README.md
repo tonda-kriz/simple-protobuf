@@ -3,6 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![C++20](https://img.shields.io/badge/C++-20-blue)](https://en.cppreference.com/w/cpp/20)
 [![CMake](https://img.shields.io/badge/build-CMake-064F8C)](https://cmake.org/)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/tonda-kriz/simple-protobuf)
 [![Linux-build](https://github.com/tonda-kriz/simple-protobuf/actions/workflows/ci-linux-tests.yml/badge.svg)](https://github.com/tonda-kriz/simple-protobuf/actions/workflows/ci-linux-tests.yml)
 [![Windows-build](https://github.com/tonda-kriz/simple-protobuf/actions/workflows/ci-windows-tests.yml/badge.svg)](https://github.com/tonda-kriz/simple-protobuf/actions/workflows/ci-windows-tests.yml)
 [![Mac-build](https://github.com/tonda-kriz/simple-protobuf/actions/workflows/ci-macos-tests.yml/badge.svg)](https://github.com/tonda-kriz/simple-protobuf/actions/workflows/ci-macos-tests.yml)
