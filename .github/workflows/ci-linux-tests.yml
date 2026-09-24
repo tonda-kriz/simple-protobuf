@@ -105,7 +105,7 @@ jobs:
     - name: Install Linux dependencies
       run: |
           sudo add-apt-repository ppa:ubuntu-toolchain-r/test
-          sudo apt-get install protobuf-compiler ninja-build
+          sudo apt-get install ninja-build
     - name: Install gcc
       if: matrix.compiler == 'gcc'
       run: |
@@ -138,4 +138,4 @@ jobs:
 
     - name: Test
       working-directory: ${{ steps.strings.outputs.build-output-dir }}
-      run: ctest
+      run: ctest --rerun-failed --output-on-failure
