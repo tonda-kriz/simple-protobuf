@@ -50,21 +50,6 @@ jobs:
           - os: ubuntu-24.04
             compiler: clang
             build_type: Release
-            version: '14'
-            sanitizer: 'OFF'
-          - os: ubuntu-24.04
-            compiler: clang
-            build_type: Release
-            version: '15'
-            sanitizer: 'OFF'
-          - os: ubuntu-24.04
-            compiler: clang
-            build_type: Release
-            version: '16'
-            sanitizer: 'OFF'
-          - os: ubuntu-24.04
-            compiler: clang
-            build_type: Release
             version: '17'
             sanitizer: 'OFF'
           - os: ubuntu-24.04
