@@ -1,24 +1,20 @@
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND EXISTS "/etc/arch-release")
-    set(protobuf_BUILD_SHARED_LIBS OFF)
-    set(protobuf_BUILD_PROTOC_BINARIES ON)
-    set(protobuf_INSTALL OFF)
-    set(protobuf_BUILD_LIBPROTOC OFF)
-    set(protobuf_BUILD_TESTS OFF)
-    set(protobuf_BUILD_EXAMPLES OFF)
-    set(protobuf_BUILD_SHARED_LIBS OFF)
-    set(protobuf_WITH_ZLIB OFF)
+set(protobuf_BUILD_SHARED_LIBS OFF)
+set(protobuf_BUILD_PROTOC_BINARIES ON)
+set(protobuf_INSTALL OFF)
+set(protobuf_BUILD_LIBPROTOC OFF)
+set(protobuf_BUILD_TESTS OFF)
+set(protobuf_BUILD_EXAMPLES OFF)
+set(protobuf_BUILD_SHARED_LIBS OFF)
+set(protobuf_WITH_ZLIB OFF)
 
-    Include(FetchContent)
+Include(FetchContent)
 
-    FetchContent_Declare(
-      protobuf
-        GIT_REPOSITORY https://github.com/protocolbuffers/protobuf.git
-        GIT_TAG v35.0
-      )
-    FetchContent_MakeAvailable(protobuf)
-  else()
-    find_package(Protobuf REQUIRED)
-endif()
+FetchContent_Declare(
+  protobuf
+    GIT_REPOSITORY https://github.com/protocolbuffers/protobuf.git
+    GIT_TAG v35.0
+  )
+FetchContent_MakeAvailable(protobuf)
 
 function(PROTOBUF_GENERATE_CPP SRC_VAR HDR_VAR PROTO_FILE)
   get_filename_component(PROTO_NAME ${PROTO_FILE} NAME_WE)

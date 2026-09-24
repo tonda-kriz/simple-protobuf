@@ -630,8 +630,7 @@ void deserialize(auto &stream, spb::detail::proto_map auto &value, wire_type typ
     check_wire_type_or_throw(type, wire_type::length_delimited);
 
     auto pair          = std::pair<key_type, mapped_type>();
-    auto key_defined   = false;
-    auto value_defined = false;
+    auto key_or_value_defined   = false;
     while (!stream.empty())
     {
         const auto tag          = tag_type(read_varint<uint32_t>(stream));
@@ -661,7 +660,7 @@ void deserialize(auto &stream, spb::detail::proto_map auto &value, wire_type typ
                     deserialize<key_encoder>(stream, pair.first, field_type);
                 }
             }
-            key_defined = true;
+            key_or_value_defined = true;
             break;
         case 2:
             if constexpr (spb::detail::proto_field_number<mapped_type>)
@@ -682,19 +681,15 @@ void deserialize(auto &stream, spb::detail::proto_map auto &value, wire_type typ
                     throw std::runtime_error("invalid field");
                 }
             }
-            value_defined = true;
+            key_or_value_defined = true;
             break;
         default:
             throw std::runtime_error("invalid field");
         }
     }
-    if (key_defined && value_defined) [[likely]]
+    if (key_or_value_defined) [[likely]]
     {
         value.insert(std::move(pair));
-    }
-    else [[unlikely]]
-    {
-        throw std::runtime_error("invalid map item");
     }
 }
 
