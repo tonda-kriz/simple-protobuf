@@ -725,7 +725,7 @@ TEST_CASE("protobuf")
     {
         SUBCASE("required")
         {
-            pb_json_test(Test::Scalar::ReqString{}, "", "{}");
+            pb_json_test(Test::Scalar::ReqString{}, "\x0a\x00"sv, "{}");
             pb_json_test(Test::Scalar::ReqString{.value = "hello"}, "\x0a\x05hello", R"({"value":"hello"})");
             CHECK_THROWS((void)spb::pb::deserialize<Test::Scalar::ReqString>("\x0a\x05hell"sv));
             SUBCASE("escaped")
@@ -763,6 +763,7 @@ TEST_CASE("protobuf")
         SUBCASE("optional")
         {
             pb_json_test(Test::Scalar::OptString{}, "", "{}");
+            // pb_json_test(Test::Scalar::OptString{.value = ""}, "\x0a\x00"sv, "{}");
             pb_json_test(Test::Scalar::OptString{.value = "hello"}, "\x0a\x05hello", R"({"value":"hello"})");
             CHECK_THROWS((void)spb::pb::deserialize<Test::Scalar::OptString>("\x08\x05hello"sv));
         }
@@ -1824,7 +1825,7 @@ TEST_CASE("protobuf")
     {
         SUBCASE("required")
         {
-            pb_json_test(Test::Scalar::ReqBytes{}, "", "{}");
+            pb_json_test(Test::Scalar::ReqBytes{}, "\x0a\x00"sv, "{}");
             pb_json_test(Test::Scalar::ReqBytes{.value = to_bytes("hello")}, "\x0a\x05hello"sv,
                          R"({"value":"aGVsbG8="})");
             pb_json_test(Test::Scalar::ReqBytes{.value = to_bytes("\x00\x01\x02"sv)},
@@ -1924,6 +1925,8 @@ TEST_CASE("protobuf")
             pb_json_test(UnitTest::map::StringString{.map = {{"hello", "world"}, {"name", "john"}}},
                          "\x0a\x0e\x0a\x05hello\x12\x05world\x0a\x0c\x0a\x04name\x12\x04john",
                          R"({"map":{"hello":"world","name":"john"}})");
+            pb_json_test(UnitTest::map::StringString{.map = {{"hello", ""}}},
+                         "\x0a\x09\x0a\x05hello\x12\x00"sv, R"({"map":{"hello":""}})");
         }
         SUBCASE("int32/string")
         {
