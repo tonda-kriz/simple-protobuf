@@ -250,9 +250,6 @@ void serialize(auto &stream, uint32_t field, const spb::detail::proto_field_stri
 {
     using stream_type = std::remove_cvref_t<decltype(stream)>;
 
-    if (value.empty())
-        return;
-
     if constexpr (!stream_type::size_only && mode.max_size)
         check_size(value.size(), mode.max_size);
 
@@ -269,9 +266,6 @@ void serialize(auto &stream, uint32_t field, const spb::detail::proto_field_byte
 {
     using stream_type = std::remove_cvref_t<decltype(stream)>;
 
-    if (value.empty())
-        return;
-
     if constexpr (!stream_type::size_only && mode.max_size)
         check_size(value.size(), mode.max_size);
 
@@ -283,9 +277,6 @@ void serialize(auto &stream, uint32_t field, const spb::detail::proto_field_byte
 template <serialize_mode mode>
 void serialize(auto &stream, uint32_t field, const spb::detail::proto_map auto &value)
 {
-    if (value.empty())
-        return;
-
     constexpr auto key_encoder   = serialize_mode{.encoder = mode.encoder};
     constexpr auto value_encoder = serialize_mode{.encoder = mode.encoder2};
 

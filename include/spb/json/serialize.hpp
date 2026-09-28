@@ -130,9 +130,11 @@ static constexpr auto is_escape(uint8_t c) -> bool
     {
     case '\\':
     case '\"':
+    case '<':
+    case '>':
         return true;
     default:
-        return (c < ' ') | (c >= 0x80);
+        return (c < ' ') | (c >= 0x7f);
     }
 }
 
