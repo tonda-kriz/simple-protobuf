@@ -12,6 +12,15 @@
 
 #include <string_view>
 
+constexpr std::string_view json_includes_template =
+    R"(#include "$"
+#include <spb/json/serialize.hpp>
+#include <spb/json/deserialize.hpp>
+#include <system_error>
+#include <type_traits>
+
+)";
+
 constexpr std::string_view json_serialize_value_template =
     R"(void serialize_value(ostream_size &stream, const $ &message)
 {
@@ -36,11 +45,11 @@ void deserialize_value(istream_buffer &stream, $ &message)
 )";
 
 constexpr std::string_view file_json_header_prototypes =
-    R"(void serialize_value(ostream_size &, const $ &message);
-void serialize_value(ostream_writer &, const $ &message);
-void serialize_value(ostream_buffer &, const $ &message);
-void deserialize_value(istream_reader &, $ &message);
-void deserialize_value(istream_buffer &, $ &message);
+    R"(void serialize_value(ostream_size &, const $ &);
+void serialize_value(ostream_writer &, const $ &);
+void serialize_value(ostream_buffer &, const $ &);
+void deserialize_value(istream_reader &, $ &);
+void deserialize_value(istream_buffer &, $ &);
 )";
 
 constexpr std::string_view file_json_header_template =
@@ -137,5 +146,7 @@ template <typename Message>
  * @return deserialized message
  * @throws std::runtime_error on error
  */
-template <typename Message> [[nodiscard]] Message deserialize(spb::io::reader reader);
+template <typename Message>
+[[nodiscard]] Message deserialize(spb::io::reader reader);
+
 )";

@@ -35,12 +35,16 @@ void deserialize_value(istream_buffer &stream, $ &message, tag_type tag)
 }
 )";
 
+constexpr std::string_view file_pb_header_enum_prototypes =
+    R"(template <$> void check_enum_value_or_throw(enum_type);
+)";
+
 constexpr std::string_view file_pb_header_prototypes =
-    R"(void serialize_value(ostream_size &, const $ &message);
-void serialize_value(ostream_writer &, const $ &message);
-void serialize_value(ostream_buffer &, const $ &message);
-void deserialize_value(istream_reader &, $ &message, tag_type);
-void deserialize_value(istream_buffer &, $ &message, tag_type);
+    R"(void serialize_value(ostream_size &, const $ &);
+void serialize_value(ostream_writer &, const $ &);
+void serialize_value(ostream_buffer &, const $ &);
+void deserialize_value(istream_reader &, $ &, tag_type);
+void deserialize_value(istream_buffer &, $ &, tag_type);
 )";
 
 constexpr std::string_view file_pb_header_template = R"(

@@ -11,7 +11,15 @@
 #pragma once
 
 #include "ast/proto-file.h"
+#include "spb/io/function_ref.hpp"
 #include <filesystem>
+
+using message_dumper = spb::detail::function_ref<void(std::ostream &, const proto_file &,
+                                                      const proto_message &, std::string_view)>;
+using enum_dumper    = spb::detail::function_ref<void(std::ostream &, const proto_enum &, std::string_view)>;
+
+void dump_cpp(std::ostream &stream, const proto_file &file, message_dumper dump_message,
+              enum_dumper dump_enum);
 
 /**
  * @brief dump C++ header file for parsed proto
