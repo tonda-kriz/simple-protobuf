@@ -693,6 +693,12 @@ TEST_CASE("protobuf")
     }
     SUBCASE("enum")
     {
+        SUBCASE("invalid")
+        {
+            CHECK_THROWS((void)spb::pb::serialize(
+                Test::Scalar::ReqEnumAlias{.value = (Test::Scalar::ReqEnumAlias::Enum)3}));
+            CHECK_THROWS((void)spb::pb::deserialize<Test::Scalar::ReqEnumAlias>("\x08\x03"sv));
+        }
         SUBCASE("alias")
         {
             SUBCASE("required")

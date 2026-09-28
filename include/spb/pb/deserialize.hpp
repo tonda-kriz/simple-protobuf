@@ -185,7 +185,7 @@ struct istream_buffer
 
 void skip(auto &stream, wire_type);
 
-// template <serialize_mode> void deserialize(auto &stream, auto &value, wire_type type);
+template <typename T> void check_enum_value_or_throw(enum_type);
 
 template <serialize_mode, size_t ordinal, typename T>
 void deserialize_variant(auto &stream, T &variant, wire_type type);
@@ -385,15 +385,15 @@ auto deserialize_bitfield(auto &stream, uint32_t bits, wire_type type) -> T
 template <serialize_mode mode>
 void deserialize(auto &stream, spb::detail::proto_enum auto &value, wire_type type)
 {
-    using T        = std::remove_cvref_t<decltype(value)>;
-    using int_type = std::underlying_type_t<T>;
+    using T = std::remove_cvref_t<decltype(value)>;
 
     if constexpr (!is_packed(mode.encoder))
     {
         check_wire_type_or_throw(type, wire_type::varint);
     }
-
-    value = T(read_varint<int_type>(stream));
+    const auto int_enum = read_varint<enum_type>(stream);
+    check_enum_value_or_throw<T>(int_enum);
+    value = (T)int_enum;
 }
 
 template <serialize_mode mode>

@@ -9,6 +9,7 @@
 \***************************************************************************/
 
 #include "dumper.h"
+#include "../dumper.h"
 #include "../header.h"
 #include "ast/ast-types.h"
 #include "ast/proto-field.h"
@@ -22,53 +23,9 @@ using namespace std::literals;
 
 namespace
 {
-using func_dumper = spb::detail::function_ref<void(std::ostream &, const proto_file &, const proto_message &,
-                                                   std::string_view)>;
-
-void dump_prototypes(std::ostream &stream, std::string_view type)
-{
-    stream << replace(file_pb_header_prototypes, "$", type);
-}
-
-void dump_prototypes(std::ostream &stream, const proto_message &message, std::string_view parent)
-{
-    const auto message_with_parent = std::string(parent) + "::" + std::string(message.name.get_name());
-    dump_prototypes(stream, message_with_parent);
-}
-
-void dump_prototypes(std::ostream &stream, const proto_messages &messages, std::string_view parent)
-{
-    for (const auto &message : messages)
-    {
-        dump_prototypes(stream, message, parent);
-    }
-
-    for (const auto &message : messages)
-    {
-        if (message.messages.empty())
-            continue;
-
-        const auto message_with_parent = std::string(parent) + "::" + std::string(message.name.get_name());
-        dump_prototypes(stream, message.messages, message_with_parent);
-    }
-}
-
-void dump_prototypes(std::ostream &stream, const proto_file &file)
-{
-    const auto package_name = file.package.name.get_name().empty()
-                                  ? std::string()
-                                  : "::" + std::string(file.package.name.get_name());
-    dump_prototypes(stream, file.package.messages, package_name);
-}
-
 void dump_cpp_includes(std::ostream &stream, std::string_view header_file_path)
 {
-    stream << "#include \"" << header_file_path << "\"\n"
-           << "#include <spb/pb/wire-types.h>\n"
-           << "#include <spb/pb.hpp>\n"
-           << "#include <spb/pb/deserialize.hpp>\n"
-           << "#include <spb/pb/serialize.hpp>\n"
-           << "#include <type_traits>\n\n";
+    stream << replace(pb_includes_template, "$", header_file_path);
 }
 
 void dump_cpp_close_namespace(std::ostream &stream, std::string_view name)
@@ -220,14 +177,14 @@ void dump_cpp_serialize_field(std::ostream &stream, const proto_file &file, cons
     stream << "\t\t}\n\t}\n\n";
 }
 
-void dump_cpp_serialize_value(std::ostream &stream, const proto_file &, const proto_message &,
-                              std::string_view full_name)
+void dump_cpp_serialize_message(std::ostream &stream, const proto_file &, const proto_message &,
+                                std::string_view full_name)
 {
     stream << replace(pb_serialize_value_template, "$", full_name);
 }
 
-void dump_cpp_serialize_value_gen(std::ostream &stream, const proto_file &file, const proto_message &message,
-                                  std::string_view full_name)
+void dump_cpp_serialize_message_gen(std::ostream &stream, const proto_file &file,
+                                    const proto_message &message, std::string_view full_name)
 {
     if (message.fields.empty() && message.maps.empty() && message.oneofs.empty())
     {
@@ -252,8 +209,49 @@ void dump_cpp_serialize_value_gen(std::ostream &stream, const proto_file &file, 
     stream << "}\n\n";
 }
 
-void dump_cpp_deserialize_value_gen(std::ostream &stream, const proto_file &file,
-                                    const proto_message &message, std::string_view full_name)
+void dump_cpp_check_enum_value_or_throw(std::ostream &stream, const proto_enum &my_enum,
+                                        std::string_view full_name)
+{
+    stream << "template<>\n";
+
+    if (my_enum.fields.empty())
+    {
+        stream << "void check_enum_value_or_throw<" << full_name << ">(enum_type)\n";
+        stream << "{\n\treturn ;\n}\n\n";
+        return;
+    }
+
+    stream << "void check_enum_value_or_throw<" << full_name << ">(enum_type value)\n{\n";
+    stream << "\tstatic_assert(sizeof(enum_type) >= sizeof(" << full_name << "));\n\n";
+    stream << "\tswitch(value)\n\t{\n";
+
+    std::set<int32_t> numbers_taken;
+    for (const auto &field : my_enum.fields)
+    {
+        if (!numbers_taken.insert(field.number).second)
+            continue;
+
+        stream << "\tcase (enum_type)" << full_name << "::" << field.name.get_name() << ":\n";
+    }
+    stream << "\t\treturn ;\n"
+           << "\tdefault:\n"
+           << "\t\tthrow std::system_error(std::make_error_code(std::errc::invalid_argument));\n";
+    stream << "\t}\n}\n\n";
+}
+
+void dump_enum_prototypes(std::ostream &stream, const proto_enum &, std::string_view full_name)
+{
+    stream << replace(file_pb_header_enum_prototypes, "$", full_name);
+}
+
+void dump_message_prototypes(std::ostream &stream, const proto_file &, const proto_message &,
+                             std::string_view full_name)
+{
+    stream << replace(file_pb_header_prototypes, "$", full_name);
+}
+
+void dump_cpp_deserialize_message_gen(std::ostream &stream, const proto_file &file,
+                                      const proto_message &message, std::string_view full_name)
 {
     if (message.fields.empty() && message.maps.empty() && message.oneofs.empty())
     {
@@ -305,36 +303,6 @@ void dump_cpp_deserialize_value_gen(std::ostream &stream, const proto_file &file
 
     stream << "\t\tdefault:\n\t\t\treturn skip(stream, type);\t\n\t}\n}\n\n";
 }
-
-void dump_cpp_messages(std::ostream &stream, const proto_file &file, const proto_messages &messages,
-                       std::string_view parent, const func_dumper &dump_cpp);
-
-void dump_cpp_message(std::ostream &stream, const proto_file &file, const proto_message &message,
-                      std::string_view parent, const func_dumper &dump_cpp)
-{
-    const auto full_name = std::string(parent) + "::" + std::string(message.name.get_name());
-
-    dump_cpp(stream, file, message, full_name);
-    dump_cpp_messages(stream, file, message.messages, full_name, dump_cpp);
-}
-
-void dump_cpp_messages(std::ostream &stream, const proto_file &file, const proto_messages &messages,
-                       std::string_view parent, const func_dumper &dump_cpp)
-{
-    for (const auto &message : messages)
-    {
-        dump_cpp_message(stream, file, message, parent, dump_cpp);
-    }
-}
-
-void dump_cpp(std::ostream &stream, const proto_file &file, func_dumper dump_cpp)
-{
-    const auto str_namespace = file.package.name.get_name().empty()
-                                   ? std::string()
-                                   : "::" + std::string(file.package.name.get_name());
-    dump_cpp_messages(stream, file, file.package.messages, str_namespace, dump_cpp);
-}
-
 } // namespace
 
 void dump_pb_header(const proto_file &file, std::ostream &stream)
@@ -342,7 +310,7 @@ void dump_pb_header(const proto_file &file, std::ostream &stream)
     dump_cpp_open_namespace(stream, "spb::pb");
     stream << file_pb_header_template;
     dump_cpp_open_namespace(stream, "detail");
-    dump_prototypes(stream, file);
+    dump_cpp(stream, file, dump_message_prototypes, dump_enum_prototypes);
     dump_cpp_close_namespace(stream, "detail");
     dump_cpp_close_namespace(stream, "spb::pb");
 }
@@ -351,8 +319,8 @@ void dump_pb_cpp(const proto_file &file, const std::filesystem::path &header_fil
 {
     dump_cpp_includes(stream, header_file.string());
     dump_cpp_open_namespace(stream, "spb::pb::detail");
-    dump_cpp(stream, file, dump_cpp_serialize_value_gen);
-    dump_cpp(stream, file, dump_cpp_deserialize_value_gen);
-    dump_cpp(stream, file, dump_cpp_serialize_value);
+    dump_cpp(stream, file, dump_cpp_serialize_message_gen, dump_cpp_check_enum_value_or_throw);
+    dump_cpp(stream, file, dump_cpp_deserialize_message_gen, nullptr);
+    dump_cpp(stream, file, dump_cpp_serialize_message, nullptr);
     dump_cpp_close_namespace(stream, "spb::pb::detail");
 }

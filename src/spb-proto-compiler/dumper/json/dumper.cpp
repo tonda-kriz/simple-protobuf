@@ -9,6 +9,7 @@
 \***************************************************************************/
 
 #include "dumper.h"
+#include "../dumper.h"
 #include "../header.h"
 #include "ast/proto-field.h"
 #include "ast/proto-file.h"
@@ -27,14 +28,6 @@ using namespace std::literals;
 
 namespace
 {
-using message_dumper = spb::detail::function_ref<void(std::ostream &, const proto_file &,
-                                                      const proto_message &, std::string_view)>;
-using enum_dumper    = spb::detail::function_ref<void(std::ostream &, const proto_enum &, std::string_view)>;
-
-void dump_prototypes(std::ostream &stream, std::string_view type)
-{
-    stream << replace(file_json_header_prototypes, "$", type);
-}
 
 auto json_name_from_options(const proto_attributes &attributes) -> std::string_view
 {
@@ -87,68 +80,9 @@ auto json_field_name_or_camelCase(const proto_base &field) -> std::string
     return convert_to_camelCase(field.name.proto_name);
 }
 
-void dump_prototypes(std::ostream &stream, const proto_message &message, std::string_view parent)
-{
-    const auto message_with_parent = std::string(parent) + "::" + std::string(message.name.get_name());
-    dump_prototypes(stream, message_with_parent);
-}
-
-void dump_prototypes(std::ostream &stream, const proto_enum &my_enum, std::string_view parent)
-{
-    const auto enum_with_parent = std::string(parent) + "::" + std::string(my_enum.name.get_name());
-    dump_prototypes(stream, enum_with_parent);
-}
-
-void dump_prototypes(std::ostream &stream, const proto_enums &enums, std::string_view parent)
-{
-    for (const auto &my_enum : enums)
-    {
-        dump_prototypes(stream, my_enum, parent);
-    }
-}
-
-void dump_prototypes(std::ostream &stream, const proto_messages &messages, std::string_view parent)
-{
-    for (const auto &message : messages)
-    {
-        dump_prototypes(stream, message, parent);
-    }
-
-    for (const auto &message : messages)
-    {
-        if (message.messages.empty())
-            continue;
-
-        const auto message_with_parent = std::string(parent) + "::" + std::string(message.name.get_name());
-        dump_prototypes(stream, message.messages, message_with_parent);
-    }
-
-    for (const auto &message : messages)
-    {
-        if (message.enums.empty())
-            continue;
-
-        const auto message_with_parent = std::string(parent) + "::" + std::string(message.name.get_name());
-        dump_prototypes(stream, message.enums, message_with_parent);
-    }
-}
-
-void dump_prototypes(std::ostream &stream, const proto_file &file)
-{
-    const auto package_name = file.package.name.get_name().empty()
-                                  ? std::string()
-                                  : "::" + std::string(file.package.name.get_name());
-    dump_prototypes(stream, file.package.messages, package_name);
-    dump_prototypes(stream, file.package.enums, package_name);
-}
-
 void dump_cpp_includes(std::ostream &stream, std::string_view header_file_path)
 {
-    stream << "#include \"" << header_file_path << "\"\n"
-           << "#include <spb/json/serialize.hpp>\n"
-           << "#include <spb/json/deserialize.hpp>\n"
-           << "#include <system_error>\n"
-           << "#include <type_traits>\n\n";
+    stream << replace(json_includes_template, "$", header_file_path);
 }
 
 void dump_cpp_close_namespace(std::ostream &stream, std::string_view name)
@@ -294,19 +228,9 @@ void dump_cpp_deserialize_enum_gen(std::ostream &stream, const proto_enum &my_en
     stream << "\t\t\t\tbreak ;\n";
     stream << "\t\t\t}\n\t\t\tthrow std::system_error(std::make_error_code("
               "std::errc::invalid_argument));\n";
-    stream << "\t\t},\n\t\t[&](int32_t enum_int)\n\t\t{\n\t\t\tswitch (" << full_name
-           << "(enum_int))\n\t\t\t{\n";
-    std::set<int32_t> numbers_taken;
-    for (const auto &field : my_enum.fields)
-    {
-        if (!numbers_taken.insert(field.number).second)
-            continue;
-
-        stream << "\t\t\tcase " << full_name << "::" << field.name.get_name() << ":\n";
-    }
-    stream << "\t\t\t\tvalue = " << full_name << "(enum_int);\n\t\t\t\treturn ;\n";
-    stream << "\t\t\t}\n\t\t\tthrow std::system_error(std::make_error_code("
-              "std::errc::invalid_argument));\n";
+    stream << "\t\t},\n\t\t[&](spb::pb::detail::enum_type enum_int)\n\t\t{\n\t";
+    stream << "\t\t\tspb::pb::detail::check_enum_value_or_throw<" << full_name << ">(enum_int);\n";
+    stream << "\t\t\t\tvalue = (" << full_name << ")enum_int;\n";
     stream << "\t\t}\n\t}, enum_value);\n}\n\n";
 }
 
@@ -324,6 +248,17 @@ void dump_cpp_serialize_field(std::ostream &stream, const proto_file &file, cons
     stream << "\tserialize<";
     dump_field_attributes(stream, file, message, map.key);
     stream << ">(stream, value." << map.name.get_name() << ", \"" << json_field_name(map) << "\"sv);\n";
+}
+
+void dump_cpp_enum_prototype(std::ostream &stream, const proto_enum &, std::string_view full_name)
+{
+    stream << replace(file_json_header_prototypes, "$", full_name);
+}
+
+void dump_cpp_message_prototype(std::ostream &stream, const proto_file &, const proto_message &,
+                                std::string_view full_name)
+{
+    stream << replace(file_json_header_prototypes, "$", full_name);
 }
 
 void dump_cpp_serialize_enum(std::ostream &stream, const proto_enum &, std::string_view full_name)
@@ -507,54 +442,6 @@ void dump_cpp_deserialize_message_gen(std::ostream &stream, const proto_file &fi
     stream << "\t\t\tbreak;\n\t}\n\treturn skip_value(stream);\n}\n";
 }
 
-void dump_cpp_enum(std::ostream &stream, const proto_enum &my_enum, std::string_view parent,
-                   enum_dumper dump_enum)
-{
-    const auto full_name = std::string(parent) + "::" + std::string(my_enum.name.get_name());
-    dump_enum(stream, my_enum, full_name);
-}
-
-void dump_cpp_enums(std::ostream &stream, const proto_enums &enums, std::string_view parent,
-                    enum_dumper dump_enum)
-{
-    for (const auto &my_enum : enums)
-    {
-        dump_cpp_enum(stream, my_enum, parent, dump_enum);
-    }
-}
-
-void dump_cpp_messages(std::ostream &stream, const proto_file &file, const proto_messages &messages,
-                       std::string_view parent, message_dumper dump_message, enum_dumper dump_enum);
-
-void dump_cpp_message(std::ostream &stream, const proto_file &file, const proto_message &message,
-                      std::string_view parent, message_dumper dump_message, enum_dumper dump_enum)
-{
-    const auto full_name = std::string(parent) + "::" + std::string(message.name.get_name());
-
-    dump_message(stream, file, message, full_name);
-    dump_cpp_enums(stream, message.enums, full_name, dump_enum);
-    dump_cpp_messages(stream, file, message.messages, full_name, dump_message, dump_enum);
-}
-
-void dump_cpp_messages(std::ostream &stream, const proto_file &file, const proto_messages &messages,
-                       std::string_view parent, message_dumper dump_message, enum_dumper dump_enum)
-{
-    for (const auto &message : messages)
-    {
-        dump_cpp_message(stream, file, message, parent, dump_message, dump_enum);
-    }
-}
-
-void dump_cpp(std::ostream &stream, const proto_file &file, message_dumper dump_message,
-              enum_dumper dump_enum)
-{
-    const auto str_namespace = file.package.name.get_name().empty()
-                                   ? std::string()
-                                   : "::" + std::string(file.package.name.get_name());
-    dump_cpp_enums(stream, file.package.enums, str_namespace, dump_enum);
-    dump_cpp_messages(stream, file, file.package.messages, str_namespace, dump_message, dump_enum);
-}
-
 } // namespace
 
 void dump_json_header(const proto_file &file, std::ostream &stream)
@@ -562,7 +449,7 @@ void dump_json_header(const proto_file &file, std::ostream &stream)
     dump_cpp_open_namespace(stream, "spb::json");
     stream << file_json_header_template;
     dump_cpp_open_namespace(stream, "detail");
-    dump_prototypes(stream, file);
+    dump_cpp(stream, file, dump_cpp_message_prototype, dump_cpp_enum_prototype);
     dump_cpp_close_namespace(stream, "detail");
     dump_cpp_close_namespace(stream, "spb::json");
 }

@@ -15,6 +15,8 @@
 
 namespace spb::pb::detail
 {
+using enum_type = int32_t;
+
 enum class tag_type : uint32_t
 {
     invalid = 0

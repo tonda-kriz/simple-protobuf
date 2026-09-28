@@ -81,6 +81,7 @@ struct ostream_writer
     }
 };
 
+template <typename T> void check_enum_value_or_throw(enum_type);
 template <serialize_mode = serialize_mode{}> size_t serialize_size(const auto &value);
 template <serialize_mode = serialize_mode{}> size_t serialize_size(uint32_t field, const auto &value);
 template <serialize_mode> void serialize(auto &stream, const spb::detail::proto_message auto &value);
@@ -141,7 +142,11 @@ void serialize(auto &stream, uint32_t field, spb::detail::proto_field_number aut
 
 template <serialize_mode mode> void serialize(auto &stream, const spb::detail::proto_enum auto &value)
 {
-    serialize_varint(stream, int32_t(value));
+    using T = std::remove_cvref_t<decltype(value)>;
+
+    const auto int_enum = (enum_type)value;
+    check_enum_value_or_throw<T>(int_enum);
+    serialize_varint(stream, int_enum);
 }
 
 template <serialize_mode mode> void serialize(auto &stream, spb::detail::proto_field_int_or_float auto value)
