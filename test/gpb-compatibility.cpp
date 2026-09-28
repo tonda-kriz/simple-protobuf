@@ -61,6 +61,10 @@ auto operator==(const Test::Variant &lhs, const Test::Variant &rhs) noexcept -> 
 {
     return lhs.oneof_field == rhs.oneof_field;
 }
+auto operator==(const Test::MapStringString &lhs, const Test::MapStringString &rhs) noexcept -> bool
+{
+    return lhs.value == rhs.value;
+}
 
 namespace Scalar
 {
@@ -115,8 +119,16 @@ template <size_t N> auto to_array(const char (&string)[N])
 }
 
 template <typename T>
+concept is_gpb_map = requires(T t) { typename std::decay_t<decltype(t.value())>::mapped_type; };
+
+template <typename T>
 concept is_gpb_repeated = requires(T t) {
     { t.value(0) };
+};
+
+template <typename T>
+concept is_spb_optional = requires(T t) {
+    { t.value.has_value() };
 };
 
 template <typename T> auto opt_size(const std::optional<T> &opt) -> std::size_t
@@ -153,26 +165,20 @@ template <typename T> auto enum_value(const std::optional<T> &value)
     return enum_value(value.value());
 }
 
-template <typename GPB, typename SPB>
-void gpb_test(const SPB &spb, const spb::pb::serialize_options &options = {})
+template <typename GPB, typename SPB> void equal(const GPB &gpb, const SPB &spb)
 {
     using T = typename ExtractOptional<std::decay_t<decltype(SPB::value)>>::type;
 
-    auto gpb            = GPB();
-    auto spb_serialized = spb::pb::serialize(spb, options);
-
-    if (options.delimited)
+    if constexpr (is_gpb_map<GPB>)
     {
-        std::istringstream input_stream{spb_serialized};
-        auto raw_input_stream = google::protobuf::io::IstreamInputStream{&input_stream};
-        REQUIRE(google::protobuf::util::ParseDelimitedFromZeroCopyStream(&gpb, &raw_input_stream, nullptr));
+        REQUIRE(gpb.value().size() == spb.value.size());
+        for (const auto &[key, value] : spb.value)
+        {
+            REQUIRE(gpb.value().contains(key));
+            REQUIRE(gpb.value().at(key) == value);
+        }
     }
-    else
-    {
-        REQUIRE(gpb.ParseFromString(spb_serialized));
-    }
-
-    if constexpr (is_gpb_repeated<GPB>)
+    else if constexpr (is_gpb_repeated<GPB>)
     {
         REQUIRE(gpb.value().size() == opt_size(spb.value));
         for (size_t i = 0; i < opt_size(spb.value); ++i)
@@ -188,6 +194,21 @@ void gpb_test(const SPB &spb, const spb::pb::serialize_options &options = {})
             }
         }
     }
+    else if constexpr (is_spb_optional<SPB>)
+    {
+        REQUIRE(spb.value.has_value() == gpb.has_value());
+        if (spb.value.has_value())
+        {
+            if constexpr (std::is_enum_v<T>)
+            {
+                REQUIRE(enum_value(spb.value) == gpb.value());
+            }
+            else
+            {
+                REQUIRE(spb.value.value() == gpb.value());
+            }
+        }
+    }
     else if constexpr (std::is_enum_v<T>)
     {
         REQUIRE(enum_value(spb.value) == gpb.value());
@@ -196,6 +217,26 @@ void gpb_test(const SPB &spb, const spb::pb::serialize_options &options = {})
     {
         REQUIRE(spb.value == gpb.value());
     }
+}
+
+template <typename GPB, typename SPB>
+void gpb_test(const SPB &spb, const spb::pb::serialize_options &options = {})
+{
+    auto gpb            = GPB();
+    auto spb_serialized = spb::pb::serialize(spb, options);
+
+    if (options.delimited)
+    {
+        std::istringstream input_stream{spb_serialized};
+        auto raw_input_stream = google::protobuf::io::IstreamInputStream{&input_stream};
+        REQUIRE(google::protobuf::util::ParseDelimitedFromZeroCopyStream(&gpb, &raw_input_stream, nullptr));
+    }
+    else
+    {
+        REQUIRE(gpb.ParseFromString(spb_serialized));
+    }
+
+    equal(gpb, spb);
 
     auto gpb_serialized = std::string();
     if (options.delimited)
@@ -215,7 +256,15 @@ void gpb_test(const SPB &spb, const spb::pb::serialize_options &options = {})
     }
 
     REQUIRE(spb::pb::deserialize<SPB>(gpb_serialized, {.delimited = options.delimited}).value == spb.value);
-    REQUIRE(gpb_serialized == spb_serialized);
+    if constexpr (is_gpb_map<GPB>)
+    {
+        if (spb.value.size() < 2)
+            REQUIRE(gpb_serialized == spb_serialized);
+    }
+    else
+    {
+        REQUIRE(gpb_serialized == spb_serialized);
+    }
 }
 
 template <typename GPB, typename SPB> void gpb_json(const SPB &spb)
@@ -228,31 +277,8 @@ template <typename GPB, typename SPB> void gpb_json(const SPB &spb)
     auto parse_options = google::protobuf::util::JsonParseOptions{};
     REQUIRE(JsonStringToMessage(spb_serialized, &gpb, parse_options).ok());
 
-    if constexpr (is_gpb_repeated<GPB>)
-    {
-        REQUIRE(gpb.value().size() == opt_size(spb.value));
-        for (size_t i = 0; i < opt_size(spb.value); ++i)
-        {
-            using value_type = typename decltype(SPB::value)::value_type;
-            if constexpr (std::is_enum_v<value_type>)
-            {
-                REQUIRE(enum_value(spb.value[i]) == gpb.value(i));
-            }
-            else
-            {
-                REQUIRE(gpb.value(i) == spb.value[i]);
-            }
-        }
-    }
-    else if constexpr (std::is_enum_v<T>)
-    {
-        REQUIRE(enum_value(spb.value) == gpb.value());
-    }
-    else
-    {
-        auto gpb_value = gpb.value();
-        REQUIRE(spb.value == gpb_value);
-    }
+    equal(gpb, spb);
+
     auto json_string                         = std::string();
     auto print_options                       = google::protobuf::util::JsonPrintOptions();
     print_options.preserve_proto_field_names = true;
@@ -264,7 +290,7 @@ template <typename GPB, typename SPB> void gpb_json(const SPB &spb)
     json_string.clear();
     REQUIRE(MessageToJsonString(gpb, &json_string, print_options).ok());
     REQUIRE(spb::json::deserialize<SPB>(json_string).value == spb.value);
-    if constexpr (std::is_integral_v<T> && sizeof(T) < sizeof(int64_t))
+    if constexpr (std::is_integral_v<T>)
     {
         auto gpb_value = gpb.value();
         if (sizeof(gpb_value) < sizeof(int64_t))
@@ -276,21 +302,19 @@ template <typename GPB, typename SPB> void gpb_json(const SPB &spb)
 
 template <typename GPB, typename SPB> void gpb_compatibility(const SPB &spb)
 {
-    SUBCASE("gpb serialize/deserialize")
-    {
-        gpb_test<GPB, SPB>(spb);
-        gpb_test<GPB, SPB>(spb, {.delimited = true});
-    }
-    SUBCASE("json serialize/deserialize")
-    {
-        gpb_json<GPB, SPB>(spb);
-    }
+    gpb_test<GPB, SPB>(spb);
+    gpb_test<GPB, SPB>(spb, {.delimited = true});
+    gpb_json<GPB, SPB>(spb);
 }
 
 template <typename GPB, typename SPB, typename POD> void gpb_compatibility_enum()
 {
     using T = typename ExtractOptional<std::decay_t<decltype(SPB::value)>>::type;
 
+    if constexpr (is_spb_optional<SPB>)
+    {
+        gpb_compatibility<GPB>(SPB{});
+    }
     gpb_compatibility<GPB>(SPB{.value = SPB::Enum::Enum_min});
     gpb_compatibility<GPB>(SPB{.value = SPB::Enum::Enum_max});
     gpb_compatibility<GPB>(SPB{.value = SPB::Enum::Enum_value});
@@ -305,6 +329,7 @@ template <typename GPB, typename SPB, typename POD> void gpb_compatibility_enum(
 
 template <typename GPB, typename SPB> void gpb_compatibility_enum_array()
 {
+    gpb_compatibility<GPB>(SPB{});
     gpb_compatibility<GPB>(SPB{.value = {SPB::Enum::Enum_min}});
     gpb_compatibility<GPB>(SPB{.value = {SPB::Enum::Enum_max}});
     gpb_compatibility<GPB>(SPB{.value = {SPB::Enum::Enum_value}});
@@ -315,6 +340,7 @@ template <typename GPB, typename SPB, typename POD> void gpb_compatibility_value
 {
     using T = typename ExtractOptional<std::decay_t<decltype(SPB::value)>>::type;
 
+    // gpb_compatibility<GPB>(SPB{});
     gpb_compatibility<GPB>(SPB{.value = 0});
     gpb_compatibility<GPB>(SPB{.value = 0x42});
     gpb_compatibility<GPB>(SPB{.value = 0x7f});
@@ -346,6 +372,7 @@ template <typename GPB, typename SPB> void gpb_compatibility_array()
 {
     using T = typename decltype(SPB::value)::value_type;
 
+    gpb_compatibility<GPB>(SPB{});
     gpb_compatibility<GPB>(SPB{.value = {0}});
     gpb_compatibility<GPB>(SPB{.value = {0x42}});
     gpb_compatibility<GPB>(SPB{.value = {0, 0x42, 0x7f}});
@@ -376,15 +403,21 @@ TEST_CASE("string")
     }
     SUBCASE("required")
     {
+        gpb_compatibility<Test::Scalar::gpb::ReqString>(Test::Scalar::ReqString{});
+        gpb_compatibility<Test::Scalar::gpb::ReqString>(Test::Scalar::ReqString{.value = ""});
         gpb_compatibility<Test::Scalar::gpb::ReqString>(Test::Scalar::ReqString{.value = "hello"});
         gpb_compatibility<Test::Scalar::gpb::ReqString>(Test::Scalar::ReqString{.value = "\"\\/\b\f\n\r\t"});
     }
     SUBCASE("optional")
     {
+        gpb_compatibility<Test::Scalar::gpb::OptString>(Test::Scalar::OptString{});
+        // gpb_compatibility<Test::Scalar::gpb::OptString>(Test::Scalar::OptString{.value = ""});
         gpb_compatibility<Test::Scalar::gpb::OptString>(Test::Scalar::OptString{.value = "hello"});
     }
     SUBCASE("repeated")
     {
+        gpb_compatibility<Test::Scalar::gpb::RepString>(Test::Scalar::RepString{});
+        gpb_compatibility<Test::Scalar::gpb::RepString>(Test::Scalar::RepString{.value = {""}});
         gpb_compatibility<Test::Scalar::gpb::RepString>(Test::Scalar::RepString{.value = {"hello"}});
         gpb_compatibility<Test::Scalar::gpb::RepString>(Test::Scalar::RepString{.value = {"hello", "world"}});
     }
@@ -425,11 +458,13 @@ TEST_CASE("bool")
     }
     SUBCASE("repeated")
     {
+        gpb_compatibility<Test::Scalar::gpb::RepBool>(Test::Scalar::RepBool{});
         gpb_compatibility<Test::Scalar::gpb::RepBool>(Test::Scalar::RepBool{.value = {true}});
         gpb_compatibility<Test::Scalar::gpb::RepBool>(Test::Scalar::RepBool{.value = {true, false}});
 
         SUBCASE("packed")
         {
+            gpb_compatibility<Test::Scalar::gpb::RepPackBool>(Test::Scalar::RepPackBool{});
             gpb_compatibility<Test::Scalar::gpb::RepPackBool>(Test::Scalar::RepPackBool{.value = {true}});
             gpb_compatibility<Test::Scalar::gpb::RepPackBool>(
                 Test::Scalar::RepPackBool{.value = {true, false}});
@@ -1207,6 +1242,7 @@ TEST_CASE("bytes")
 {
     SUBCASE("required")
     {
+        gpb_compatibility<Test::Scalar::gpb::ReqBytes>(Test::Scalar::ReqBytes{});
         gpb_compatibility<Test::Scalar::gpb::ReqBytes>(Test::Scalar::ReqBytes{.value = to_bytes("hello")});
         gpb_compatibility<Test::Scalar::gpb::ReqBytes>(
             Test::Scalar::ReqBytes{.value = to_bytes("\x00\x01\x02"sv)});
@@ -1215,6 +1251,7 @@ TEST_CASE("bytes")
     }
     SUBCASE("optional")
     {
+        gpb_compatibility<Test::Scalar::gpb::OptBytes>(Test::Scalar::OptBytes{});
         gpb_compatibility<Test::Scalar::gpb::OptBytes>(Test::Scalar::OptBytes{.value = to_bytes("hello")});
         gpb_compatibility<Test::Scalar::gpb::OptBytes>(
             Test::Scalar::OptBytes{.value = to_bytes("\x00\x01\x02"sv)});
@@ -1223,6 +1260,7 @@ TEST_CASE("bytes")
     }
     SUBCASE("repeated")
     {
+        gpb_compatibility<Test::Scalar::gpb::RepBytes>(Test::Scalar::RepBytes{});
         gpb_compatibility<Test::Scalar::gpb::RepBytes>(Test::Scalar::RepBytes{.value = {to_bytes("hello")}});
         gpb_compatibility<Test::Scalar::gpb::RepBytes>(
             Test::Scalar::RepBytes{.value = {to_bytes("\x00\x01\x02"sv), to_bytes("hello")}});
@@ -1412,6 +1450,39 @@ TEST_CASE("variant")
             REQUIRE(gpb.SerializeToString(&gpb_serialized));
             REQUIRE(spb::pb::deserialize<Test::Variant>(gpb_serialized) == spb);
         }
+    }
+}
+TEST_CASE("map")
+{
+    SUBCASE("empty")
+    {
+        gpb_compatibility<Test::gpb::MapStringString>(Test::MapStringString{});
+    }
+    SUBCASE("single value")
+    {
+        gpb_compatibility<Test::gpb::MapStringString>(Test::MapStringString{.value = {{"key", "value"}}});
+    }
+    SUBCASE("multiple values")
+    {
+        gpb_compatibility<Test::gpb::MapStringString>(
+            Test::MapStringString{.value = {{"key", "value"}, {"one", "two"}, {"xxx", "yyy"}}});
+    }
+    SUBCASE("empty key")
+    {
+        gpb_compatibility<Test::gpb::MapStringString>(Test::MapStringString{.value = {{"", "value"}}});
+    }
+    SUBCASE("empty value")
+    {
+        gpb_compatibility<Test::gpb::MapStringString>(Test::MapStringString{.value = {{"key", ""}}});
+    }
+    SUBCASE("empty key and value")
+    {
+        gpb_compatibility<Test::gpb::MapStringString>(Test::MapStringString{.value = {{"", ""}}});
+    }
+    SUBCASE("multiple empty")
+    {
+        gpb_compatibility<Test::gpb::MapStringString>(
+            Test::MapStringString{.value = {{"", ""}, {"key", ""}, {"", "value"}, {"hello", "world"}}});
     }
 }
 TEST_CASE("person")
