@@ -17,7 +17,6 @@ constexpr std::string_view json_includes_template =
 #include <spb/json/serialize.hpp>
 #include <spb/json/deserialize.hpp>
 #include <system_error>
-#include <type_traits>
 
 )";
 

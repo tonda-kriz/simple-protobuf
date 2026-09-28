@@ -12,6 +12,16 @@
 
 #include <string_view>
 
+constexpr std::string_view pb_includes_template =
+    R"(#include "$"
+#include <spb/pb/wire-types.h>
+#include <spb/pb.hpp>
+#include <spb/pb/deserialize.hpp>
+#include <spb/pb/serialize.hpp>
+#include <system_error>
+
+)";
+
 constexpr std::string_view pb_serialize_value_template =
     R"(void serialize_value(ostream_size &stream, const $ &message)
 {

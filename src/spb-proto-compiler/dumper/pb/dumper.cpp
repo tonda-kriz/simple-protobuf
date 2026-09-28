@@ -25,12 +25,7 @@ namespace
 {
 void dump_cpp_includes(std::ostream &stream, std::string_view header_file_path)
 {
-    stream << "#include \"" << header_file_path << "\"\n"
-           << "#include <spb/pb/wire-types.h>\n"
-           << "#include <spb/pb.hpp>\n"
-           << "#include <spb/pb/deserialize.hpp>\n"
-           << "#include <spb/pb/serialize.hpp>\n"
-           << "#include <type_traits>\n\n";
+    stream << replace(pb_includes_template, "$", header_file_path);
 }
 
 void dump_cpp_close_namespace(std::ostream &stream, std::string_view name)
