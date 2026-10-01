@@ -287,9 +287,8 @@ void serialize(auto &stream, uint32_t field, const spb::detail::proto_map auto &
 
     for (const auto &[k, v] : value)
     {
-        const auto size = serialize_size<key_encoder>(1, k) + serialize_size<value_encoder>(2, v);
         serialize_tag(stream, field, wire_type::length_delimited);
-        serialize_varint(stream, size);
+        serialize_varint(stream, serialize_size<key_encoder>(1, k) + serialize_size<value_encoder>(2, v));
         serialize<key_encoder>(stream, 1, k);
         serialize<value_encoder>(stream, 2, v);
     }
@@ -309,9 +308,8 @@ void serialize(auto &stream, uint32_t field, const spb::detail::proto_label_repe
         if (container.empty())
             return;
 
-        const auto size = serialize_size<mode>(container);
         serialize_tag(stream, field, wire_type::length_delimited);
-        serialize_varint(stream, size);
+        serialize_varint(stream, serialize_size<mode>(container));
         serialize_packed<mode>(stream, container);
     }
     else
@@ -332,9 +330,8 @@ void serialize(auto &stream, uint32_t field,
 {
     static_assert(is_packed(mode.encoder), "repeated field with fixed size has to have attribute 'packed'");
 
-    const auto size = serialize_size<mode>(container);
     serialize_tag(stream, field, wire_type::length_delimited);
-    serialize_varint(stream, size);
+    serialize_varint(stream, serialize_size<mode>(container));
     serialize_packed<mode>(stream, container);
 }
 
@@ -355,12 +352,8 @@ void serialize(auto &stream, uint32_t field, const std::unique_ptr<T> &p_value)
 template <serialize_mode mode>
 void serialize(auto &stream, uint32_t field, const spb::detail::proto_message auto &value)
 {
-    const auto size = serialize_size<mode>(value);
-    if (!size) [[unlikely]]
-        return;
-
     serialize_tag(stream, field, wire_type::length_delimited);
-    serialize_varint(stream, size);
+    serialize_varint(stream, serialize_size<mode>(value));
     serialize_value(stream, value);
 }
 

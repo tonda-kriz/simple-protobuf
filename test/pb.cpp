@@ -86,6 +86,11 @@ auto operator==(const Person &lhs, const Person &rhs) noexcept -> bool
 
 namespace Test::Scalar
 {
+auto operator==(const Empty &, const Empty &) noexcept -> bool
+{
+    return true;
+}
+
 auto operator==(const Simple &lhs, const Simple &rhs) noexcept -> bool
 {
     return lhs.value == rhs.value;
@@ -1955,6 +1960,29 @@ TEST_CASE("protobuf")
                                  std::unordered_map<int32_t, int32_t>>);
             pb_json_test(UnitTest::map::UnorderedInt32Int32{.map = {{1, 2}}}, "\x0a\x04\x08\x01\x10\x02",
                          R"({"map":{"1":2}})");
+        }
+    }
+    SUBCASE("empty")
+    {
+        pb_json_test(Test::Scalar::Empty{}, ""sv, "{}");
+
+        SUBCASE("required")
+        {
+            pb_json_test(Test::Scalar::ReqEmpty{}, "\x0a\x00"sv, R"({"value":{}})");
+        }
+        SUBCASE("optional")
+        {
+            pb_json_test(Test::Scalar::OptEmpty{}, "", "{}");
+            pb_json_test(Test::Scalar::OptEmpty{.value = Test::Scalar::Empty{}}, "\x0a\x00"sv,
+                         R"({"value":{}})");
+        }
+        SUBCASE("repeated")
+        {
+            pb_json_test(Test::Scalar::RepEmpty{}, ""sv, "{}");
+            pb_json_test(Test::Scalar::RepEmpty{.value = {Test::Scalar::Empty{}}}, "\x0a\x00"sv,
+                         R"({"value":[{}]})");
+            pb_json_test(Test::Scalar::RepEmpty{.value = {Test::Scalar::Empty{}, Test::Scalar::Empty{}}},
+                         "\x0a\x00\x0a\x00"sv, R"({"value":[{},{}]})");
         }
     }
     SUBCASE("person")
