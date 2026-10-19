@@ -269,8 +269,6 @@ void gpb_test(const SPB &spb, const spb::pb::serialize_options &options = {})
 
 template <typename GPB, typename SPB> void gpb_json(const SPB &spb)
 {
-    using T = typename ExtractOptional<std::decay_t<decltype(SPB::value)>>::type;
-
     auto gpb            = GPB();
     auto spb_serialized = spb::json::serialize(spb);
 
@@ -279,25 +277,19 @@ template <typename GPB, typename SPB> void gpb_json(const SPB &spb)
 
     equal(gpb, spb);
 
-    auto json_string                         = std::string();
+    auto gpb_serialized                      = std::string();
     auto print_options                       = google::protobuf::util::JsonPrintOptions();
     print_options.preserve_proto_field_names = true;
 
-    REQUIRE(MessageToJsonString(gpb, &json_string, print_options).ok());
-    REQUIRE(spb::json::deserialize<SPB>(json_string).value == spb.value);
+    REQUIRE(MessageToJsonString(gpb, &gpb_serialized, print_options).ok());
+    REQUIRE(spb::json::deserialize<SPB>(gpb_serialized).value == spb.value);
 
     print_options.preserve_proto_field_names = false;
-    json_string.clear();
-    REQUIRE(MessageToJsonString(gpb, &json_string, print_options).ok());
-    REQUIRE(spb::json::deserialize<SPB>(json_string).value == spb.value);
-    if constexpr (std::is_integral_v<T>)
-    {
-        auto gpb_value = gpb.value();
-        if (sizeof(gpb_value) < sizeof(int64_t))
-        {
-            REQUIRE(json_string == spb_serialized);
-        }
-    }
+    print_options.unquote_int64_if_possible  = true;
+    gpb_serialized.clear();
+    REQUIRE(MessageToJsonString(gpb, &gpb_serialized, print_options).ok());
+    REQUIRE(spb::json::deserialize<SPB>(gpb_serialized).value == spb.value);
+    CHECK(gpb_serialized == spb_serialized);
 }
 
 template <typename GPB, typename SPB> void gpb_compatibility(const SPB &spb)
@@ -394,9 +386,7 @@ TEST_CASE("string")
             char buffer[4];
             auto value = std::string(buffer, spb::detail::utf8::encode_point(i, buffer));
             if (value.empty())
-            {
                 continue;
-            }
 
             gpb_compatibility<Test::Scalar::gpb::ReqString>(Test::Scalar::ReqString{.value = value});
         }

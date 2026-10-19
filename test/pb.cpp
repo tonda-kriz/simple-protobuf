@@ -750,7 +750,7 @@ TEST_CASE("protobuf")
             {
                 pb_json_test(Test::Scalar::ReqString{.value = "h\x16\xc3\x8c\xE3\x9B\x8B\xF0\x90\x87\xB3o"},
                              "\x0a\x0ch\x16\xc3\x8c\xE3\x9B\x8B\xF0\x90\x87\xB3o",
-                             R"({"value":"h\u0016\u00cc\u36cb\ud800\uddf3o"})");
+                             "{\"value\":\"h\\u0016\xc3\x8c\xE3\x9B\x8B\xF0\x90\x87\xB3o\"}");
                 SUBCASE("invalid")
                 {
                     CHECK_THROWS((void)spb::pb::deserialize<Test::Scalar::ReqString>("\x0a\x02h\x80"sv));
@@ -1425,7 +1425,7 @@ TEST_CASE("protobuf")
                 pb_json_test(Test::Scalar::ReqFixed64{.value = 0xff},
                              "\x09\xff\x00\x00\x00\x00\x00\x00\x00"sv, R"({"value":255})");
                 pb_json_test(Test::Scalar::ReqFixed64{.value = uint64_t(-2)},
-                             "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv, R"({"value":18446744073709551614})");
+                             "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv, R"({"value":"18446744073709551614"})");
                 CHECK_THROWS((void)spb::pb::deserialize<Test::Scalar::ReqFixed32>(
                     "\x09\x42\x00\x00\x00\x00\x00\x00"sv));
             }
@@ -1436,7 +1436,7 @@ TEST_CASE("protobuf")
                 pb_json_test(Test::Scalar::OptFixed64{.value = 0xff},
                              "\x09\xff\x00\x00\x00\x00\x00\x00\x00"sv, R"({"value":255})");
                 pb_json_test(Test::Scalar::OptFixed64{.value = -2}, "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv,
-                             R"({"value":18446744073709551614})");
+                             R"({"value":"18446744073709551614"})");
             }
             SUBCASE("repeated")
             {
