@@ -20,7 +20,7 @@ auto base64_encode(std::string_view value) -> std::string
 {
     auto encode_size = base64_encode_size(value);
     auto result      = std::string(encode_size, '\0');
-    auto stream      = spb::json::detail::ostream_buffer(result.data());
+    auto stream      = spb::json::detail::ostream_buffer{{}, reinterpret_cast<uint8_t *>(result.data())};
     spb::json::detail::base64_encode(stream,
                                      {reinterpret_cast<const std::byte *>(value.data()), value.size()});
     return result;

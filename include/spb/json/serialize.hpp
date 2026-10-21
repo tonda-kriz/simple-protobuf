@@ -15,6 +15,7 @@
 #include "../to_from_chars.h"
 #include "base64.h"
 #include "field.hpp"
+#include "options.h"
 #include "spb/utf8.h"
 #include <algorithm>
 #include <array>
@@ -37,7 +38,9 @@ namespace spb::json::detail
 struct ostream_size
 {
     static constexpr bool size_only = true;
-    size_t size;
+
+    const serialize_options options;
+    size_t size    = 0;
     bool put_comma = false;
 
     void write(uint8_t) noexcept
@@ -55,12 +58,9 @@ struct ostream_buffer
 {
     static constexpr bool size_only = false;
 
+    const serialize_options options;
     uint8_t *p_buffer;
     bool put_comma = false;
-
-    explicit ostream_buffer(void *buffer) : p_buffer((std::uint8_t *)buffer)
-    {
-    }
 
     void write(uint8_t byte) noexcept
     {
@@ -77,13 +77,11 @@ struct ostream_buffer
 struct ostream_writer
 {
     static constexpr bool size_only = false;
-    spb::io::writer on_write;
+
+    const serialize_options options;
+    const spb::io::writer on_write;
     size_t size    = 0;
     bool put_comma = false;
-
-    explicit ostream_writer(spb::io::writer writer) : on_write(writer)
-    {
-    }
 
     void write(uint8_t byte)
     {
@@ -97,7 +95,8 @@ struct ostream_writer
     }
 };
 
-template <field_attributes = field_attributes{}> size_t serialize_size(const auto &value);
+template <field_attributes = field_attributes{}>
+size_t serialize_size(const auto &value, const serialize_options &options);
 
 // Protocol Buffers - Google's data interchange format
 // Copyright 2008 Google Inc.  All rights reserved.
@@ -359,7 +358,7 @@ void serialize(auto &stream, const spb::detail::proto_field_int_or_float auto &v
     auto result = spb_std_emu::to_chars(buffer.data(), buffer.data() + sizeof(buffer), value);
     if constexpr (std::is_same_v<value_type, int64_t> || std::is_same_v<value_type, uint64_t>)
     {
-        if (RoundTripsThroughDouble(value)) [[likely]]
+        if (!stream.options.quote_inexact_int64 || RoundTripsThroughDouble(value)) [[likely]]
         {
             stream.write(buffer.data(), static_cast<size_t>(result.ptr - buffer.data()));
         }
@@ -585,9 +584,10 @@ void serialize(auto &stream, const spb::detail::proto_enum auto &value, std::str
     serialize_value(stream, value);
 }
 
-template <field_attributes attributes> size_t serialize_size(const auto &value)
+template <field_attributes attributes>
+size_t serialize_size(const auto &value, const serialize_options &options)
 {
-    auto stream = ostream_size();
+    auto stream = ostream_size{options};
     serialize<attributes>(stream, value);
     return stream.size;
 }

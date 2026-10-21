@@ -61,7 +61,7 @@ constexpr std::string_view file_json_header_template =
  * @return serialized size in bytes
  * @throws exceptions only from `on_write`
  */
-size_t serialize(const auto &message, spb::io::writer on_write);
+size_t serialize(const auto &message, spb::io::writer on_write, const serialize_options &options);
 
 /**
  * @brief return JSON serialized size in bytes
@@ -70,7 +70,7 @@ size_t serialize(const auto &message, spb::io::writer on_write);
  * @param[in] options
  * @return serialized size in bytes
  */
-[[nodiscard]] size_t serialize_size(const auto &message);
+[[nodiscard]] size_t serialize_size(const auto &message, const serialize_options &options);
 
 size_t serialize(const auto &message, void *buffer);
 
@@ -85,7 +85,8 @@ size_t serialize(const auto &message, void *buffer);
  * @example `std::string json;`
  *          `spb::json::serialize(message, json);`
  */
-template <spb::resizable_container Container> size_t serialize(const auto &message, Container &result);
+template <spb::resizable_container Container>
+size_t serialize(const auto &message, Container &result, const serialize_options &options);
 
 /**
  * @brief serialize message into JSON
@@ -97,7 +98,7 @@ template <spb::resizable_container Container> size_t serialize(const auto &messa
  * @example `auto serialized_message = spb::json::serialize< std::vector< std::byte > >( message );`
  */
 template <spb::resizable_container Container>
-[[nodiscard]] Container serialize(const auto &message);
+[[nodiscard]] Container serialize(const auto &message, const serialize_options &options);
 
 size_t deserialize(auto &message, const void *buffer, size_t size);
 

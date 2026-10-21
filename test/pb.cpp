@@ -1,4 +1,5 @@
 #include "spb/concepts.h"
+#include "spb/json/options.h"
 #include "spb/pb/serialize.hpp"
 #include <array>
 #include <name.pb.h>
@@ -342,26 +343,27 @@ template <typename T> void pb_test(const T &value, std::string_view protobuf)
     }
 }
 
-template <typename T> void json_test(const T &value, std::string_view json)
+template <typename T>
+void json_test(const T &value, std::string_view json, const spb::json::serialize_options &options = {})
 {
     {
         auto serialized = std::string();
-        auto size       = spb::json::serialize(value, serialized);
+        auto size       = spb::json::serialize(value, serialized, options);
         CHECK(size == json.size());
         CHECK(serialized == json);
     }
 
     {
-        auto serialized = spb::json::serialize(value);
+        auto serialized = spb::json::serialize(value, options);
         CHECK(serialized == json);
-        auto size = spb::json::serialize_size(value);
+        auto size = spb::json::serialize_size(value, options);
         CHECK(size == json.size());
     }
 
     {
         auto serialized = std::string();
         auto writer = [&serialized](const void *data, size_t size) { serialized.append((char *)data, size); };
-        auto size   = spb::json::serialize(value, writer);
+        auto size   = spb::json::serialize(value, writer, options);
         CHECK(size == json.size());
         CHECK(serialized == json);
     }
@@ -414,7 +416,9 @@ template <typename T> void json_test(const T &value, std::string_view json)
     }
 }
 
-template <typename T> void pb_json_test(const T &value, std::string_view protobuf, std::string_view json)
+template <typename T>
+void pb_json_test(const T &value, std::string_view protobuf, std::string_view json,
+                  const spb::json::serialize_options &options = {})
 {
     SUBCASE("pb")
     {
@@ -422,7 +426,7 @@ template <typename T> void pb_json_test(const T &value, std::string_view protobu
     }
     SUBCASE("json")
     {
-        json_test(value, json);
+        json_test(value, json, options);
     }
 }
 } // namespace
@@ -1425,7 +1429,10 @@ TEST_CASE("protobuf")
                 pb_json_test(Test::Scalar::ReqFixed64{.value = 0xff},
                              "\x09\xff\x00\x00\x00\x00\x00\x00\x00"sv, R"({"value":255})");
                 pb_json_test(Test::Scalar::ReqFixed64{.value = uint64_t(-2)},
-                             "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv, R"({"value":"18446744073709551614"})");
+                             "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv, R"({"value":18446744073709551614})");
+                pb_json_test(Test::Scalar::ReqFixed64{.value = uint64_t(-2)},
+                             "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv, R"({"value":"18446744073709551614"})",
+                             {.quote_inexact_int64 = true});
                 CHECK_THROWS((void)spb::pb::deserialize<Test::Scalar::ReqFixed32>(
                     "\x09\x42\x00\x00\x00\x00\x00\x00"sv));
             }
@@ -1436,7 +1443,9 @@ TEST_CASE("protobuf")
                 pb_json_test(Test::Scalar::OptFixed64{.value = 0xff},
                              "\x09\xff\x00\x00\x00\x00\x00\x00\x00"sv, R"({"value":255})");
                 pb_json_test(Test::Scalar::OptFixed64{.value = -2}, "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv,
-                             R"({"value":"18446744073709551614"})");
+                             R"({"value":18446744073709551614})");
+                pb_json_test(Test::Scalar::OptFixed64{.value = -2}, "\x09\xfe\xff\xff\xff\xff\xff\xff\xff"sv,
+                             R"({"value":"18446744073709551614"})", {.quote_inexact_int64 = true});
             }
             SUBCASE("repeated")
             {

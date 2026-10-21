@@ -13,6 +13,7 @@
 #include "spb/json/field.hpp"
 #include "json/deserialize.hpp"
 #include "json/field.hpp"
+#include "json/options.h"
 #include "json/serialize.hpp"
 #include <cstdlib>
 
@@ -27,9 +28,9 @@ namespace spb::json
  * @return serialized size in bytes
  * @throws exceptions only from `on_write`
  */
-size_t serialize(const auto &message, spb::io::writer on_write)
+size_t serialize(const auto &message, spb::io::writer on_write, const serialize_options &options = {})
 {
-    auto stream = detail::ostream_writer{on_write};
+    auto stream = detail::ostream_writer{options, on_write};
     detail::serialize<detail::field_attributes{}>(stream, message);
     return stream.size;
 }
@@ -41,15 +42,15 @@ size_t serialize(const auto &message, spb::io::writer on_write)
  * @param[in] options
  * @return serialized size in bytes
  */
-[[nodiscard]] size_t serialize_size(const auto &message)
+[[nodiscard]] size_t serialize_size(const auto &message, const serialize_options &options = {})
 {
-    return detail::serialize_size(message);
+    return detail::serialize_size(message, options);
 }
 
-size_t serialize(const auto &message, void *buffer)
+size_t serialize(const auto &message, void *buffer, const serialize_options &options = {})
 {
     const auto start = (uint8_t *)buffer;
-    auto stream      = detail::ostream_buffer((uint8_t *)buffer);
+    auto stream      = detail::ostream_buffer{options, (uint8_t *)buffer};
     detail::serialize<detail::field_attributes{}>(stream, message);
     return stream.p_buffer - start;
 }
@@ -65,13 +66,14 @@ size_t serialize(const auto &message, void *buffer)
  * @example `std::string json;`
  *          `spb::json::serialize(message, json);`
  */
-template <spb::resizable_container Container> size_t serialize(const auto &message, Container &result)
+template <spb::resizable_container Container>
+size_t serialize(const auto &message, Container &result, const serialize_options &options = {})
 {
     static_assert(sizeof(*result.data()) == sizeof(uint8_t));
 
-    const auto size = detail::serialize_size(message);
+    const auto size = detail::serialize_size(message, options);
     result.resize(size);
-    return serialize(message, result.data());
+    return serialize(message, result.data(), options);
 }
 
 /**
@@ -84,10 +86,10 @@ template <spb::resizable_container Container> size_t serialize(const auto &messa
  * @example `auto serialized_message = spb::json::serialize< std::vector< std::byte > >( message );`
  */
 template <spb::resizable_container Container = std::string>
-[[nodiscard]] Container serialize(const auto &message)
+[[nodiscard]] Container serialize(const auto &message, const serialize_options &options = {})
 {
     auto result = Container();
-    serialize(message, result);
+    serialize(message, result, options);
     return result;
 }
 

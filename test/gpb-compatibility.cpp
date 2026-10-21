@@ -270,7 +270,7 @@ void gpb_test(const SPB &spb, const spb::pb::serialize_options &options = {})
 template <typename GPB, typename SPB> void gpb_json(const SPB &spb)
 {
     auto gpb            = GPB();
-    auto spb_serialized = spb::json::serialize(spb);
+    auto spb_serialized = spb::json::serialize(spb, {.quote_inexact_int64 = true});
 
     auto parse_options = google::protobuf::util::JsonParseOptions{};
     REQUIRE(JsonStringToMessage(spb_serialized, &gpb, parse_options).ok());
