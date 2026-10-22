@@ -10,7 +10,7 @@ namespace
 {
 auto base64_encode_size(std::string_view value) -> size_t
 {
-    auto stream = spb::json::detail::ostream_size();
+    auto stream = spb::json::detail::ostream_size{};
     spb::json::detail::base64_encode(stream,
                                      {reinterpret_cast<const std::byte *>(value.data()), value.size()});
     return stream.size;

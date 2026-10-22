@@ -39,9 +39,9 @@ struct ostream_size
 {
     static constexpr bool size_only = true;
 
-    const serialize_options options;
-    size_t size    = 0;
-    bool put_comma = false;
+    const serialize_options options = {};
+    size_t size                     = 0;
+    bool put_comma                  = false;
 
     void write(uint8_t) noexcept
     {
