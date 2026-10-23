@@ -15,11 +15,13 @@
 #include "../to_from_chars.h"
 #include "base64.h"
 #include "field.hpp"
+#include "options.h"
 #include "spb/utf8.h"
 #include <algorithm>
 #include <array>
 #include <charconv>
 #include <cinttypes>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -36,8 +38,10 @@ namespace spb::json::detail
 struct ostream_size
 {
     static constexpr bool size_only = true;
-    size_t size;
-    bool put_comma = false;
+
+    const serialize_options options = {};
+    size_t size                     = 0;
+    bool put_comma                  = false;
 
     void write(uint8_t) noexcept
     {
@@ -54,12 +58,9 @@ struct ostream_buffer
 {
     static constexpr bool size_only = false;
 
+    const serialize_options options;
     uint8_t *p_buffer;
     bool put_comma = false;
-
-    explicit ostream_buffer(void *buffer) : p_buffer((std::uint8_t *)buffer)
-    {
-    }
 
     void write(uint8_t byte) noexcept
     {
@@ -76,13 +77,11 @@ struct ostream_buffer
 struct ostream_writer
 {
     static constexpr bool size_only = false;
-    spb::io::writer on_write;
+
+    const serialize_options options;
+    const spb::io::writer on_write;
     size_t size    = 0;
     bool put_comma = false;
-
-    explicit ostream_writer(spb::io::writer writer) : on_write(writer)
-    {
-    }
 
     void write(uint8_t byte)
     {
@@ -96,7 +95,52 @@ struct ostream_writer
     }
 };
 
-template <field_attributes = field_attributes{}> size_t serialize_size(const auto &value);
+template <field_attributes = field_attributes{}>
+size_t serialize_size(const auto &value, const serialize_options &options);
+
+// Protocol Buffers - Google's data interchange format
+// Copyright 2008 Google Inc.  All rights reserved.
+//
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file or at
+// https://developers.google.com/open-source/licenses/bsd
+//
+// Returns true if x round-trips through being cast to a double, i.e., if
+// x is represenable exactly as a double. This is a slightly weaker condition
+// than x < 2^52.
+template <typename Int> bool RoundTripsThroughDouble(Int x)
+{
+    auto d = static_cast<double>(x);
+    // d has guaranteed to be finite with no fractional part, because it came from
+    // an integer, so we only need to check that it is not outside of the
+    // representable range of `int`. The way to do this is somewhat not obvious:
+    // UINT64_MAX isn't representable, and what it gets rounded to when we go
+    // int->double is unspecified!
+    //
+    // Thus, we have to go through ldexp.
+    double min          = 0;
+    double max_plus_one = std::ldexp(1.0, sizeof(Int) * 8);
+    if (std::is_signed<Int>::value)
+    {
+        max_plus_one /= 2;
+        min = -max_plus_one;
+    }
+
+    if (d < min || d >= max_plus_one)
+    {
+        return false;
+    }
+
+    return static_cast<Int>(d) == x;
+}
+
+void write_uft8(auto &stream, uint32_t codepoint)
+{
+    char buffer[4];
+
+    const auto size = spb::detail::utf8::encode_point(codepoint, buffer);
+    stream.write(buffer, size);
+}
 
 void write_unicode(auto &stream, uint32_t codepoint)
 {
@@ -124,7 +168,7 @@ template <size_t N> void write_string(auto &stream, const char (&string)[N])
     stream.write(string, N - 1);
 }
 
-static constexpr auto is_escape(uint8_t c) -> bool
+inline constexpr auto is_ascii_escape(uint8_t c) -> bool
 {
     switch (c)
     {
@@ -134,18 +178,31 @@ static constexpr auto is_escape(uint8_t c) -> bool
     case '>':
         return true;
     default:
-        return (c < ' ') | (c >= 0x7f);
+        return (c < ' ') || c >= 0x7f;
     }
 }
 
-static constexpr auto has_escape_chars(std::string_view str) -> bool
+inline constexpr auto is_printable_ascii(std::string_view str) -> bool
 {
-    return std::any_of(str.begin(), str.end(), is_escape);
+    return std::none_of(str.begin(), str.end(), is_ascii_escape);
+}
+
+inline constexpr auto is_escape(uint32_t c) -> bool
+{
+    constexpr std::array<std::pair<uint32_t, uint32_t>, 20> escapes = {
+        {{0, 31},        {34, 34},       {60, 60},         {62, 62},         {92, 92},
+         {127, 159},     {173, 173},     {1536, 1539},     {1757, 1757},     {1807, 1807},
+         {6068, 6069},   {8203, 8207},   {8232, 8238},     {8288, 8292},     {8298, 8303},
+         {65279, 65279}, {65529, 65531}, {119155, 119162}, {917505, 917505}, {917536, 917631}}};
+
+    auto it = std::lower_bound(escapes.begin(), escapes.end(), c,
+                               [](auto range, auto c) { return range.second < c; });
+    return it != escapes.end() && it->first <= c;
 }
 
 void write_escaped(auto &stream, std::string_view str)
 {
-    if (!has_escape_chars(str)) [[likely]]
+    if (is_printable_ascii(str)) [[likely]]
     {
         stream.write(str.data(), str.size());
         return;
@@ -153,21 +210,14 @@ void write_escaped(auto &stream, std::string_view str)
 
     uint32_t codepoint = 0;
     uint32_t state     = spb::detail::utf8::ok;
-    bool decoding_utf8 = false;
     for (uint8_t c : str)
     {
-        if (decoding_utf8)
-        {
-            if (spb::detail::utf8::decode_point(&state, &codepoint, c) == spb::detail::utf8::ok)
-            {
-                write_unicode(stream, codepoint);
-                decoding_utf8 = false;
-            }
+        if (spb::detail::utf8::decode_point(&state, &codepoint, c) != spb::detail::utf8::ok) [[unlikely]]
             continue;
-        }
-        if (is_escape(c))
+
+        if (is_escape(codepoint)) [[unlikely]]
         {
-            switch (c)
+            switch (codepoint)
             {
             case '"':
                 write_string(stream, R"(\")");
@@ -191,23 +241,17 @@ void write_escaped(auto &stream, std::string_view str)
                 write_string(stream, R"(\t)");
                 break;
             default:
-                decoding_utf8 = true;
-                if (spb::detail::utf8::decode_point(&state, &codepoint, c) == spb::detail::utf8::ok)
-                {
-                    write_unicode(stream, codepoint);
-                    decoding_utf8 = false;
-                }
+                write_unicode(stream, codepoint);
             }
         }
         else
         {
-            stream.write(c);
+            write_uft8(stream, codepoint);
         }
     }
+
     if (state != spb::detail::utf8::ok) [[unlikely]]
-    {
         throw std::runtime_error("invalid utf8");
-    }
 }
 
 void put_comma_if_needed(auto &stream)
@@ -308,9 +352,27 @@ void serialize(auto &stream, const spb::detail::proto_field_string auto &value)
 template <field_attributes>
 void serialize(auto &stream, const spb::detail::proto_field_int_or_float auto &value)
 {
+    using value_type = std::remove_cvref_t<decltype(value)>;
+
     auto buffer = std::array<char, 32>();
     auto result = spb_std_emu::to_chars(buffer.data(), buffer.data() + sizeof(buffer), value);
-    stream.write(buffer.data(), static_cast<size_t>(result.ptr - buffer.data()));
+    if constexpr (std::is_same_v<value_type, int64_t> || std::is_same_v<value_type, uint64_t>)
+    {
+        if (!stream.options.quote_inexact_int64 || RoundTripsThroughDouble(value)) [[likely]]
+        {
+            stream.write(buffer.data(), static_cast<size_t>(result.ptr - buffer.data()));
+        }
+        else
+        {
+            stream.write('"');
+            stream.write(buffer.data(), static_cast<size_t>(result.ptr - buffer.data()));
+            stream.write('"');
+        }
+    }
+    else
+    {
+        stream.write(buffer.data(), static_cast<size_t>(result.ptr - buffer.data()));
+    }
 }
 
 template <field_attributes attributes> void serialize(auto &stream, const bool &value, std::string_view field)
@@ -522,9 +584,10 @@ void serialize(auto &stream, const spb::detail::proto_enum auto &value, std::str
     serialize_value(stream, value);
 }
 
-template <field_attributes attributes> size_t serialize_size(const auto &value)
+template <field_attributes attributes>
+size_t serialize_size(const auto &value, const serialize_options &options)
 {
-    auto stream = ostream_size();
+    auto stream = ostream_size{options};
     serialize<attributes>(stream, value);
     return stream.size;
 }
