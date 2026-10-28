@@ -1,4 +1,5 @@
 #include "spb/json.hpp"
+#include "spb/json/options.h"
 #include "spb/utf8.h"
 #include <climits>
 #include <cstdint>
@@ -219,8 +220,7 @@ template <typename GPB, typename SPB> void equal(const GPB &gpb, const SPB &spb)
     }
 }
 
-template <typename GPB, typename SPB>
-void gpb_test(const SPB &spb, const spb::pb::serialize_options &options = {})
+template <typename GPB, typename SPB> void gpb_test(const SPB &spb, const spb::pb::serialize_options &options)
 {
     auto gpb            = GPB();
     auto spb_serialized = spb::pb::serialize(spb, options);
@@ -267,10 +267,11 @@ void gpb_test(const SPB &spb, const spb::pb::serialize_options &options = {})
     }
 }
 
-template <typename GPB, typename SPB> void gpb_json(const SPB &spb)
+template <typename GPB, typename SPB>
+void gpb_json(const SPB &spb, const spb::json::serialize_options &options)
 {
     auto gpb            = GPB();
-    auto spb_serialized = spb::json::serialize(spb, {.quote_inexact_int64 = true});
+    auto spb_serialized = spb::json::serialize(spb, options);
 
     auto parse_options = google::protobuf::util::JsonParseOptions{};
     REQUIRE(JsonStringToMessage(spb_serialized, &gpb, parse_options).ok());
@@ -286,17 +287,21 @@ template <typename GPB, typename SPB> void gpb_json(const SPB &spb)
 
     print_options.preserve_proto_field_names = false;
     print_options.unquote_int64_if_possible  = true;
+    print_options.add_whitespace             = options.pretty_print;
+
     gpb_serialized.clear();
     REQUIRE(MessageToJsonString(gpb, &gpb_serialized, print_options).ok());
     REQUIRE(spb::json::deserialize<SPB>(gpb_serialized).value == spb.value);
-    CHECK(gpb_serialized == spb_serialized);
+    if (!options.pretty_print)
+        CHECK(gpb_serialized == spb_serialized);
 }
 
 template <typename GPB, typename SPB> void gpb_compatibility(const SPB &spb)
 {
-    gpb_test<GPB, SPB>(spb);
+    gpb_test<GPB, SPB>(spb, {.delimited = false});
     gpb_test<GPB, SPB>(spb, {.delimited = true});
-    gpb_json<GPB, SPB>(spb);
+    gpb_json<GPB, SPB>(spb, {.quote_inexact_int64 = true, .pretty_print = false});
+    gpb_json<GPB, SPB>(spb, {.quote_inexact_int64 = true, .pretty_print = true});
 }
 
 template <typename GPB, typename SPB, typename POD> void gpb_compatibility_enum()

@@ -92,7 +92,7 @@ void base64_decode_string(spb::detail::proto_field_bytes auto &output, istream &
     if (!stream.consume('"')) [[unlikely]]
         throw std::runtime_error("expecting '\"'");
 
-    if (stream.consume_and_skip_white_space('"'))
+    if (stream.consume('"'))
         return;
 
     auto mask = uint8_t(0);

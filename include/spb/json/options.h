@@ -20,6 +20,11 @@ struct serialize_options
      * It will output {"value":"18446744073709551614"} instead of {"value":18446744073709551614}
      */
     bool quote_inexact_int64 = false;
+
+    /**
+     * @brief Adds whitespace, indentation, and line breaks to make it human-readable.
+     */
+    bool pretty_print = false;
 };
 
 } // namespace spb::json
