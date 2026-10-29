@@ -34,7 +34,7 @@ jobs:
 
       - name: Configure
         env:
-          CMAKE_SYSTEM_VERSION: ${{ matrix.sdk }}
+          WINDOWS_SDK_VERSION: ${{ matrix.sdk }}
         run: |
           $cmakeArgs = @(
             "-S", ".",
@@ -44,8 +44,9 @@ jobs:
             "-DSPB_PROTO_BUILD_EXAMPLES=ON"
           )
 
-          if ($env:CMAKE_SYSTEM_VERSION) {
-            $cmakeArgs += "-DCMAKE_SYSTEM_VERSION=$env:CMAKE_SYSTEM_VERSION"
+          if ($env:WINDOWS_SDK_VERSION) {
+            $env:WindowsSDKVersion = "$($env:WINDOWS_SDK_VERSION)\"
+            $cmakeArgs += "-DCMAKE_SYSTEM_VERSION=$env:WINDOWS_SDK_VERSION"
           }
 
           cmake @cmakeArgs
