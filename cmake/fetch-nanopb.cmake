@@ -3,7 +3,7 @@ Include(FetchContent)
 FetchContent_Declare(
     nanopb
     GIT_REPOSITORY https://github.com/nanopb/nanopb.git
-    GIT_TAG 0.4.9.1
+    GIT_TAG 0.4.9.2
     GIT_SHALLOW TRUE
   )
 FetchContent_MakeAvailable(nanopb)

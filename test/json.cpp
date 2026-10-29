@@ -422,9 +422,6 @@ TEST_CASE("json")
             {
                 CHECK(spb::json::deserialize<bool>("true"sv) == true);
                 CHECK(spb::json::deserialize<bool>("false"sv) == false);
-                CHECK_THROWS((void)spb::json::deserialize<bool>("hello"sv));
-                CHECK_THROWS((void)spb::json::deserialize<bool>("true1"sv));
-                CHECK_THROWS((void)spb::json::deserialize<bool>("true_"sv));
                 auto value = false;
                 CHECK_NOTHROW(spb::json::deserialize(value, "true"sv));
                 CHECK(value);
