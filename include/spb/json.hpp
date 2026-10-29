@@ -32,7 +32,7 @@ size_t serialize(const auto &message, spb::io::writer on_write, const serialize_
 {
     auto stream = detail::ostream_writer{options, on_write};
     detail::serialize<detail::field_attributes{}>(stream, message);
-    return stream.size;
+    return stream.end();
 }
 
 /**
@@ -52,7 +52,7 @@ size_t serialize(const auto &message, void *buffer, const serialize_options &opt
     const auto start = (uint8_t *)buffer;
     auto stream      = detail::ostream_buffer{options, (uint8_t *)buffer};
     detail::serialize<detail::field_attributes{}>(stream, message);
-    return stream.p_buffer - start;
+    return stream.end(start);
 }
 
 /**

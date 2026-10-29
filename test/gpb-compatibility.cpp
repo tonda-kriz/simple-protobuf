@@ -292,8 +292,7 @@ void gpb_json(const SPB &spb, const spb::json::serialize_options &options)
     gpb_serialized.clear();
     REQUIRE(MessageToJsonString(gpb, &gpb_serialized, print_options).ok());
     REQUIRE(spb::json::deserialize<SPB>(gpb_serialized).value == spb.value);
-    if (!options.pretty_print)
-        CHECK(gpb_serialized == spb_serialized);
+    CHECK(gpb_serialized == spb_serialized);
 }
 
 template <typename GPB, typename SPB> void gpb_compatibility(const SPB &spb)

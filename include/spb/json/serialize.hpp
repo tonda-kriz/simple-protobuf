@@ -40,8 +40,9 @@ struct ostream_size
     static constexpr bool size_only = true;
 
     const serialize_options options = {};
-    size_t size                     = 0;
     bool put_comma                  = false;
+    size_t indent                   = 0;
+    size_t size                     = 0;
 
     void write(uint8_t) noexcept
     {
@@ -52,6 +53,14 @@ struct ostream_size
     {
         size += data_size;
     }
+
+    auto end() -> size_t
+    {
+        if (options.pretty_print)
+            write('\n');
+
+        return size;
+    }
 };
 
 struct ostream_buffer
@@ -61,6 +70,7 @@ struct ostream_buffer
     const serialize_options options;
     uint8_t *p_buffer;
     bool put_comma = false;
+    size_t indent  = 0;
 
     void write(uint8_t byte) noexcept
     {
@@ -72,6 +82,14 @@ struct ostream_buffer
         memcpy(p_buffer, data, data_size);
         p_buffer += data_size;
     }
+
+    auto end(uint8_t *start) -> size_t
+    {
+        if (options.pretty_print)
+            write('\n');
+
+        return p_buffer - start;
+    }
 };
 
 struct ostream_writer
@@ -81,6 +99,7 @@ struct ostream_writer
     const serialize_options options;
     const spb::io::writer on_write;
     size_t size    = 0;
+    size_t indent  = 0;
     bool put_comma = false;
 
     void write(uint8_t byte)
@@ -92,6 +111,14 @@ struct ostream_writer
     {
         on_write(data, data_size);
         size += data_size;
+    }
+
+    auto end() -> size_t
+    {
+        if (options.pretty_print)
+            write('\n');
+
+        return size;
     }
 };
 
@@ -254,21 +281,103 @@ void write_escaped(auto &stream, std::string_view str)
         throw std::runtime_error("invalid utf8");
 }
 
+void put_newline(auto &stream)
+{
+    stream.write('\n');
+}
+
+void indent_increment(auto &stream)
+{
+    ++stream.indent;
+}
+
+void indent_decrement(auto &stream)
+{
+    assert(stream.indent > 0);
+
+    --stream.indent;
+}
+
+void indent(auto &stream)
+{
+    for (size_t i = 0; i < stream.indent; ++i)
+    {
+        stream.write(' ');
+    }
+}
+
+void indent_if_needed(auto &stream)
+{
+    if (!stream.options.pretty_print)
+        return;
+
+    put_newline(stream);
+    indent(stream);
+}
+
 void put_comma_if_needed(auto &stream)
 {
     if (stream.put_comma)
         stream.write(',');
 
     stream.put_comma = true;
+    indent_if_needed(stream);
 }
 
-void serialize_key(auto &stream, std::string_view key)
+void container_begin(auto &stream, char c)
+{
+    stream.put_comma = false;
+    stream.write(c);
+
+    if (stream.options.pretty_print)
+        indent_increment(stream);
+}
+
+void container_end(auto &stream, char c)
+{
+    if (!stream.options.pretty_print) [[likely]]
+    {
+        stream.put_comma = true;
+        stream.write(c);
+        return;
+    }
+
+    indent_decrement(stream);
+    if (stream.put_comma)
+    {
+        put_newline(stream);
+        indent(stream);
+    }
+
+    stream.put_comma = true;
+    stream.write(c);
+}
+
+void serialize_key_value(auto &stream, const spb::detail::proto_field_string auto &key)
+{
+    stream.write(key.data(), key.size());
+}
+
+void serialize_key_value(auto &stream, const std::string_view &key)
+{
+    stream.write(key.data(), key.size());
+}
+
+void serialize_key_value(auto &stream, const auto &key)
+{
+    serialize<field_attributes{}>(stream, key);
+}
+
+void serialize_key(auto &stream, const auto &key)
 {
     put_comma_if_needed(stream);
 
     stream.write('"');
-    stream.write(key.data(), key.size());
+    serialize_key_value(stream, key);
     write_string(stream, R"(":)");
+
+    if (stream.options.pretty_print)
+        stream.write(' ');
 }
 
 template <field_attributes> void serialize(auto &stream, const bool &value);
@@ -439,8 +548,7 @@ void serialize(auto &stream, const spb::detail::proto_label_repeated auto &value
     if constexpr (!stream_type::size_only && attributes.max_count)
         check_size(value.size(), attributes.max_count);
 
-    stream.write('[');
-    stream.put_comma = false;
+    container_begin(stream, '[');
     for (const auto &v : value)
     {
         put_comma_if_needed(stream);
@@ -454,15 +562,13 @@ void serialize(auto &stream, const spb::detail::proto_label_repeated auto &value
             serialize<attributes>(stream, v);
         }
     }
-    stream.write(']');
-    stream.put_comma = true;
+    container_end(stream, ']');
 }
 
 template <field_attributes attributes>
 void serialize(auto &stream, const spb::detail::proto_label_repeated_fixed_size auto &value)
 {
-    stream.write('[');
-    stream.put_comma = false;
+    container_begin(stream, '[');
     for (size_t i = 0; i < value.size(); i++)
     {
         put_comma_if_needed(stream);
@@ -476,8 +582,7 @@ void serialize(auto &stream, const spb::detail::proto_label_repeated_fixed_size 
             serialize<attributes>(stream, value[i]);
         }
     }
-    stream.write(']');
-    stream.put_comma = true;
+    container_end(stream, ']');
 }
 
 template <field_attributes attributes>
@@ -500,32 +605,15 @@ void serialize(auto &stream, const spb::detail::proto_map auto &map, std::string
 
 template <field_attributes attributes> void serialize(auto &stream, const spb::detail::proto_map auto &map)
 {
-    using map_type = std::remove_cvref_t<decltype(map)>;
-    using key_type = typename map_type::key_type;
-
-    stream.write('{');
-    stream.put_comma = false;
+    container_begin(stream, '{');
     for (const auto &[map_key, map_value] : map)
     {
-        if constexpr (std::is_same_v<key_type, std::string_view> || std::is_same_v<key_type, std::string>)
-        {
-            serialize_key(stream, map_key);
-        }
-        else
-        {
-            if (stream.put_comma)
-                stream.write(',');
-
-            stream.write('"');
-            serialize<attributes>(stream, map_key);
-            write_string(stream, R"(":)");
-        }
+        serialize_key(stream, map_key);
         stream.put_comma = false;
         serialize<attributes>(stream, map_value);
         stream.put_comma = true;
     }
-    stream.write('}');
-    stream.put_comma = true;
+    container_end(stream, '}');
 }
 
 template <field_attributes attributes>
@@ -558,11 +646,9 @@ void serialize(auto &stream, const std::unique_ptr<T> &p_value, std::string_view
 
 template <field_attributes> void serialize(auto &stream, const spb::detail::proto_message auto &value)
 {
-    stream.write('{');
-    stream.put_comma = false;
+    container_begin(stream, '{');
     serialize_value(stream, value);
-    stream.write('}');
-    stream.put_comma = true;
+    container_end(stream, '}');
 }
 
 template <field_attributes attributes>
@@ -589,7 +675,7 @@ size_t serialize_size(const auto &value, const serialize_options &options)
 {
     auto stream = ostream_size{options};
     serialize<attributes>(stream, value);
-    return stream.size;
+    return stream.end();
 }
 
 } // namespace spb::json::detail
