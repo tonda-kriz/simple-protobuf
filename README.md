@@ -173,9 +173,3 @@ See the [benchmark](benchmark/) directory for more details.
 ## Missing features
 
 * gRPC is not implemented
-
-## Status
-
-* [x] Make it work
-* [x] Make it right
-* [x] Make it fast
