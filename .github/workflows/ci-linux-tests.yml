@@ -2,9 +2,9 @@ name: Linux GPB compatibility
 
 on:
   push:
-    branches: [ "master" ]
+    branches: ["master"]
   pull_request:
-    branches: [ "master" ]
+    branches: ["master"]
 
 jobs:
   build:
@@ -12,115 +12,119 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     strategy:
-      # Set fail-fast to false to ensure that feedback is delivered for all matrix combinations. Consider changing this to true when your workflow is stable.
       fail-fast: false
-
       matrix:
         include:
-          - os: ubuntu-24.04
+          - os: ubuntu-latest
             compiler: gcc
             build_type: Release
-            version: '13'
-            sanitizer: 'OFF'
-          - os: ubuntu-24.04
+            version: "13"
+            sanitizer: "OFF"
+          - os: ubuntu-latest
             compiler: gcc
             build_type: Release
-            version: '14'
-            sanitizer: 'ON'
-          - os: ubuntu-24.04
+            version: "14"
+            sanitizer: "ON"
+          - os: ubuntu-latest
             compiler: gcc
             build_type: Release
-            version: '14'
-            sanitizer: 'OFF'
-          - os: ubuntu-24.04
+            version: "14"
+            sanitizer: "OFF"
+          - os: ubuntu-latest
             compiler: gcc
             build_type: Release
-            version: '15'
-            sanitizer: 'OFF'
-          - os: ubuntu-24.04
+            version: "15"
+            sanitizer: "OFF"
+          - os: ubuntu-latest
             compiler: gcc
             build_type: Release
-            version: '16'
-            sanitizer: 'OFF'
-          - os: ubuntu-24.04
+            version: "16"
+            sanitizer: "OFF"
+          - os: ubuntu-latest
             compiler: gcc
             build_type: Debug
-            version: '14'
-            sanitizer: 'ON'
-          - os: ubuntu-24.04
+            version: "14"
+            sanitizer: "ON"
+          - os: ubuntu-latest
             compiler: clang
             build_type: Release
-            version: '17'
-            sanitizer: 'OFF'
-          - os: ubuntu-24.04
+            version: "17"
+            sanitizer: "OFF"
+          - os: ubuntu-latest
             compiler: clang
             build_type: Release
-            version: '18'
-            sanitizer: 'OFF'
-          - os: ubuntu-24.04
+            version: "18"
+            sanitizer: "OFF"
+          - os: ubuntu-latest
             compiler: clang
             build_type: Release
-            version: '19'
-            sanitizer: 'OFF'
-          - os: ubuntu-24.04
+            version: "19"
+            sanitizer: "OFF"
+          - os: ubuntu-latest
             compiler: clang
             build_type: Release
-            version: '20'
-            sanitizer: 'OFF'
-          - os: ubuntu-24.04
+            version: "20"
+            sanitizer: "OFF"
+          - os: ubuntu-latest
             compiler: clang
             build_type: Release
-            version: '18'
-            sanitizer: 'ON'
-          - os: ubuntu-24.04
+            version: "18"
+            sanitizer: "ON"
+          - os: ubuntu-latest
             compiler: clang
             build_type: Debug
-            version: '18'
-            sanitizer: 'ON'
+            version: "18"
+            sanitizer: "ON"
+
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-    - name: Set reusable strings
-      # Turn repeated input strings (such as the build output directory) into step outputs. These step outputs can be used throughout the workflow file.
-      id: strings
-      shell: bash
-      run: |
-        echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+      - name: Install common dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ninja-build ccache software-properties-common
 
-    - name: Install Linux dependencies
-      run: |
-          sudo add-apt-repository ppa:ubuntu-toolchain-r/test
-          sudo apt-get install ninja-build
-    - name: Install gcc
-      if: matrix.compiler == 'gcc'
-      run: |
-          sudo apt-get install g++-${{ matrix.version }}
-          sudo apt-get install gcc-${{ matrix.version }}
-          echo "CXX=g++-${{ matrix.version }}" >> ${GITHUB_ENV}
-          echo "CC=gcc-${{ matrix.version }}" >> ${GITHUB_ENV}
-    - name: Install clang
-      if: matrix.compiler == 'clang'
-      run: |
-            sudo apt-get install clang-${{ matrix.version }}
-            echo "CXX=clang++-${{ matrix.version }}" >> ${GITHUB_ENV}
-            echo "CC=clang-${{ matrix.version }}" >> ${GITHUB_ENV}
-    - name: Configure CMake
-      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
-      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-      run: >
-        cmake -B ${{ steps.strings.outputs.build-output-dir }}
-        -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
-        -DSPB_PROTO_BUILD_TESTS=ON
-        -DSPB_PROTO_BUILD_EXAMPLES=ON
-        -DSPB_PROTO_BUILD_COMPATIBILITY_TESTS=ON
-        -DSPB_PROTO_BUILD_ETL_TESTS=ON
-        -DSPB_PROTO_USE_ADDRESS_SANITIZER=${{ matrix.sanitizer }}
-        -DSPB_PROTO_USE_UB_SANITIZER=${{ matrix.sanitizer }}
-        -S ${{ github.workspace }}
+      - name: Install GCC
+        if: matrix.compiler == 'gcc'
+        run: |
+          sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            gcc-${{ matrix.version }} g++-${{ matrix.version }}
+          printf 'CC=gcc-%s\nCXX=g++-%s\n' \
+            '${{ matrix.version }}' '${{ matrix.version }}' >> "$GITHUB_ENV"
 
-    - name: Build
-      run: cmake --build ${{ steps.strings.outputs.build-output-dir }}
+      - name: Install Clang
+        if: matrix.compiler == 'clang'
+        run: |
+          sudo apt-get install -y --no-install-recommends clang-${{ matrix.version }}
+          printf 'CC=clang-%s\nCXX=clang++-%s\n' \
+            '${{ matrix.version }}' '${{ matrix.version }}' >> "$GITHUB_ENV"
 
-    - name: Test
-      working-directory: ${{ steps.strings.outputs.build-output-dir }}
-      run: ctest --rerun-failed --output-on-failure
+      - name: Cache ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ccache
+          key: ${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.version }}-${{ matrix.build_type }}-${{ matrix.sanitizer }}-${{ hashFiles('**/CMakeLists.txt', '**/*.cmake') }}
+          restore-keys: |
+            ${{ runner.os }}-${{ matrix.compiler }}-${{ matrix.version }}-${{ matrix.build_type }}-${{ matrix.sanitizer }}-
+
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} \
+            -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+            -DSPB_PROTO_BUILD_TESTS=ON \
+            -DSPB_PROTO_BUILD_EXAMPLES=ON \
+            -DSPB_PROTO_BUILD_COMPATIBILITY_TESTS=ON \
+            -DSPB_PROTO_BUILD_ETL_TESTS=ON \
+            -DSPB_PROTO_USE_ADDRESS_SANITIZER=${{ matrix.sanitizer }} \
+            -DSPB_PROTO_USE_UB_SANITIZER=${{ matrix.sanitizer }}
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
