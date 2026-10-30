@@ -1,103 +1,131 @@
 name: Code coverage report
 
 on:
-    push:
-        branches: ['master']
-    workflow_dispatch:
+  push:
+    branches: ["master"]
+  workflow_dispatch:
 
-permissions: write-all
+permissions:
+  contents: read
 
-# Allow one concurrent deployment
 concurrency:
-    group: 'pages'
-    cancel-in-progress: true
+  group: pages
+  cancel-in-progress: true
 
 jobs:
-    coverage:
-        environment:
-            name: github-pages
-            url: ${{ steps.deployment.outputs.page_url }}
-        runs-on: ubuntu-24.04
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v4
+  coverage:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
 
-            - name: Set reusable strings
-              # Turn repeated input strings (such as the build output directory) into step outputs. These step outputs can be used throughout the workflow file.
-              id: strings
-              shell: bash
-              run: |
-                echo "build-output-dir=${{ github.workspace }}/build" >> "$GITHUB_OUTPUT"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-            - name: Install Linux dependencies
-              run: |
-                  sudo add-apt-repository ppa:ubuntu-toolchain-r/test
-                  sudo apt-get install ninja-build lcov g++-14 gcc-14 bc
-                  echo "CXX=g++-14" >> ${GITHUB_ENV}
-                  echo "CC=gcc-14" >> ${GITHUB_ENV}
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            ninja-build gcc-16 g++-16 lcov
 
-            - name: Configure CMake
-              # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
-              # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-              run: >
-                cmake -B ${{ steps.strings.outputs.build-output-dir }}
-                -G Ninja .
-                -DCMAKE_C_COMPILER=gcc-14
-                -DCMAKE_CXX_COMPILER=g++-14
-                -DSPB_PROTO_BUILD_TESTS=ON
-                -DCMAKE_BUILD_TYPE=Debug
-                -DSPB_PROTO_USE_COVERAGE=ON
-                -S ${{ github.workspace }}
+      - name: Install latest LCOV
+        run: |
+          git clone --depth 1 --branch v2.6 \
+            https://github.com/linux-test-project/lcov.git \
+            "$RUNNER_TEMP/lcov"
+          sudo make -C "$RUNNER_TEMP/lcov" install LCOV_NO_DOC=1 LCOV_NO_XS=1
+          lcov --version
 
-            - name: Build
-              run: cmake --build ${{ steps.strings.outputs.build-output-dir }} --target unit_tests
+      - name: Configure
+        run: |
+          cmake -S . -B build -G Ninja \
+            -DCMAKE_C_COMPILER=gcc-16 \
+            -DCMAKE_CXX_COMPILER=g++-16 \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DSPB_PROTO_BUILD_TESTS=ON \
+            -DSPB_PROTO_USE_COVERAGE=ON
 
-            - name: Test
-              working-directory: ${{ steps.strings.outputs.build-output-dir }}
-              # Execute tests defined by the CMake configuration. Note that --build-config is needed because the default Windows generator is a multi-config generator (Visual Studio generator).
-              # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-              run: |
-                ctest --output-on-failure
-                mkdir report
+      - name: Build
+        run: cmake --build build --target unit_tests --parallel
 
-            - name: coverage report
-              working-directory: ${{ steps.strings.outputs.build-output-dir }}
-              run: |
-                lcov --capture -o coverage.info  --directory . --exclude '/usr/*' --exclude '*/test/*' -q --gcov-tool gcov-14
-                coverage=$(genhtml coverage.info --include 'include/*' --output-directory report/library | grep -P 'lines\.+'| grep -oP '[0-9]+' | head -n1)
-                if (( $(echo "$coverage <= 50" | bc -l) )); then
-                  color=red
-                elif (( $(echo "$coverage > 80" | bc -l) )); then
-                  color=brightgreen
-                else
-                  color=orange
-                fi
-                curl "https://img.shields.io/badge/library_coverage-$coverage%25-$color?logo=github" > report/library/coverage.svg
-                coverage=$(genhtml coverage.info --include 'compiler/*' --output-directory report/compiler | grep -P 'lines\.+'| grep -oP '[0-9]+' | head -n1)
-                if (( $(echo "$coverage <= 50" | bc -l) )); then
-                  color=red
-                elif (( $(echo "$coverage > 80" | bc -l) )); then
-                  color=brightgreen
-                else
-                  color=orange
-                fi
-                curl "https://img.shields.io/badge/protoc_coverage-$coverage%25-$color?logo=github" > report/compiler/coverage.svg
+      - name: Test
+        run: ctest --test-dir build --output-on-failure --parallel 2
 
-            - name: Delete deployment
-              uses: strumwolf/delete-deployment-environment@v2
-              with:
-                token: ${{ secrets.GITHUB_TOKEN }}
-                environment: github-pages
-                onlyRemoveDeployments: true
+      - name: Generate coverage reports
+        working-directory: build
+        shell: bash
+        run: |
+          set -euo pipefail
 
-            - name: Setup Pages
-              uses: actions/configure-pages@v4
+          lcov --capture \
+            --directory . \
+            --gcov-tool gcov-16 \
+            --exclude '/usr/*' \
+            --exclude '*/test/*' \
+            --output-file coverage.info \
+            --quiet
 
-            - name: Upload artifact
-              uses: actions/upload-pages-artifact@v3
-              with:
-                  path: ${{ steps.strings.outputs.build-output-dir }}/report
+          make_report() {
+            local label="$1"
+            local source_pattern="$2"
+            local output_dir="$3"
+            local tracefile="${label}.info"
+            local summary
+            local coverage
+            local color
 
-            - name: Deploy to GitHub Pages
-              id: deployment
-              uses: actions/deploy-pages@v4
+            lcov --extract coverage.info "$source_pattern" \
+              --output-file "$tracefile" \
+              --quiet
+
+            mkdir -p "$output_dir"
+            genhtml "$tracefile" --output-directory "$output_dir"
+
+            summary="$(lcov --summary "$tracefile" 2>&1)"
+            coverage="$(printf '%s\n' "$summary" |
+              awk -F'[:%]' '/lines/ {
+                gsub(/[[:space:]]/, "", $2)
+                print $2
+                exit
+              }')"
+
+            if [[ -z "$coverage" ]]; then
+              echo "Could not parse line coverage for $label" >&2
+              exit 1
+            fi
+
+            if awk -v value="$coverage" 'BEGIN { exit !(value <= 50) }'; then
+              color=red
+            elif awk -v value="$coverage" 'BEGIN { exit !(value > 80) }'; then
+              color=brightgreen
+            else
+              color=orange
+            fi
+
+            curl --fail --silent --show-error --retry 3 \
+              "https://img.shields.io/badge/${label}_coverage-${coverage}%25-${color}?logo=github" \
+              --output "$output_dir/coverage.svg"
+          }
+
+          make_report library '*/include/*' report/library
+          make_report protoc '*/compiler/*' report/compiler
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: build/report
+
+  deploy:
+    if: github.ref == 'refs/heads/master'
+    needs: coverage
+    runs-on: ubuntu-26.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
