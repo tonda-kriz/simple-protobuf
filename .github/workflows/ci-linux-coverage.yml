@@ -3,13 +3,15 @@ name: Code coverage report
 on:
   push:
     branches: ["master"]
+  pull_request:
+    branches: ["master"]
   workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: pages
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -27,14 +29,6 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
             ninja-build gcc-16 g++-16 lcov
 
-      - name: Install latest LCOV
-        run: |
-          git clone --depth 1 --branch v2.6 \
-            https://github.com/linux-test-project/lcov.git \
-            "$RUNNER_TEMP/lcov"
-          sudo make -C "$RUNNER_TEMP/lcov" install LCOV_NO_DOC=1 LCOV_NO_XS=1
-          lcov --version
-
       - name: Configure
         run: |
           cmake -S . -B build -G Ninja \
@@ -48,9 +42,9 @@ jobs:
         run: cmake --build build --target unit_tests --parallel
 
       - name: Test
-        run: ctest --test-dir build --output-on-failure --parallel 2
+        run: ctest --test-dir build --output-on-failure
 
-      - name: Generate coverage reports
+      - name: Capture library coverage
         working-directory: build
         shell: bash
         run: |
@@ -59,63 +53,80 @@ jobs:
           lcov --capture \
             --directory . \
             --gcov-tool gcov-16 \
+            --rc geninfo_unexecuted_blocks=1 \
             --exclude '/usr/*' \
             --exclude '*/test/*' \
+            --output-file coverage-all.info \
+            --quiet
+
+          lcov --extract coverage-all.info '*/include/*' \
             --output-file coverage.info \
             --quiet
 
-          make_report() {
-            local label="$1"
-            local source_pattern="$2"
-            local output_dir="$3"
-            local tracefile="${label}.info"
-            local summary
-            local coverage
-            local color
+      - name: Show library coverage summary
+        working-directory: build
+        shell: bash
+        run: |
+          set -euo pipefail
 
-            lcov --extract coverage.info "$source_pattern" \
-              --output-file "$tracefile" \
-              --quiet
+          summary="$(lcov --summary coverage.info 2>&1)"
+          printf '%s\n' "$summary"
 
-            mkdir -p "$output_dir"
-            genhtml "$tracefile" --output-directory "$output_dir"
+          {
+            echo "## Library coverage"
+            echo
+            echo '```text'
+            printf '%s\n' "\$summary"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
-            summary="$(lcov --summary "$tracefile" 2>&1)"
-            coverage="$(printf '%s\n' "$summary" |
+      - name: Generate library report
+        if: github.event_name != 'pull_request'
+        working-directory: build
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          report_dir="report/library"
+          mkdir -p "$report_dir"
+          genhtml coverage.info \
+            --output-directory "$report_dir" \
+            --quiet
+
+          coverage="$(
+            lcov --summary coverage.info 2>&1 |
               awk -F'[:%]' '/lines/ {
                 gsub(/[[:space:]]/, "", $2)
                 print $2
                 exit
-              }')"
+              }'
+          )"
 
-            if [[ -z "$coverage" ]]; then
-              echo "Could not parse line coverage for $label" >&2
-              exit 1
-            fi
+          if [[ -z "$coverage" ]]; then
+            echo "Could not parse library line coverage" >&2
+            exit 1
+          fi
 
-            if awk -v value="$coverage" 'BEGIN { exit !(value <= 50) }'; then
-              color=red
-            elif awk -v value="$coverage" 'BEGIN { exit !(value > 80) }'; then
-              color=brightgreen
-            else
-              color=orange
-            fi
+          if awk -v value="$coverage" 'BEGIN { exit !(value <= 50) }'; then
+            color=red
+          elif awk -v value="$coverage" 'BEGIN { exit !(value > 80) }'; then
+            color=brightgreen
+          else
+            color=orange
+          fi
 
-            curl --fail --silent --show-error --retry 3 \
-              "https://img.shields.io/badge/${label}_coverage-${coverage}%25-${color}?logo=github" \
-              --output "$output_dir/coverage.svg"
-          }
-
-          make_report library '*/include/*' report/library
-          make_report protoc '*/compiler/*' report/compiler
+          curl --fail --silent --show-error --retry 3 \
+            "https://img.shields.io/badge/library_coverage-${coverage}%25-${color}?logo=github" \
+            --output "$report_dir/coverage.svg"
 
       - name: Upload Pages artifact
+        if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v4
         with:
           path: build/report
 
   deploy:
-    if: github.ref == 'refs/heads/master'
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/master'
     needs: coverage
     runs-on: ubuntu-26.04
     environment:
