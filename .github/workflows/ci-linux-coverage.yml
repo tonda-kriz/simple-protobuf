@@ -27,7 +27,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            ninja-build gcc-16 g++-16
+            ninja-build gcc-16 g++-16 libcapture-tiny-perl
 
       - name: Install LCOV
         run: |
