@@ -1,14 +1,15 @@
-/***************************************************************************\
-* Name        : function_ref                                                *
-* Description : non-owning reference to a callable                          *
-* Author      : LLVM                                                        *
-* Reference   : https://llvm.org/doxygen/classllvm_1_1function__ref_3_01Ret_07Params_8_8_8_08_4.html
-*
-* ------------------------------------------------------------------------- *
-* This is free software; you can redistribute it and/or modify it under the *
-* terms of the MIT license. A copy of the license can be found in the file  *
-* "LICENSE" at the root of this distribution.                               *
-\***************************************************************************/
+/*
+ ==============================================================================
+ The LLVM Project is under the Apache License v2.0 with LLVM Exceptions:
+ ==============================================================================
+
+                                  Apache License
+                            Version 2.0, January 2004
+                         http://www.apache.org/licenses/
+ * Copyright LLVM
+ * https://llvm.org/doxygen/classllvm_1_1function__ref_3_01Ret_07Params_8_8_8_08_4.html
+ */
+
 #pragma once
 #pragma once
 

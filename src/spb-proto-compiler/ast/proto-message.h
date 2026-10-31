@@ -1,13 +1,10 @@
-/***************************************************************************\
-* Name        : proto ast                                                   *
-* Description : data structure for message                                  *
-* Link        : https://protobuf.dev/reference/protobuf/proto3-spec/#message_definition *
-* Author      : antonin.kriz@gmail.com                                      *
-* ------------------------------------------------------------------------- *
-* This is free software; you can redistribute it and/or modify it under the *
-* terms of the MIT license. A copy of the license can be found in the file  *
-* "LICENSE" at the root of this distribution.                               *
-\***************************************************************************/
+/*
+ * Protobuf compiler - proto message storage.
+ *
+ * Copyright (c) 2024 Antonin Kriz <antonin.kriz@gmail.com>
+ * https://protobuf.dev/reference/protobuf/proto3-spec/#message_definition
+ * Released under the MIT License. See LICENSE in the project root.
+ */
 
 #pragma once
 

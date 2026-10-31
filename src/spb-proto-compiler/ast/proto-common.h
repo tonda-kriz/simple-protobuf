@@ -1,13 +1,10 @@
-/***************************************************************************\
-* Name        : proto ast                                                   *
-* Description : data structure for common definitions                       *
-* Link        : https://protobuf.dev/programming-guides/proto3/             *
-* Author      : antonin.kriz@gmail.com                                      *
-* ------------------------------------------------------------------------- *
-* This is free software; you can redistribute it and/or modify it under the *
-* terms of the MIT license. A copy of the license can be found in the file  *
-* "LICENSE" at the root of this distribution.                               *
-\***************************************************************************/
+/*
+ * Protobuf compiler - common proto field attributes.
+ *
+ * Copyright (c) 2024 Antonin Kriz <antonin.kriz@gmail.com>
+ * https://protobuf.dev/programming-guides/proto3/
+ * Released under the MIT License. See LICENSE in the project root.
+ */
 
 #pragma once
 
@@ -16,7 +13,6 @@
 #include <cstdint>
 #include <string>
 #include <string_view>
-#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 

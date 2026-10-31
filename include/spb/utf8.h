@@ -1,14 +1,11 @@
+/*
+ * Protobuf serialization library - utf8 support.
+ *
+ * Copyright (c) 2024 Antonin Kriz <antonin.kriz@gmail.com>
+ * Reference: https://bjoern.hoehrmann.de/utf-8/decoder/dfa/
+ * Released under the MIT License. See LICENSE in the project root.
+ */
 
-/***************************************************************************\
-* Name        : utf8                                                        *
-* Description : utf8 validation and utf8 to unicode convert                 *
-* Author      : antonin.kriz@gmail.com                                      *
-* reference   : https://bjoern.hoehrmann.de/utf-8/decoder/dfa/              *
-* ------------------------------------------------------------------------- *
-* This is free software; you can redistribute it and/or modify it under the *
-* terms of the MIT license. A copy of the license can be found in the file  *
-* "LICENSE" at the root of this distribution.                               *
-\***************************************************************************/
 #pragma once
 
 #include <cstddef>

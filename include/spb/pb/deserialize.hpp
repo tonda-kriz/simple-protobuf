@@ -1,12 +1,9 @@
-/***************************************************************************\
-* Name        : deserialize library for protobuf                            *
-* Description : all protobuf deserialization functions                      *
-* Author      : antonin.kriz@gmail.com                                      *
-* ------------------------------------------------------------------------- *
-* This is free software; you can redistribute it and/or modify it under the *
-* terms of the MIT license. A copy of the license can be found in the file  *
-* "LICENSE" at the root of this distribution.                               *
-\***************************************************************************/
+/*
+ * Protobuf serialization library - protobuf deserialize library.
+ *
+ * Copyright (c) 2024 Antonin Kriz <antonin.kriz@gmail.com>
+ * Released under the MIT License. See LICENSE in the project root.
+ */
 
 #pragma once
 
@@ -629,8 +626,8 @@ void deserialize(auto &stream, spb::detail::proto_map auto &value, wire_type typ
 
     check_wire_type_or_throw(type, wire_type::length_delimited);
 
-    auto pair          = std::pair<key_type, mapped_type>();
-    auto key_or_value_defined   = false;
+    auto pair                 = std::pair<key_type, mapped_type>();
+    auto key_or_value_defined = false;
     while (!stream.empty())
     {
         const auto tag          = tag_type(read_varint<uint32_t>(stream));

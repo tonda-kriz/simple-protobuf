@@ -1,12 +1,9 @@
-/***************************************************************************\
-* Name        : C++ ostream with indentation                                *
-* Description : Insert space indentation after new line. '{', '}' alter indentation *
-* Author      : antonin.kriz@gmail.com                                      *
-* ------------------------------------------------------------------------- *
-* This is free software; you can redistribute it and/or modify it under the *
-* terms of the MIT license. A copy of the license can be found in the file  *
-* "LICENSE" at the root of this distribution.                               *
-\***************************************************************************/
+/*
+ * Protobuf compiler - Pretty print/indent support
+ *
+ * Copyright (c) 2024 Antonin Kriz <antonin.kriz@gmail.com>
+ * Released under the MIT License. See LICENSE in the project root.
+ */
 
 #pragma once
 
