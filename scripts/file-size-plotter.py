@@ -1,7 +1,6 @@
 import os
 import sys
 from collections import defaultdict
-#from turtle import color
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -16,7 +15,7 @@ def is_executable(file_path: str) -> bool:
 
 def get_base_name(name: str) -> str:
     """Extract base name by removing known prefixes."""
-    for prefix in color_map.keys():
+    for prefix in color_map:
         if name.startswith(prefix):
             return name[len(prefix) :]
     return name
@@ -56,7 +55,7 @@ def main():
     for exe in executables:
         base = get_base_name(exe["filename"])
         prefix = next(
-            (p for p in color_map.keys() if exe["filename"].startswith(p)),
+            (p for p in color_map if exe["filename"].startswith(p)),
             "other",
         )
         groups[base][prefix] = exe["size"]
@@ -70,7 +69,7 @@ def main():
     bar_width = 0.22
     x = np.arange(len(base_names))
 
-    fig, ax = plt.subplots(figsize=(max(12, len(base_names) * 0.7), 9))
+    _fig, ax = plt.subplots(figsize=(max(12, len(base_names) * 0.7), 9))
 
     for i, base in enumerate(base_names):
         sorted_impls = sorted(groups[base].items(), key=lambda item: item[1])

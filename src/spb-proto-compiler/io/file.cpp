@@ -1,12 +1,9 @@
-/***************************************************************************\
-* Name              : file io                                               *
-* Description       : basic file io                                         *
-* Author            : antonin.kriz@gmail.com                                *
-* ------------------------------------------------------------------------- *
-* This is free software; you can redistribute it and/or modify it under the *
-* terms of the MIT license. A copy of the license can be found in the file  *
-* "LICENSE" at the root of this distribution.                               *
-\***************************************************************************/
+/*
+ * Protobuf compiler - basic file IO
+ *
+ * Copyright (c) 2024 Antonin Kriz <antonin.kriz@gmail.com>
+ * Released under the MIT License. See LICENSE in the project root.
+ */
 
 #include "file.h"
 #include <cstdio>
@@ -16,7 +13,7 @@
 auto load_file(const std::filesystem::path &file_path) -> std::string
 {
     const auto file_size = std::filesystem::file_size(file_path);
-    auto file_content = std::string(file_size, '\0');
+    auto file_content    = std::string(file_size, '\0');
 
     if (auto *p_file = fopen(file_path.string().c_str(), "rb"); p_file)
     {

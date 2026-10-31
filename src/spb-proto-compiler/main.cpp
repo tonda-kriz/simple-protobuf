@@ -1,17 +1,12 @@
-/***************************************************************************\
-* Name        : spb-protoc                                                  *
-* Description : proto file compiler                                         *
-* Author      : antonin.kriz@gmail.com                                      *
-* ------------------------------------------------------------------------- *
-* This is free software; you can redistribute it and/or modify it under the *
-* terms of the MIT license. A copy of the license can be found in the file  *
-* "LICENSE" at the root of this distribution.                               *
-\***************************************************************************/
+/*
+ * Protobuf compiler - proto file compiler main executable
+ *
+ * Copyright (c) 2024 Antonin Kriz <antonin.kriz@gmail.com>
+ * Released under the MIT License. See LICENSE in the project root.
+ */
 
 #include "dumper/dumper.h"
 #include "parser/parser.h"
-#include <cstdio>
-#include <cstring>
 #include <exception>
 #include <filesystem>
 #include <fstream>
@@ -24,16 +19,16 @@ using namespace std::literals;
 namespace fs = std::filesystem;
 
 constexpr auto opt_version = "--version"sv;
-constexpr auto opt_v = "-v"sv;
+constexpr auto opt_v       = "-v"sv;
 
 constexpr auto opt_help = "--help"sv;
-constexpr auto opt_h = "-h"sv;
+constexpr auto opt_h    = "-h"sv;
 
 constexpr auto opt_cpp_out_prefix = "--cpp_out="sv;
-constexpr auto opt_cpp_out = "--cpp_out"sv;
+constexpr auto opt_cpp_out        = "--cpp_out"sv;
 
 constexpr auto opt_proto_path_prefix = "--proto_path="sv;
-constexpr auto opt_i = "-I"sv;
+constexpr auto opt_i                 = "-I"sv;
 
 void print_usage()
 {
@@ -72,10 +67,10 @@ auto get_relative_output_dir(const fs::path &input_file, std::span<const fs::pat
 void process_file(const fs::path &input_file, std::span<const fs::path> import_paths,
                   const fs::path &output_dir)
 {
-    const auto parsed_file = parse_proto_file(input_file, import_paths);
+    const auto parsed_file       = parse_proto_file(input_file, import_paths);
     const auto output_cpp_header = cpp_file_name_from_proto(input_file, ".pb.h");
-    const auto output_cpp = cpp_file_name_from_proto(input_file, ".pb.cc");
-    const auto rel_output_dir = get_relative_output_dir(input_file, import_paths);
+    const auto output_cpp        = cpp_file_name_from_proto(input_file, ".pb.cc");
+    const auto rel_output_dir    = get_relative_output_dir(input_file, import_paths);
 
     fs::create_directories(output_dir / rel_output_dir);
     auto cpp_header_stream = std::ofstream(output_dir / rel_output_dir / output_cpp_header);
@@ -95,7 +90,7 @@ auto main(int argc, char *argv[]) -> int
         return 1;
     }
 
-    auto output_dir = fs::path();
+    auto output_dir   = fs::path();
     auto import_paths = std::vector<fs::path>();
 
     for (; argc > 1 && argv[1][0] == '-'; argc--, argv++)
@@ -110,7 +105,7 @@ auto main(int argc, char *argv[]) -> int
 
         if (opt_version == opt || opt_v == opt)
         {
-            std::cout << "spb-protoc version 0.1.0\n";
+            std::cout << "spb-protoc version 1.0.1\n";
             return 0;
         }
 

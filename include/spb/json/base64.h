@@ -1,12 +1,9 @@
-/***************************************************************************\
-* Name        : base64 library for json                                     *
-* Description : RFC 4648 base64 decoder and encoder                         *
-* Author      : antonin.kriz@gmail.com                                      *
-* ------------------------------------------------------------------------- *
-* This is free software; you can redistribute it and/or modify it under the *
-* terms of the MIT license. A copy of the license can be found in the file  *
-* "LICENSE" at the root of this distribution.                               *
-\***************************************************************************/
+/*
+ * Protobuf serialization library - RFC 4648 base64 decoder and encoder.
+ *
+ * Copyright (c) 2024 Antonin Kriz <antonin.kriz@gmail.com>
+ * Released under the MIT License. See LICENSE in the project root.
+ */
 
 #pragma once
 

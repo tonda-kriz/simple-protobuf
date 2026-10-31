@@ -1,18 +1,14 @@
-/***************************************************************************\
-* Name        : proto ast                                                   *
-* Description : data structure for the whole proto file                     *
-* Link        : https://protobuf.dev/reference/protobuf/proto3-spec         *
-* Author      : antonin.kriz@gmail.com                                      *
-* ------------------------------------------------------------------------- *
-* This is free software; you can redistribute it and/or modify it under the *
-* terms of the MIT license. A copy of the license can be found in the file  *
-* "LICENSE" at the root of this distribution.                               *
-\***************************************************************************/
+/*
+ * Protobuf compiler - proto file storage.
+ *
+ * Copyright (c) 2024 Antonin Kriz <antonin.kriz@gmail.com>
+ * https://protobuf.dev/reference/protobuf/proto3-spec
+ * Released under the MIT License. See LICENSE in the project root.
+ */
 
 #pragma once
 
 #include "proto-comment.h"
-#include "proto-common.h"
 #include "proto-extend.h"
 #include "proto-message.h"
 #include "proto-option.h"

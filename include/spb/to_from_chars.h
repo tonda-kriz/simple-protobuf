@@ -1,12 +1,9 @@
-/***************************************************************************\
-* Name        : std::to/from_chars emulation, #if __cpp_lib_to_chars < 201611L *
-* Description : string to number conversion, (std::from_chars or strtoX)    *
-* Author      : antonin.kriz@gmail.com                                      *
-* ------------------------------------------------------------------------- *
-* This is free software; you can redistribute it and/or modify it under the *
-* terms of the MIT license. A copy of the license can be found in the file  *
-* "LICENSE" at the root of this distribution.                               *
-\***************************************************************************/
+/*
+ * Protobuf serialization library - std::to/from_chars emulation.
+ *
+ * Copyright (c) 2024 Antonin Kriz <antonin.kriz@gmail.com>
+ * Released under the MIT License. See LICENSE in the project root.
+ */
 
 #pragma once
 #include <charconv>

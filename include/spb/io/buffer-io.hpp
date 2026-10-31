@@ -1,12 +1,9 @@
-/***************************************************************************\
-* Name        : buffered reader                                             *
-* Description : buffer between io::reader and detail::istream              *
-* Author      : antonin.kriz@gmail.com                                      *
-* ------------------------------------------------------------------------- *
-* This is free software; you can redistribute it and/or modify it under the *
-* terms of the MIT license. A copy of the license can be found in the file  *
-* "LICENSE" at the root of this distribution.                               *
-\***************************************************************************/
+/*
+ * Protobuf serialization library - buffered reader, between io::reader and detail::istream.
+ *
+ * Copyright (c) 2024 Antonin Kriz <antonin.kriz@gmail.com>
+ * Released under the MIT License. See LICENSE in the project root.
+ */
 
 #pragma once
 #include "io.hpp"
@@ -29,8 +26,8 @@ class buffered_reader
     std::array<char, BUFFER_SIZE> buffer;
     io::reader on_read;
     buffer_index_type begin_index = 0;
-    buffer_index_type end_index = 0;
-    bool eof_reached = false;
+    buffer_index_type end_index   = 0;
+    bool eof_reached              = false;
 
     auto bytes_in_buffer() const noexcept -> size_t
     {
